@@ -1,0 +1,646 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>Draft Interaction Design — State of the Art (Forschungsbericht)</title>
+<style>
+  @page { size: A4; margin: 22mm 20mm 22mm 20mm; }
+
+  :root {
+    --ink: #1a1a1a;
+    --muted: #555;
+    --rule: #d8d8d8;
+    --accent: #b3261e;
+    --accent-soft: #fbe9e7;
+    --bg-soft: #f7f7f5;
+    --bg-card: #f0efeb;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: "Helvetica Neue", "Helvetica", "Arial", sans-serif;
+    font-size: 10.5pt;
+    line-height: 1.55;
+    color: var(--ink);
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  h1, h2, h3, h4 {
+    font-weight: 700;
+    line-height: 1.2;
+    color: var(--ink);
+    page-break-after: avoid;
+  }
+  h1 { font-size: 24pt; margin: 0 0 6pt 0; letter-spacing: -0.01em; }
+  h2 { font-size: 15pt; margin: 22pt 0 8pt 0; padding-bottom: 4pt; border-bottom: 1px solid var(--rule); }
+  h3 { font-size: 12pt; margin: 14pt 0 4pt 0; }
+  h4 { font-size: 10.5pt; margin: 10pt 0 3pt 0; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+
+  p { margin: 0 0 8pt 0; }
+  ul, ol { margin: 0 0 8pt 0; padding-left: 18pt; }
+  li { margin-bottom: 3pt; }
+
+  .lead {
+    font-size: 11pt;
+    color: var(--muted);
+    margin-top: 0;
+    margin-bottom: 14pt;
+  }
+
+  .meta {
+    font-size: 8.5pt;
+    color: var(--muted);
+    margin-bottom: 18pt;
+    border-top: 2px solid var(--ink);
+    border-bottom: 1px solid var(--rule);
+    padding: 6pt 0;
+    display: flex;
+    justify-content: space-between;
+  }
+
+  /* Cover block */
+  .cover {
+    padding-top: 12pt;
+    margin-bottom: 16pt;
+  }
+
+  /* TOC */
+  .toc {
+    background: var(--bg-soft);
+    border: 1px solid var(--rule);
+    border-radius: 4pt;
+    padding: 10pt 14pt;
+    margin: 6pt 0 18pt 0;
+    font-size: 9.5pt;
+    page-break-inside: avoid;
+  }
+  .toc h4 { margin-top: 0; }
+  .toc ol { padding-left: 18pt; margin-bottom: 0; }
+  .toc li { margin-bottom: 2pt; }
+
+  /* Callouts */
+  .callout {
+    border-left: 3px solid var(--accent);
+    background: var(--accent-soft);
+    padding: 8pt 12pt;
+    margin: 10pt 0;
+    page-break-inside: avoid;
+  }
+  .callout strong { color: var(--accent); }
+
+  .tldr {
+    background: var(--bg-card);
+    border-radius: 4pt;
+    padding: 12pt 14pt;
+    margin: 12pt 0 18pt 0;
+    page-break-inside: avoid;
+  }
+  .tldr h3 { margin-top: 0; }
+
+  /* Finding cards */
+  .finding {
+    border: 1px solid var(--rule);
+    border-radius: 4pt;
+    padding: 10pt 12pt;
+    margin: 8pt 0;
+    page-break-inside: avoid;
+  }
+  .finding h4 {
+    margin-top: 0;
+    color: var(--ink);
+    text-transform: none;
+    letter-spacing: 0;
+    font-size: 10.5pt;
+  }
+  .finding .conf {
+    display: inline-block;
+    font-size: 7.5pt;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 1pt 6pt;
+    border-radius: 999pt;
+    vertical-align: middle;
+    margin-left: 6pt;
+  }
+  .conf-high { background: #d4edda; color: #155724; }
+  .conf-medium { background: #fff3cd; color: #856404; }
+  .conf-refuted { background: #f8d7da; color: #721c24; }
+
+  .finding .evi {
+    font-size: 9.5pt;
+    color: var(--muted);
+    margin: 4pt 0;
+  }
+  .finding .src {
+    font-size: 8.5pt;
+    color: var(--muted);
+    word-break: break-all;
+  }
+
+  /* Tables */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 9.5pt;
+    margin: 8pt 0 12pt 0;
+    page-break-inside: avoid;
+  }
+  th, td {
+    text-align: left;
+    padding: 5pt 7pt;
+    border-bottom: 1px solid var(--rule);
+    vertical-align: top;
+  }
+  th { background: var(--bg-soft); font-weight: 700; }
+
+  code, .mono {
+    font-family: "SF Mono", Menlo, Consolas, monospace;
+    font-size: 9pt;
+    background: var(--bg-soft);
+    padding: 0.5pt 3pt;
+    border-radius: 2pt;
+  }
+
+  blockquote {
+    border-left: 2px solid var(--rule);
+    margin: 6pt 0 6pt 0;
+    padding: 2pt 12pt;
+    color: var(--muted);
+    font-style: italic;
+  }
+
+  hr {
+    border: 0;
+    border-top: 1px solid var(--rule);
+    margin: 18pt 0;
+  }
+
+  .small { font-size: 9pt; color: var(--muted); }
+
+  .row { display: flex; gap: 12pt; }
+  .col { flex: 1; }
+
+  /* Source list */
+  .sources li {
+    font-size: 9pt;
+    margin-bottom: 4pt;
+    word-break: break-word;
+  }
+
+  /* Page-break helpers */
+  .page-break { page-break-before: always; }
+
+  /* Print-only pagination */
+  @media print {
+    a { color: var(--ink); text-decoration: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ────────────────────────── COVER / TL;DR ────────────────────────── -->
+
+<section class="cover">
+  <div class="meta">
+    <span>Forschungsbericht · UX-Patterns</span>
+    <span>Stand: Juni 2026</span>
+  </div>
+  <h1>Draft Interaction Design</h1>
+  <p class="lead">State of the Art: Wie moderne Apps und SaaS-Produkte „Entwurf"-Zustände, unvollständige Datensätze und Save-Patterns behandeln. Aufbereitung verifizierter Quellen aus NN/g, Polaris, SLDS, Linear, Pajamas, USWDS u. a. – mit konkreten Empfehlungen für die Pflanzenschutz-Prototypen (Plot-Datensätze).</p>
+
+  <div class="tldr">
+    <h3>Kernbefund in einem Absatz</h3>
+    <p>Die explizite <strong>Draft-Markierung ist nicht veraltet</strong> – sie hat sich aber <strong>kontextabhängig ausdifferenziert</strong>. Strukturierte B2B/SaaS-Datensätze (Linear-Issues, Shopify-Produkte, Salesforce-Records) verwenden weiterhin explizite Draft-States mit dedizierten <em>Badges/Chips</em>, während kontinuierliche Content-Editoren (Figma, Google Docs, Notion) auf transparenten Autosave mit Versionierung umgestellt haben. Heutiger Best-Practice-Stack: (1) <strong>Save anytime</strong> – Speichern verlangt nur ein Minimum an Pflichtfeldern; (2) <strong>Pflichtfeld-Gating zur Action-Zeit</strong>, nicht beim Feldfokus; (3) <strong>Status-Indikator</strong> als nicht-interaktiver Badge (Informational/Neutral-Tone) statt eines neuen, eigens erfundenen Tones; (4) <strong>Felder NICHT disablen</strong>, sondern inline validieren nach erstem Submit-Versuch.</p>
+  </div>
+
+  <div class="toc">
+    <h4>Inhalt</h4>
+    <ol>
+      <li>Forschungsfragen &amp; Methode</li>
+      <li>Frage 1 – Markiert man heute noch als „Draft"?</li>
+      <li>Frage 2 – Visuelle Signale: Badge, Chip, Pill, Banner, Icon</li>
+      <li>Frage 3 – Autosave-Alternativen und Status-Feedback</li>
+      <li>Frage 4 – Best Practices für unvollständige Datensätze</li>
+      <li>Frage 5 – „Save anytime" + Gating zur Action-Zeit</li>
+      <li>Frage 6 – Wie machen es Notion, Linear, Figma, Salesforce, GitLab?</li>
+      <li>Konkrete Empfehlung für die Pflanzenschutz-App (Plot-Datensätze)</li>
+      <li>Verifizierte Findings (Übersicht)</li>
+      <li>Widerlegte Annahmen (refuted)</li>
+      <li>Quellen</li>
+      <li>Offene Fragen &amp; Caveats</li>
+    </ol>
+  </div>
+</section>
+
+<!-- ────────────────────────── 1. METHODE ────────────────────────── -->
+
+<h2>1. Forschungsfragen &amp; Methode</h2>
+
+<p>Sechs Leitfragen wurden in einem Deep-Research-Lauf bearbeitet (104 Subagenten, 22 Quellen gefetched, 83 Claims extrahiert, 25 davon adversarial verifiziert: 16 bestätigt, 9 widerlegt). Bevorzugte Quellen: <em>Nielsen Norman Group (NN/g)</em>, <em>Shopify Polaris</em>, <em>Atlassian Design System</em>, <em>Salesforce Lightning Design System (SLDS)</em>, <em>GitLab Pajamas</em>, <em>U.S. Web Design System (USWDS)</em> sowie Engineering-Blogs der untersuchten Produkte (Linear, Figma, Notion).</p>
+
+<table>
+  <thead><tr><th>Frage</th><th>Kurzantwort</th></tr></thead>
+  <tbody>
+    <tr><td>1 · Markiert man heute noch als „Draft"?</td><td>Ja – aber differenziert nach Domäne (strukturierte Records: ja; Content-Editoren: meist nein, ersetzt durch Versionierung)</td></tr>
+    <tr><td>2 · Welche visuellen Signale?</td><td>Badge mit Informational/Neutral-Tone (Polaris, Atlassian Lozenge, SLDS); kein eigener „Draft"-Tone</td></tr>
+    <tr><td>3 · Alternativen zu Draft-Marker?</td><td>Autosave-Status („Saving…" → „Saved 1 min ago", Pajamas) + Versionierung (Figma) + Completeness-Indikator</td></tr>
+    <tr><td>4 · Best Practices (NN/g, USWDS)?</td><td>Validation zur Action-Zeit, nicht beim Tippen; Felder nicht disablen; inline Format-Validierung</td></tr>
+    <tr><td>5 · „Save anytime" + Gating?</td><td>Save mit minimalen Pflichtfeldern, vollständige Validation erst beim Folge-Aktion (z. B. Publish / Forecast / Submit)</td></tr>
+    <tr><td>6 · Wie machen es die großen Tools?</td><td>Linear: explizite Draft-Persistenz · Notion: kein Top-Level-Draft · Figma: Autosave + Version-Checkpoints · Salesforce: Unsaved-Changes-Dialog · GitLab: Per-Feld-Autosave + Timestamp</td></tr>
+  </tbody>
+</table>
+
+<!-- ────────────────────────── 2. FRAGE 1 ────────────────────────── -->
+
+<h2>2. Frage 1 – Markiert man heute noch Dokumente als „Draft"?</h2>
+
+<p><strong>Antwort: Ja, aber kontextabhängig.</strong> Die Pattern hat sich in zwei Richtungen ausdifferenziert:</p>
+
+<div class="row">
+  <div class="col">
+    <h3>Strukturierte Datensätze → expliziter Draft</h3>
+    <p>Tools wie <strong>Linear, Shopify, Salesforce, Airtable</strong> behandeln einen halbfertigen Record (Issue, Product, Opportunity, Row) als eigenen Lifecycle-Zustand. Begründung: Der Datensatz steht in <em>Beziehung zu anderen Records</em> (Reports, Filter, Workflows) – die Umgebung muss wissen, ob er „zählt".</p>
+    <p>Linear hat im Mai 2023 explizit ein <strong>persistentes Draft-System</strong> ausgerollt: Beim ESC- oder X-Klick erscheint ein „Save draft"-Prompt, Drafts überleben Logout und sind device-übergreifend. <span class="small">[Linear-Changelog 2023-05-11]</span></p>
+  </div>
+  <div class="col">
+    <h3>Content-Editoren → Autosave + Version-History</h3>
+    <p><strong>Figma, Google Docs, Notion</strong> haben das klassische Draft-Konzept faktisch <em>ersetzt</em>. Statt eines Status „draft" gibt es nur noch Versionen. Figma erzeugt nach Offline-Edits automatisch <em>Version-Checkpoints</em> (vergleichbar mit Git-Commits) vor und nach jedem Merge-Schritt. <span class="small">[Figma Engineering Blog, April 2024]</span></p>
+    <p>Notion verzichtet sogar auf eine Top-Level-Draft-Kategorie: Die <em>Status</em>-Property kennt nur drei <strong>nicht umbenennbare</strong> Kategorien – <code>To Do</code>, <code>In Progress</code>, <code>Complete</code>. „Draft" taucht maximal als User-erstellte Sub-Option auf. <span class="small">[Notion Help: Status property]</span></p>
+  </div>
+</div>
+
+<div class="callout">
+  <strong>Daraus folgt:</strong> Die Frage „Brauchen wir noch Drafts?" ist die falsche Frage. Die richtige lautet: <em>Wirkt der unvollständige Datensatz auf seine Umgebung? Erscheint er in Listen, Reports, Filtern?</em> Wenn ja → Draft-Marker. Wenn nein (reiner Editor) → Autosave reicht.
+</div>
+
+<!-- ────────────────────────── 3. FRAGE 2 ────────────────────────── -->
+
+<h2>3. Frage 2 – Visuelle Signale: Badge, Chip, Pill, Banner, Icon</h2>
+
+<h3>Die Mehrheits-Lösung: Badge mit Informational-Tone</h3>
+
+<p>Quer durch alle untersuchten Design-Systems wird Draft als <strong>nicht-interaktiver Status-Marker</strong> dargestellt – nicht als Action-Trigger. Drei prägende Vorgaben:</p>
+
+<table>
+  <thead><tr><th>System</th><th>Komponente</th><th>Konkrete Regel zu Draft</th></tr></thead>
+  <tbody>
+    <tr>
+      <td>Shopify Polaris</td>
+      <td>Badge</td>
+      <td>Kein eigener „Draft"-Tone. Mapping auf <code>tone="info"</code> (Beispiel-Code: <code>&lt;s-badge tone="info"&gt;Draft&lt;/s-badge&gt;</code>). Erfinden neuer Tones ist explizit untersagt.</td>
+    </tr>
+    <tr>
+      <td>Salesforce SLDS</td>
+      <td>lightning-badge</td>
+      <td>„Badges don't work for navigation because they can't include a hyperlink … Badges with nested elements are not supported." → Rein informativ. Für interaktive Labels: <code>lightning-pill</code>.</td>
+    </tr>
+    <tr>
+      <td>Atlassian Design</td>
+      <td>Lozenge</td>
+      <td>Lozenge ist als <em>Status-Communicator</em> definiert (z. B. issue states wie „In Progress"). Subtle-Variante (default) ist nicht-interaktiv.</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3>Hierarchie der Mittel (Faustregel)</h3>
+
+<table>
+  <thead><tr><th>Mittel</th><th>Wann?</th><th>Beispiel</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Badge / Chip</strong></td><td>Per-Record-Indikator in Listen, Tabellen, Karten</td><td>„Draft" neben dem Issue-Titel</td></tr>
+    <tr><td><strong>Lozenge / Pill</strong></td><td>Bei Bedarf nach interaktivem Status (klickbar, filterbar)</td><td>Jira-Status „In Review"</td></tr>
+    <tr><td><strong>Banner</strong></td><td>Globaler Hinweis innerhalb des geöffneten Records („Diese Version ist ein Entwurf – noch nicht veröffentlicht")</td><td>WordPress Edit-Screen</td></tr>
+    <tr><td><strong>Icon</strong></td><td>Ergänzend in dichten Listen; nie als alleiniges Signal (Accessibility)</td><td>Kleines Stift-Icon</td></tr>
+    <tr><td><strong>Listentrennung</strong></td><td>Wenn Draft-Records dominieren (eigene Sektion „Drafts" oder Tab)</td><td>Linear: „Drafts"-Menü im Composer</td></tr>
+  </tbody>
+</table>
+
+<div class="callout">
+  <strong>Anti-Pattern:</strong> Eigener „Draft"-Farbton (z. B. rot oder orange) suggeriert Fehler oder Warnung. Polaris und Atlassian raten beide explizit davon ab. Verwende den bestehenden Informational/Neutral-Tone des Design-Systems.
+</div>
+
+<!-- ────────────────────────── 4. FRAGE 3 ────────────────────────── -->
+
+<h2>4. Frage 3 – Autosave-Alternativen &amp; Status-Feedback</h2>
+
+<h3>Der GitLab-Pajamas-Standard</h3>
+
+<p>Die klarste, am breitesten zitierte Spec stammt von <strong>GitLab Pajamas</strong>. Zwei Zustände, ein Timestamp:</p>
+
+<table>
+  <thead><tr><th>Zustand</th><th>Anzeige</th><th>Beispiel</th></tr></thead>
+  <tbody>
+    <tr><td>Während Save</td><td><code>Saving…</code> + Spinner</td><td>Spinner-Icon links neben Text</td></tr>
+    <tr><td>Nach Save</td><td><code>Saved</code> + relativer Timestamp</td><td><code>Saved just now</code>, <code>Saved 1 min ago</code></td></tr>
+    <tr><td>Optional (Draft-Kontext)</td><td>Präfix „Draft"</td><td><code>Draft saved 1 min ago</code></td></tr>
+  </tbody>
+</table>
+
+<div class="callout">
+  <strong>Wichtigste Pajamas-Einschränkung:</strong> „Auto-saving should be applied to <em>each input individually</em> and <em>not</em> to forms as a whole. <strong>Never apply to whole forms.</strong>" Beispiel aus dem Original: Ein „Personal Access Token"-Formular (Name, Expiration, Scope) soll <em>nicht</em> autogespeichert werden – es braucht ein bewusstes Submit.
+</div>
+
+<h3>Versionierung als Recovery-Layer (Figma)</h3>
+
+<p>Figmas Engineering-Blog macht transparent, dass Autosave allein das Risiko von Merge-Konflikten erhöht. Lösung: Vor und nach jedem riskanten Schritt (etwa Reconnect nach Offline-Edit) wird automatisch ein <em>Version-History-Checkpoint</em> gesetzt. „Saven" verlagert sich damit nach hinten in die Recovery-Schicht; vorne sieht der User nur noch das durchgehende, transparente Autosave.</p>
+
+<h3>Der „Last saved"-Stempel als minimales Vertrauenssignal</h3>
+
+<p>Auch bei Autosave verlangt NN/g eine sichtbare Bestätigung – aber differenziert: Für strukturierte Records (Settings, Profile) bleibt der Save-Button als <em>kognitiver Anker</em> wertvoll, denn User vermuten ohne ihn fälschlicherweise, dass nichts persistiert ist. Für Editoren ist die Schulung der User auf Autosave (siehe Google Docs) inzwischen abgeschlossen.</p>
+
+<!-- ────────────────────────── 5. FRAGE 4 ────────────────────────── -->
+
+<h2>5. Frage 4 – Best Practices für unvollständige Datensätze</h2>
+
+<h3>NN/g: Validation erst beim Submit, nicht beim Tippen</h3>
+
+<p>Aus „The Cost of Hostile Patterns in Forms" (NN/g): Zusätzliche Validierungselemente (rote Border, Warnings, Inline-Errors) sollen erst erscheinen, „<em>if and after the user attempts to submit a form or page without filling in required fields</em>". Vorher genügt der Asterisk am Label. Format-Validation (z. B. E-Mail-Syntax) ist davon getrennt und sollte inline <em>on blur</em> stattfinden:</p>
+
+<blockquote>„Ideally, all validation should be inline; that is, as soon as the user has finished filling in a field." <span class="small">– NN/g, „Errors in Forms"</span></blockquote>
+
+<h3>USWDS: Felder niemals disablen</h3>
+
+<p>Das U.S. Web Design System verbietet das Disabling von Form-Inputs zur Progressionssteuerung aus Accessibility-Gründen:</p>
+
+<blockquote>„Don't disable form inputs. Disabled states can confuse users due to low color contrast, lack of meaningful feedback for users of screen readers, and no focus capability for keyboard navigators."</blockquote>
+
+<p>Statt Felder zu sperren, bis Vorbedingungen erfüllt sind: <strong>Save anytime</strong> erlauben und die Validation am Aktions-Endpunkt platzieren.</p>
+
+<h3>Kontrolle vs. Komfort: NN/g „Efficiency vs Expectations"</h3>
+
+<p>NN/g formalisiert das Trade-off über das „P-vs-M-Framework" (Physical vs Mental Effort): „It's not worth reducing P by a small amount if the corresponding M becomes much larger." Heißt für Draft-Designs: Wenn das Wegnehmen des Save-Buttons User irritiert, hat der gewonnene Klick keinen Nettowert.</p>
+
+<!-- ────────────────────────── 6. FRAGE 5 ────────────────────────── -->
+
+<h2>6. Frage 5 – „Save anytime" + Required Fields zur Action-Zeit</h2>
+
+<p>Die saubere Implementierung für strukturierte B2B-Datensätze besteht aus drei Schichten:</p>
+
+<table>
+  <thead><tr><th>Schicht</th><th>Was passiert?</th><th>Praxis-Beispiel</th></tr></thead>
+  <tbody>
+    <tr>
+      <td><strong>1. Save-Schwelle (minimal)</strong></td>
+      <td>Nur 1-3 Felder müssen gesetzt sein, damit der Datensatz überhaupt existiert (typischerweise ein Name/Titel + ggf. ein Owner).</td>
+      <td>Linear-Issue: Title genügt. Shopify-Product: Title genügt. → Status danach: Draft.</td>
+    </tr>
+    <tr>
+      <td><strong>2. Action-Schwelle (vollständig)</strong></td>
+      <td>Vor jeder Folge-Aktion (Publish, Submit, Forecast, Send) prüft das System gegen das volle Pflichtfeld-Set und gibt dem User dosiert die Möglichkeit, die Lücken zu schließen.</td>
+      <td>WordPress: „Publish" zeigt fehlende Felder. Shopify: „Activate Product" listet fehlende Anforderungen.</td>
+    </tr>
+    <tr>
+      <td><strong>3. Recovery / Schutz</strong></td>
+      <td>Unsaved-Changes-Dialog beim Verlassen; bei kollaborativen Tools zusätzlich Versionierung.</td>
+      <td>Salesforce <code>lightning:unsavedChanges</code>: Save/Discard-Dialog beim Tab-Schließen.</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="callout">
+  <strong>Designprinzip:</strong> Pflichtfelder sind <em>kein Save-Gate</em>, sondern ein <em>Action-Gate</em>. Save = „ich will mir das merken". Action = „ich will dem System sagen, dass es jetzt etwas damit tun soll". Diese Trennung kommt direkt aus dem NN/g-Validation-Modell und ist die theoretische Basis für „Save anytime".
+</div>
+
+<!-- ────────────────────────── 7. FRAGE 6 ────────────────────────── -->
+
+<h2>7. Frage 6 – Wie machen es Notion, Linear, Figma, Salesforce, GitLab?</h2>
+
+<div class="finding">
+  <h4>Linear · Persistente, geräteübergreifende Drafts</h4>
+  <p class="evi">Beim ESC oder X-Klick im New-Issue-Composer erscheint ein „Save draft"-Prompt. Titel, Description, Properties werden persistiert. „Saved drafts will persist on logout and are available across devices." Zugriff über einen dedizierten <em>Drafts</em>-Button im Composer, der ein Menü mit allen gespeicherten Drafts öffnet.</p>
+  <p class="src">Quelle: linear.app/changelog/2023-05-11-issue-drafts · Verifikation: 3-0</p>
+</div>
+
+<div class="finding">
+  <h4>Notion · Drei fixe Status-Kategorien, kein Top-Level-Draft</h4>
+  <p class="evi">Die Status-Property kennt nur <code>To Do</code> / <code>In Progress</code> / <code>Complete</code>. „You can't change the three main categories." „Draft" gilt als User-erstellte Sub-Option innerhalb von „In Progress" (Beispiele aus Notion-Doku: „1st Draft, 2nd Draft, Editing"). Damit explizite Abkehr von Draft als globalem Status.</p>
+  <p class="src">Quelle: notion.com/help/guides/status-property-gives-clarity-on-tasks · Verifikation: 3-0</p>
+</div>
+
+<div class="finding">
+  <h4>Figma · Autosave + automatische Version-Checkpoints</h4>
+  <p class="evi">Continuous Autosave; Risiko von Merge-Konflikten nach Offline-Sessions wird über automatisch erzeugte Version-History-Checkpoints (Git-Commit-Analogie) entschärft. „We automatically create a version history checkpoint before and after applying the diff." User können beim Konflikt zurückrollen.</p>
+  <p class="src">Quelle: figma.com/blog/behind-the-feature-autosave/ · Verifikation: 3-0</p>
+</div>
+
+<div class="finding">
+  <h4>Salesforce · Unsaved-Changes-Dialog statt Silent-Autosave</h4>
+  <p class="evi">SLDS stellt <code>lightning:unsavedChanges</code> bereit: Eine Komponente, die der UI-Containment-Hierarchy ungesicherte Änderungen signalisiert. Bei Aktionen, die Datenverlust bedeuten (z. B. Console-Tab schließen), erscheint ein Save/Discard-Dialog. SLDS-Save-Workflow setzt damit explizit auf bewusste Bestätigung, nicht auf stilles Background-Save.</p>
+  <p class="src">Quelle: developer.salesforce.com/docs/platform/lightning-component-reference/guide/aura-unsaved-changes.html · Verifikation: 3-0</p>
+</div>
+
+<div class="finding">
+  <h4>GitLab Pajamas · Two-State-Indikator, Per-Feld-Autosave</h4>
+  <p class="evi"><code>Saving…</code> mit Spinner während Save, danach <code>Saved just now</code> / <code>Saved 1 min ago</code>. Mit Draft-Kontext optional <code>Draft saved 1 min ago</code>. Wichtigste Regel: „Auto-saving should be applied to each input individually and not to forms as a whole. Never apply to whole forms."</p>
+  <p class="src">Quelle: design.gitlab.com/patterns/saving-and-feedback/ · Verifikation: 3-0</p>
+</div>
+
+<div class="finding">
+  <h4>Shopify Polaris · Draft = Informational Badge</h4>
+  <p class="evi">Kein eigener Draft-Tone. Mapping auf <code>tone="info"</code> über die existierende Badge-Komponente: <code>&lt;s-badge tone="info"&gt;Draft&lt;/s-badge&gt;</code>. Erfinden neuer Tones ist explizit untersagt – Begründung: Konsistenz und Accessibility.</p>
+  <p class="src">Quelle: polaris-react.shopify.com/components/feedback-indicators/badge · Verifikation: 3-0</p>
+</div>
+
+<!-- ────────────────────────── 8. EMPFEHLUNG ────────────────────────── -->
+
+<h2>8. Konkrete Empfehlung für die Pflanzenschutz-App (Plot-Datensätze)</h2>
+
+<p>Die Pflanzenschutz-App hat ein typisches Profil für <em>explicit Draft + Save anytime</em>: Plot-Datensätze stehen in Beziehung zu Treatments, Lab-Reports und Forecasts. Sie erscheinen in Listen, Filtern und Reports. Damit qualifizieren sie sich klar für die <strong>strukturierte Variante</strong>, nicht für reine Editor-Autosave-Logik.</p>
+
+<h3>Empfohlenes Pattern (4 Schichten)</h3>
+
+<table>
+  <thead><tr><th>Schicht</th><th>Konkrete Umsetzung</th><th>Begründung</th></tr></thead>
+  <tbody>
+    <tr>
+      <td><strong>Save-Schwelle</strong></td>
+      <td>Minimum (z. B. Plot-Name) – evtl. zusätzlich nicht-zukünftige Felder (Crop, Variety, Location), aber NICHT die beiden Datums-Felder (Planting, Flowering).</td>
+      <td>Datums-Felder beziehen sich auf vergangene/zukünftige Ereignisse, die der User bei Plot-Anlage oft noch nicht kennt. Save-Gating darauf erzeugt Friktion ohne Nutzen.</td>
+    </tr>
+    <tr>
+      <td><strong>Listen-Marker</strong></td>
+      <td>Badge „Draft" neben dem Plot-Namen. Tone = informational/neutral des Design-Systems. Nicht interaktiv. Keine eigene Farbe.</td>
+      <td>Polaris/SLDS/Atlassian-Konvention. Konsistenz mit etablierten Patterns reduziert Lernkost für User, die andere SaaS-Tools kennen.</td>
+    </tr>
+    <tr>
+      <td><strong>Action-Gating</strong></td>
+      <td>Vor „Get Forecast" prüfen, ob Planting- und Flowering-Date gesetzt sind. Bei Lücke: kleines Inline-Dialog mit genau diesen 2 Feldern. (Genau das, was in v6 schon implementiert ist.)</td>
+      <td>NN/g: Validierung zur Action-Zeit. Pajamas: niemals ganze Forms auf einmal validieren. → Nur die für die Folge-Aktion benötigten Felder erzwingen.</td>
+    </tr>
+    <tr>
+      <td><strong>Recovery</strong></td>
+      <td>Unsaved-Changes-Dialog beim Verlassen der Add/Edit-Seite, wenn ungesicherte Änderungen existieren. „Save draft / Discard / Cancel".</td>
+      <td>Salesforce-Pattern. Verhindert Datenverlust ohne den User zu Autosave zu zwingen.</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3>Was zu vermeiden ist</h3>
+<ul>
+  <li><strong>Felder bei „Plot ist Draft" disabled rendern.</strong> Verstoß gegen USWDS-Regel. Stattdessen: alle Felder editierbar, Validation am Action-Punkt.</li>
+  <li><strong>Eigene rote/orange „Draft"-Badge-Farbe.</strong> Suggeriert Fehler. Informational-Tone des Design-Systems verwenden.</li>
+  <li><strong>Autosave für die gesamte Plot-Anlage-Maske.</strong> Pajamas-Verbot. Plot-Anlage ist ein strukturiertes Submit, kein Editor.</li>
+  <li><strong>Pflichtfeld-Validation beim ersten Tippen.</strong> NN/g-Regel: Errors erst nach Submit-Versuch, Format-Errors inline on blur.</li>
+</ul>
+
+<div class="callout">
+  <strong>Direkte Konsequenz für v6:</strong> Die in v6 gewählte Lösung – „nur Planting- und Flowering-Date sind beim Save optional, kleines Dialog vor Forecast" – ist <em>state of the art</em>. Was die Recherche zusätzlich nahelegt: (a) den Draft-Badge Tone auf den Informational-Tone des verwendeten Material-Systems setzen statt rot; (b) den „Unsaved Changes"-Schutz beim Verlassen der Add-Plot-Maske hinzufügen; (c) für künftige V7-Iteration die Kombination aus Per-Feld-Autosave (à la Pajamas) auf einzelnen Feldern und explizitem Save für den Datensatz prüfen.
+</div>
+
+<!-- ────────────────────────── 9. FINDINGS ────────────────────────── -->
+
+<h2>9. Verifizierte Findings (Übersicht)</h2>
+
+<div class="finding">
+  <h4>1. Explizite Draft-Markierung ist in B2B-SaaS weiterhin Standard – als nicht-interaktiver Status-Marker (Badge), nicht als Action-Trigger.<span class="conf conf-high">High</span></h4>
+  <p class="evi">Belege: Polaris erlaubt kein Erfinden neuer Tones, mappt Draft auf Informational. SLDS-Badges sind ohne Hyperlinks/Nested Elements rein informativ. Linear hat explizites Draft-Konzept im Composer.</p>
+  <p class="src">Quellen: polaris-react.shopify.com · developer.salesforce.com · linear.app/changelog · Vote: 3-0</p>
+</div>
+
+<div class="finding">
+  <h4>2. Linear implementiert Drafts als persistenten, geräteübergreifenden Zustand mit explizitem „Save draft"-Dialog beim Schließen/ESC.<span class="conf conf-high">High</span></h4>
+  <p class="evi">Drafts persistieren über Logout hinweg, sind device-übergreifend verfügbar. Zugriff über dedizierten Drafts-Button im Composer.</p>
+  <p class="src">Quelle: linear.app/changelog/2023-05-11-issue-drafts · Vote: 3-0</p>
+</div>
+
+<div class="finding">
+  <h4>3. GitLab Pajamas definiert State-of-the-Art Autosave-Status-Indikator: zwei Zustände, nur auf Einzelfeld-Ebene.<span class="conf conf-high">High</span></h4>
+  <p class="evi"><code>Saving…</code> + Spinner → <code>Saved</code> + relativer Timestamp. Niemals ganze Forms auto-speichern.</p>
+  <p class="src">Quelle: design.gitlab.com/patterns/saving-and-feedback/ · Vote: 3-0</p>
+</div>
+
+<div class="finding">
+  <h4>4. Salesforce schützt Draft-Zustände über Confirmation-Dialog beim Navigation/Close, nicht über Silent-Autosave.<span class="conf conf-high">High</span></h4>
+  <p class="evi"><code>lightning:unsavedChanges</code>-Komponente signalisiert ungesicherte Inhalte und triggert Save/Discard-Dialog.</p>
+  <p class="src">Quelle: developer.salesforce.com/docs/.../aura-unsaved-changes.html · Vote: 3-0</p>
+</div>
+
+<div class="finding">
+  <h4>5. Pure Autosave ohne Save-Button erhöht kognitive Last in strukturierten Formularen (kontextabhängig).<span class="conf conf-medium">Medium</span></h4>
+  <p class="evi">NN/g P-vs-M-Framework: weniger Steps physisch, mehr Aufwand mental. Gilt für strukturierte B2B-Records, nicht für kollaborative Content-Editoren.</p>
+  <p class="src">Quelle: nngroup.com/articles/efficiency-vs-expectations/ · Vote: 2-1 (split)</p>
+</div>
+
+<div class="finding">
+  <h4>6. Figma kombiniert kontinuierliches Autosave mit automatischen Versions-Checkpoints.<span class="conf conf-high">High</span></h4>
+  <p class="evi">Bei Reconnect nach Offline-Sessions: Version-History-Checkpoint vor und nach Merge erzeugt – wie Git-Commit. User können bei Konflikt rückrollen.</p>
+  <p class="src">Quelle: figma.com/blog/behind-the-feature-autosave/ · Vote: 3-0</p>
+</div>
+
+<div class="finding">
+  <h4>7. Notion verzichtet auf Top-Level-Draft-Status; fix drei Kategorien: To Do / In Progress / Complete.<span class="conf conf-high">High</span></h4>
+  <p class="evi">„You can't change the three main categories." Draft tritt nur als User-erstellte Sub-Option auf.</p>
+  <p class="src">Quelle: notion.com/help/guides/status-property-gives-clarity-on-tasks · Vote: 3-0</p>
+</div>
+
+<div class="finding">
+  <h4>8. Required-Field-Validierung gehört zur Action-Zeit (Submit), nicht zum Feldfokus.<span class="conf conf-high">High</span></h4>
+  <p class="evi">NN/g „Hostile Patterns": Rote Borders, Inline-Errors erst nach Submit-Versuch. Pflichtfelder vorab via Asterisk/Label kennzeichnen. Format-Validation (E-Mail-Syntax) separat inline on blur.</p>
+  <p class="src">Quellen: nngroup.com/articles/hostile-error-messages/ · nngroup.com/articles/errors-forms-design-guidelines/ · Vote: 3-0 / 2-1</p>
+</div>
+
+<div class="finding">
+  <h4>9. USWDS verbietet das Disabling von Formular-Inputs zur Progressionssteuerung (Accessibility).<span class="conf conf-high">High</span></h4>
+  <p class="evi">„Don't disable form inputs." Stattdessen Error-Messages und Inline-Validation für Korrektur.</p>
+  <p class="src">Quelle: designsystem.digital.gov/patterns/complete-a-complex-form/progress-easily/ · Vote: 3-0</p>
+</div>
+
+<div class="finding">
+  <h4>10. Autosave ist die richtige Wahl, wenn Content-Fokus wichtiger ist als explizite Kontrolle.<span class="conf conf-medium">Medium</span></h4>
+  <p class="evi">UI-Patterns: Für lange Texte / kreative Arbeit Autosave; für strukturierte Daten mit klaren Submit-Semantiken explizites Save + Draft-Marker.</p>
+  <p class="src">Quelle: ui-patterns.com/patterns/autosave · Vote: 3-0 (secondary source)</p>
+</div>
+
+<!-- ────────────────────────── 10. REFUTED ────────────────────────── -->
+
+<h2>10. Widerlegte Annahmen (refuted)</h2>
+
+<p>Die adversariale Verifikation hat 9 Claims verworfen. Hier die wichtigsten – als <strong>Negativ-Liste</strong>, damit nicht versehentlich darauf aufgebaut wird:</p>
+
+<div class="finding">
+  <h4>NN/g unterscheide explizit drei UI-Communication-Methoden: Indicators, Validations, Notifications.<span class="conf conf-refuted">Refuted 0-3</span></h4>
+  <p class="evi">Die Behauptung ließ sich im Original-Artikel nicht in dieser Schärfe belegen. Die <em>praktische</em> Anwendung (Draft = Indicator) bleibt aber via Polaris/SLDS/Linear belegt.</p>
+</div>
+
+<div class="finding">
+  <h4>USWDS empfehle Save-and-Resume als essenziell für komplexe Formulare.<span class="conf conf-refuted">Refuted 0-3</span></h4>
+  <p class="evi">USWDS empfiehlt zwar Progressive Disclosure und keine disabled Inputs – Save-and-Resume wird im Original aber nicht so klar als Pflicht beschrieben.</p>
+</div>
+
+<div class="finding">
+  <h4>Auch mit Autosave sollte ein Save-Button erhalten bleiben, weil User „panicken" ohne ihn.<span class="conf conf-refuted">Refuted 0-3</span></h4>
+  <p class="evi">In dieser absoluten Form nicht aus der Primärquelle belegbar. Kontextabhängig korrekt für B2B, aber nicht universell.</p>
+</div>
+
+<div class="finding">
+  <h4>Visuelles Autosave-Feedback durch dynamisches Relabeling des Save-Buttons („Save" → „Saved").<span class="conf conf-refuted">Refuted 0-3</span></h4>
+  <p class="evi">Pattern existiert in der Praxis, aber als universelle Empfehlung nicht aus den geprüften Quellen ableitbar. Pajamas-Pattern (separates Status-Label mit Timestamp) ist robuster.</p>
+</div>
+
+<div class="finding">
+  <h4>Die Mehrheit der User nimmt an, dass Änderungen erst nach Save-Klick persistiert sind.<span class="conf conf-refuted">Refuted 1-2</span></h4>
+  <p class="evi">In dieser Allgemeinheit widerlegt – User-Erwartungen sind über die letzten Jahre Richtung Autosave gewandert (Google Docs, Notion). Für strukturierte B2B-Records bleibt der Save-Erwartungsanker stark, ist aber kein universelles Gesetz mehr.</p>
+</div>
+
+<!-- ────────────────────────── 11. QUELLEN ────────────────────────── -->
+
+<h2>11. Quellen (geprüft)</h2>
+
+<h4>Primärquellen (Design Systems &amp; Engineering Blogs)</h4>
+<ul class="sources">
+  <li>Shopify Polaris – Badge: <a>https://polaris-react.shopify.com/components/feedback-indicators/badge</a></li>
+  <li>Salesforce SLDS – lightning-badge: <a>https://developer.salesforce.com/docs/platform/lightning-component-reference/guide/lightning-badge.html</a></li>
+  <li>Salesforce SLDS – Unsaved Changes: <a>https://developer.salesforce.com/docs/platform/lightning-component-reference/guide/aura-unsaved-changes.html</a></li>
+  <li>Atlassian Design – Lozenge: <a>https://atlassian.design/components/lozenge</a></li>
+  <li>Atlassian Design – Badge Usage: <a>https://atlassian.design/components/badge/badge/usage</a></li>
+  <li>GitLab Pajamas – Saving and Feedback: <a>https://design.gitlab.com/patterns/saving-and-feedback/</a></li>
+  <li>U.S. Web Design System – Complete a Complex Form: <a>https://designsystem.digital.gov/patterns/complete-a-complex-form/progress-easily/</a></li>
+  <li>Linear Changelog – Issue Drafts (2023-05-11): <a>https://linear.app/changelog/2023-05-11-issue-drafts</a></li>
+  <li>Figma Engineering Blog – Behind the Feature: Autosave (2024): <a>https://www.figma.com/blog/behind-the-feature-autosave/</a></li>
+  <li>Notion Help – Status Property: <a>https://www.notion.com/help/guides/status-property-gives-clarity-on-tasks</a></li>
+</ul>
+
+<h4>Nielsen Norman Group (NN/g)</h4>
+<ul class="sources">
+  <li>Hostile Patterns in Forms (Error Messages): <a>https://www.nngroup.com/articles/hostile-error-messages/</a></li>
+  <li>Errors in Forms – Design Guidelines: <a>https://www.nngroup.com/articles/errors-forms-design-guidelines/</a></li>
+  <li>Efficiency vs Expectations: <a>https://www.nngroup.com/articles/efficiency-vs-expectations/</a></li>
+  <li>Indicators, Validations, Notifications: <a>https://www.nngroup.com/articles/indicators-validations-notifications/</a> <span class="small">(kritisch zu lesen – einzelne Claims widerlegt)</span></li>
+</ul>
+
+<h4>Sekundärquellen (Sammelseiten, Blogs)</h4>
+<ul class="sources">
+  <li>Smart Interface Design Patterns – Badges, Chips, Tags, Pills: <a>https://smart-interface-design-patterns.com/articles/badges-chips-tags-pills/</a></li>
+  <li>UI-Patterns – Autosave: <a>https://ui-patterns.com/patterns/autosave</a></li>
+  <li>Damian Wajer – Autosave Patterns: <a>https://www.damianwajer.com/blog/autosave/</a></li>
+  <li>UXPin Studio Blog – Progressive Disclosure: <a>https://www.uxpin.com/studio/blog/what-is-progressive-disclosure/</a></li>
+</ul>
+
+<!-- ────────────────────────── 12. CAVEATS ────────────────────────── -->
+
+<h2>12. Offene Fragen &amp; Caveats</h2>
+
+<h4>Was die Recherche nicht abschließend belegt</h4>
+<ul>
+  <li>Konkrete Empfehlungen von <strong>Material Design 3, Carbon (IBM), Atlassian</strong> spezifisch zum Draft-State wurden im Verifikations-Sample nicht vollständig abgedeckt, obwohl Lozenge/Badge dort dokumentiert sind. Lohnt einen Direkt-Lookup im jeweiligen System vor Implementierung.</li>
+  <li>Quantitative Effekte von Autosave auf User-Errors bei strukturierten B2B-Datensätzen vs. Editoren – keine harten Zahlen (z. B. von Baymard) im Lauf gefunden.</li>
+  <li>Airtable und Microsoft 365 (Word/Excel Online) – ihre konkrete Visualisierung von Draft- vs. Published-Records in gemischten Listen wurde nicht vertieft.</li>
+  <li>Accessibility-Anforderungen für Saving/Saved-Status-Announcements (WCAG 2.2, ARIA-Live-Regions) bleiben ein eigenes Recherche-Thema.</li>
+</ul>
+
+<h4>Methodische Caveats</h4>
+<ul>
+  <li>Adversarial Vote (3-Vote-Verifikation): Aussagen wurden als „bestätigt" gewertet, wenn ≥ 2/3 Verifier sie nicht refutieren konnten. Das ist robust gegen einzelne falsch-positive Stellen, aber kein Ersatz für Domänen-Expertise.</li>
+  <li>Linear-Feature ist Mai 2023, Pajamas/SLDS/Polaris werden laufend aktualisiert – Detail-Wording kann sich in 2026 leicht verschoben haben. Vor Implementierung Stand prüfen.</li>
+  <li>Salesforces <code>lightning:unsavedChanges</code> ist Aura-Legacy; das LWC-Äquivalent existiert, ist aber organisatorisch anders – API-Cross-Check empfohlen.</li>
+</ul>
+
+<hr>
+
+<p class="small">Forschungsbericht generiert via Deep-Research-Workflow (5 Such-Angles, 104 Subagenten, 22 Quellen, 25 verifizierte Claims). Zusammenstellung und deutsche Synthese: <em>für Lyle Peterer · ResiYou-Variations Prototyp, Pflanzenschutz-App · Juni 2026.</em></p>
+
+</body>
+</html>

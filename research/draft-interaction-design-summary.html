@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>Draft Interaction Design — 2-Page Summary</title>
+<style>
+  @page { size: A4; margin: 10mm 11mm 10mm 11mm; }
+
+  :root {
+    --ink: #1a1a1a;
+    --muted: #555;
+    --rule: #d8d8d8;
+    --accent: #b3261e;
+    --green: #1b5e20;
+    --red: #b3261e;
+    --bg-soft: #f7f7f5;
+    --bg-card: #f0efeb;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: "Helvetica Neue", "Helvetica", "Arial", sans-serif;
+    font-size: 8.5pt;
+    line-height: 1.32;
+    color: var(--ink);
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  h1, h2, h3, h4 { font-weight: 700; line-height: 1.1; color: var(--ink); page-break-after: avoid; margin: 0; }
+  h1 { font-size: 15pt; letter-spacing: -0.01em; margin-bottom: 1pt; }
+  h2 { font-size: 10pt; margin: 6pt 0 3pt 0; padding-bottom: 1.5pt; border-bottom: 1px solid var(--ink); }
+  h3 { font-size: 8pt; margin: 4pt 0 1pt 0; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+
+  p { margin: 0 0 3pt 0; }
+  ul { margin: 0 0 3pt 0; padding-left: 12pt; }
+  li { margin-bottom: 0.5pt; }
+
+  .lead {
+    font-size: 8.5pt;
+    color: var(--muted);
+    margin-bottom: 4pt;
+  }
+  .meta {
+    font-size: 7pt;
+    color: var(--muted);
+    margin-bottom: 4pt;
+    border-top: 1.2pt solid var(--ink);
+    border-bottom: 0.5pt solid var(--rule);
+    padding: 2pt 0;
+    display: flex;
+    justify-content: space-between;
+  }
+
+  /* TL;DR strip */
+  .tldr {
+    background: var(--bg-card);
+    padding: 4pt 7pt;
+    margin: 3pt 0 4pt 0;
+    border-radius: 2pt;
+    font-size: 8.5pt;
+  }
+  .tldr strong { color: var(--ink); }
+
+  /* Two-column grid */
+  .grid2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 5pt;
+  }
+  .grid3 {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 5pt;
+  }
+
+  /* Cards */
+  .card {
+    border: 0.5pt solid var(--rule);
+    border-radius: 2pt;
+    padding: 4pt 6pt;
+    page-break-inside: avoid;
+  }
+  .card h4 { font-size: 8pt; margin: 0 0 1pt 0; }
+  .card p { font-size: 7.5pt; margin: 0; color: var(--muted); line-height: 1.3; }
+
+  /* Tables (compact) */
+  table { width: 100%; border-collapse: collapse; font-size: 7.5pt; margin: 1pt 0 4pt 0; page-break-inside: avoid; }
+  th, td { text-align: left; padding: 2.5pt 4pt; border-bottom: 0.5pt solid var(--rule); vertical-align: top; line-height: 1.28; }
+  th { background: var(--bg-soft); font-weight: 700; font-size: 7pt; text-transform: uppercase; letter-spacing: 0.04em; }
+
+  /* Do/Don't */
+  .dodont { display: grid; grid-template-columns: 1fr 1fr; gap: 5pt; margin: 3pt 0; }
+  .do, .dont { padding: 4pt 7pt; border-radius: 2pt; font-size: 7.5pt; line-height: 1.32; }
+  .do { background: #e8f5e9; border-left: 2pt solid var(--green); }
+  .dont { background: #ffebee; border-left: 2pt solid var(--red); }
+  .do strong { color: var(--green); }
+  .dont strong { color: var(--red); }
+  .do ul, .dont ul { padding-left: 11pt; margin: 1pt 0 0 0; }
+
+  code, .mono {
+    font-family: "SF Mono", Menlo, Consolas, monospace;
+    font-size: 7pt;
+    background: var(--bg-soft);
+    padding: 0.5pt 2pt;
+    border-radius: 1.5pt;
+  }
+
+  .small { font-size: 7pt; color: var(--muted); }
+
+  /* Quotation strip */
+  .quote {
+    border-left: 2pt solid var(--accent);
+    padding: 1pt 7pt;
+    font-style: italic;
+    color: var(--muted);
+    font-size: 7.5pt;
+    margin: 3pt 0;
+  }
+
+  /* Final recommendation box */
+  .reco {
+    background: #fff8e1;
+    border: 0.5pt solid #f9a825;
+    padding: 5pt 8pt;
+    border-radius: 2pt;
+    page-break-inside: avoid;
+    font-size: 8pt;
+  }
+  .reco h2 { border-bottom: none; margin: 0 0 2pt 0; font-size: 9.5pt; }
+  .reco ul { margin: 2pt 0; }
+
+  .sources { font-size: 6.5pt; color: var(--muted); line-height: 1.4; }
+</style>
+</head>
+<body>
+
+<!-- ─────────── PAGE 1 ─────────── -->
+
+<div class="meta">
+  <span>Draft Interaction Design · Cheatsheet für Product Designer</span>
+  <span>Stand 06/2026 · Basierend auf NN/g, Polaris, SLDS, Pajamas, Linear, Figma, Notion</span>
+</div>
+
+<h1>Draft-Patterns 2026 in 2 Seiten</h1>
+<p class="lead">Was du als Designer über „Save as draft", Autosave und unvollständige Datensätze wissen musst – inklusive Do's, Don'ts und der direkten Anwendung auf strukturierte Records.</p>
+
+<div class="tldr">
+  <strong>Die eine Frage, die alles entscheidet:</strong> Wirkt der unfertige Datensatz auf seine Umgebung? <em>(Erscheint er in Listen, Reports, Filtern, beeinflusst er andere Records?)</em> → <strong>Ja:</strong> expliziter Draft-Badge + „Save anytime" + Action-Gating. → <strong>Nein</strong> (reiner Editor, einzelner Content): Autosave + Versionierung statt Draft-Status.
+</div>
+
+<h2>Die zwei Welten</h2>
+<div class="grid2">
+  <div class="card">
+    <h4>1 · Strukturierte Records (B2B/SaaS)</h4>
+    <p><strong>Linear, Shopify, Salesforce, Airtable.</strong> Datensatz steht in Beziehung zu anderen → braucht expliziten Draft-Zustand. Save mit minimalen Pflichtfeldern. Badge sichtbar in Listen. Volle Validation erst zur Action-Zeit (Publish/Submit/Forecast).</p>
+  </div>
+  <div class="card">
+    <h4>2 · Content-Editoren</h4>
+    <p><strong>Figma, Google Docs, Notion.</strong> Klassisches Draft-Konzept abgeschafft. Continuous Autosave + automatische Version-Checkpoints (Figma: Git-Commit-Analogie). Notion verzichtet sogar auf einen Top-Level-Status „Draft" – nur 3 Kategorien: <code>To Do / In Progress / Complete</code>.</p>
+  </div>
+</div>
+
+<h2>Visuelle Signale – die Hierarchie</h2>
+<table>
+  <thead><tr><th>Mittel</th><th>Wann?</th><th>Tone (Polaris/SLDS/Atlassian)</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Badge / Chip</strong></td><td>Per-Record-Indikator in Listen, Tabellen, Karten</td><td>Informational / Neutral – <em>nie</em> rot oder orange</td></tr>
+    <tr><td>Lozenge / Pill</td><td>Wenn der Status klickbar / filterbar sein muss</td><td>Subtle-Variante (default), nicht-interaktiv per Default</td></tr>
+    <tr><td>Banner</td><td>Innerhalb des geöffneten Records („Dies ist ein Entwurf")</td><td>Info-Banner, oben im Edit-View</td></tr>
+    <tr><td>Listentrennung</td><td>Wenn Drafts dominieren → eigene Sektion oder Tab</td><td>Linear-Pattern: „Drafts"-Menü im Composer</td></tr>
+  </tbody>
+</table>
+
+<div class="dodont">
+  <div class="do">
+    <strong>DO</strong>
+    <ul>
+      <li>Save anytime mit <em>nur 1–3 Pflichtfeldern</em> (Name + Owner reichen meist)</li>
+      <li>Validation <em>erst nach Submit-Klick</em> einblenden (NN/g)</li>
+      <li>Format-Validation (Email, Zahlen) inline <em>on blur</em></li>
+      <li>Draft-Badge im Informational-Tone des Design-Systems</li>
+      <li>Beim Verlassen mit ungesicherten Änderungen: Save/Discard-Dialog</li>
+    </ul>
+  </div>
+  <div class="dont">
+    <strong>DON'T</strong>
+    <ul>
+      <li>Felder <em>disablen</em>, bis Vorbedingungen erfüllt sind (USWDS-Verbot, Accessibility)</li>
+      <li>Eigene rote/orange „Draft"-Farbe erfinden – suggeriert Fehler (Polaris-Verbot)</li>
+      <li>Ganze Forms auto-speichern (Pajamas: „<em>Never apply to whole forms</em>")</li>
+      <li>Rote Borders/Errors anzeigen, bevor der User Submit gedrückt hat</li>
+      <li>Save-Button bei strukturierten Records entfernen – User vermuten dann „nichts persistiert" (NN/g)</li>
+    </ul>
+  </div>
+</div>
+
+<h2>Status-Feedback bei Autosave (GitLab Pajamas)</h2>
+<div class="grid3">
+  <div class="card"><h4>Während Save</h4><p><code>Saving…</code> + Spinner</p></div>
+  <div class="card"><h4>Nach Save</h4><p><code>Saved just now</code><br><code>Saved 1 min ago</code></p></div>
+  <div class="card"><h4>Draft-Kontext</h4><p><code>Draft saved 1 min ago</code></p></div>
+</div>
+<p class="small">Wichtigste Regel: Autosave nur <em>pro Feld</em>, nie auf ganze Formulare. Ein Personal-Access-Token-Formular (Name + Expiry + Scope) braucht weiterhin explizites Submit.</p>
+
+<h2>So machen es die Großen</h2>
+<table>
+  <thead><tr><th>Tool</th><th>Pattern</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Linear</strong></td><td>Beim ESC / X im Composer → „Save draft"-Prompt. Drafts persistieren über Logout, device-übergreifend. Eigener „Drafts"-Button im Composer.</td></tr>
+    <tr><td><strong>Notion</strong></td><td>Drei fixe Status: To Do / In Progress / Complete – nicht änderbar. „Draft" gibt's nur als User-erstellte Sub-Option unter „In Progress".</td></tr>
+    <tr><td><strong>Figma</strong></td><td>Continuous Autosave + automatische Version-Checkpoints (Git-Commit-Analogie) vor/nach Merge-Konflikten. Recovery statt Draft.</td></tr>
+    <tr><td><strong>Salesforce</strong></td><td><code>lightning:unsavedChanges</code>-Komponente → Save/Discard-Dialog beim Verlassen. <em>Kein</em> stilles Background-Save.</td></tr>
+    <tr><td><strong>Shopify</strong></td><td>Polaris: <code>&lt;s-badge tone="info"&gt;Draft&lt;/s-badge&gt;</code>. Eigene Tones zu erfinden ist verboten.</td></tr>
+    <tr><td><strong>GitLab</strong></td><td>Per-Feld-Autosave + zwei-Zustands-Indikator („Saving…" → „Saved 1 min ago"). Niemals form-weit.</td></tr>
+  </tbody>
+</table>
+
+<!-- ─────────── PAGE 2 ─────────── -->
+
+<h2>Die 4-Schichten-Architektur für strukturierte Records</h2>
+<table>
+  <thead><tr><th>Schicht</th><th>Was passiert?</th><th>Beispiel</th></tr></thead>
+  <tbody>
+    <tr><td><strong>1 · Save-Schwelle</strong></td><td>Minimum für Existenz (Name + ggf. Owner). Kein Gating auf Felder, die der User zur Anlage-Zeit noch nicht kennt (Daten, Mengen).</td><td>Linear: Title genügt → Status „Draft"</td></tr>
+    <tr><td><strong>2 · Listen-Marker</strong></td><td>Badge „Draft", Informational-Tone, nicht-interaktiv, neben dem Namen.</td><td>Shopify-Products-Liste</td></tr>
+    <tr><td><strong>3 · Action-Gating</strong></td><td>Vor jeder Folge-Aktion (Publish, Forecast, Submit) prüfen <em>nur die für diese Aktion nötigen</em> Felder. Kleines Inline-Dialog für Lücken.</td><td>WordPress-Publish, Shopify-Activate</td></tr>
+    <tr><td><strong>4 · Recovery</strong></td><td>Unsaved-Changes-Dialog beim Verlassen. Für kollaborative Tools zusätzlich Version-History.</td><td>Salesforce <code>unsavedChanges</code></td></tr>
+  </tbody>
+</table>
+
+<h2>Die fünf NN/g- und USWDS-Faustregeln</h2>
+<ul>
+  <li><strong>Validation am Action-Punkt, nicht beim Tippen.</strong> Rote Borders, Inline-Errors „<em>if and after the user attempts to submit</em>". Vorab nur Asterisk am Label.</li>
+  <li><strong>Format-Errors trotzdem inline on blur.</strong> Email-Syntax-Fehler sofort beim Verlassen des Feldes, nicht erst beim Submit.</li>
+  <li><strong>Felder niemals disablen.</strong> Schlechter Kontrast, kein Screen-Reader-Feedback, kein Keyboard-Focus. Stattdessen: Validation an der Aktion.</li>
+  <li><strong>P-vs-M-Trade-off:</strong> Physical Effort reduzieren lohnt nicht, wenn Mental Effort steigt. (Save-Button entfernen spart 1 Klick, kostet Vertrauen.)</li>
+  <li><strong>Action-Gating ≠ Save-Gating.</strong> Save = „ich will mir das merken". Action = „mach was damit". Pflichtfeld-Logik gehört zur Action, nicht zum Save.</li>
+</ul>
+
+<div class="quote">
+„Autosave should be applied to each input individually and not to forms as a whole. Never apply to whole forms." – GitLab Pajamas &nbsp;·&nbsp; „Don't disable form inputs … low color contrast, no screen-reader feedback, no keyboard focus." – U.S. Web Design System
+</div>
+
+<div class="reco">
+  <h2>Anwendung auf die Pflanzenschutz-App (Plot-Records)</h2>
+  <p>Plot-Datensätze wirken auf Treatments, Lab-Reports, Forecasts → strukturierte Variante. Konkret:</p>
+  <ul>
+    <li><strong>Save-Schwelle:</strong> alle Felder außer Planting- und Flowering-Date pflichtbasiert. Die beiden Daten sind beim Anlegen oft noch nicht bekannt → Optional.</li>
+    <li><strong>Listen-Marker:</strong> Badge „Draft" mit Informational/Neutral-Tone des Material-Systems (nicht rot). Nicht-interaktiv.</li>
+    <li><strong>Action-Gating:</strong> Beim Klick auf „Get Forecast" → kleines Inline-Dialog mit <em>genau den beiden fehlenden Datums-Feldern</em>. Genau das v6-Pattern.</li>
+    <li><strong>Recovery:</strong> Beim Verlassen der Add-Plot-Maske mit ungesicherten Änderungen → Save/Discard-Dialog (Salesforce-Pattern).</li>
+  </ul>
+  <p><strong>Konkrete Korrektur für v6:</strong> Den aktuellen roten „Draft"-Chip auf den Informational-Tone (z. B. blau/grau) umstellen – das ist die einzige Stelle, an der die jetzige Lösung gegen den Industrie-Standard verstößt.</p>
+</div>
+
+<h2 style="border-bottom: none; font-size: 9pt; margin-top: 8pt;">Quellen (für Vertiefung)</h2>
+<p class="sources">
+NN/g · <em>Hostile Patterns in Forms</em>, <em>Errors in Forms – Design Guidelines</em>, <em>Efficiency vs Expectations</em> &nbsp;|&nbsp;
+GitLab Pajamas · <em>Saving and Feedback</em> &nbsp;|&nbsp;
+Shopify Polaris · <em>Badge</em> &nbsp;|&nbsp;
+Salesforce SLDS · <em>lightning-badge</em>, <em>unsavedChanges</em> &nbsp;|&nbsp;
+Atlassian Design · <em>Lozenge, Badge</em> &nbsp;|&nbsp;
+USWDS · <em>Complete a Complex Form / Progress Easily</em> &nbsp;|&nbsp;
+Linear Changelog · <em>Issue Drafts (2023-05-11)</em> &nbsp;|&nbsp;
+Figma Engineering · <em>Behind the Feature: Autosave (2024)</em> &nbsp;|&nbsp;
+Notion Help · <em>Status Property</em>
+</p>
+<p class="small">Voller Bericht mit Verifikations-Votes &amp; widerlegten Annahmen: <code>research/draft-interaction-design-research.pdf</code></p>
+
+</body>
+</html>

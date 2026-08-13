@@ -1,0 +1,204 @@
+RESIYOU PRODUCTION — LAB RESULTS FLOW ANALYSIS
+Source: live production app at resiyou.com (screenshots captured 2026-07-13, user: Anita Baranyi)
+Purpose: ground-truth reference for the "Lab management" design-prototype project (variants v1-reports-table
+through v10-sample-report-page) so variants can be evaluated against what's actually shipped.
+
+================================================================================
+1. ROUTE / URL ARCHITECTURE
+================================================================================
+
+Production uses flat, non-parameterized URLs — no plot ID or sample ID appears in the path.
+State (which plot, which sample) is carried by app/session context, not the URL.
+
+  /plot-list/plot-details-summary                    Plot detail page (all tabs live under this one URL;
+                                                       switching tabs does NOT change the URL)
+  /plot-list/plot-details-summary/add-edit-sampling   New/Edit Sample page (same URL for both create AND edit;
+                                                       also reused across all 3 internal wizard tabs —
+                                                       Sample / Lab Report / Report results — URL never changes
+                                                       when switching those tabs either)
+
+This is a notably different convention from this prototype's baseline routing
+(/plot/:id/lab-results/new, /plot/:id/lab-results/:id — see CLAUDE.md Routes section), which uses
+real path params and distinct URLs per sample. Worth flagging if "match production URLs" ever becomes
+a goal — currently the prototype's routing is more RESTful/shareable than production's.
+
+================================================================================
+2. PAGE CHROME / LAYOUT
+================================================================================
+
+Header (persistent): hamburger menu icon (left) · ResiYou logo (circular check-mark icon, red/green gradient
++ wordmball "Resi" in dark navy / "You" in brand red) · right side: notification bell icon, "?" help icon,
+red circular avatar with user initial + full name ("Anita Baranyi") + dropdown caret.
+
+Breadcrumb bar (grey background band, sits directly under header):
+  PLOTS > SintTruiden (Apple)   [+ inline "View or Edit" link in brand red, next to the plot name]
+On the sample editor page the breadcrumb extends one level deeper and switches to ALL-CAPS for every
+segment except the current page title:
+  PLOTS > SINTTRUIDEN (APPLE) > LAB RESULTS >
+  New/Edit Sample   (bold, normal case — this is the actual page title, not a breadcrumb crumb)
+
+Plot detail tab bar: Treatments | Residue forecast | Compare plans | Lab results
+  — 4 tabs, not the 3 named in this prototype's docs (Treatments / Residue forecast / Lab management).
+    Production adds a distinct "Compare plans" tab alongside "Lab results" — in baseline here, "Compare"
+    is described as a placeholder inside another tab, not its own top-level tab. Also note production
+    calls it "Lab results", not "Lab management".
+  — Right-aligned status chip on the tab bar itself (not inside the tab content): green checkmark +
+    "Predictions up to date" — persistent forecast-freshness indicator sitting at the same visual level
+    as the tabs, always visible regardless of which tab is active.
+
+================================================================================
+3. LAB RESULTS TAB — EMPTY STATE
+================================================================================
+
+Notable divergence from this prototype's own convention ("Empty list = empty state only — hide toolbar +
+count bar"): production KEEPS the toolbar visible even with zero rows —
+  "Add lab result [+]" button (top right) · Search box (present but visually greyed/disabled since there's
+  nothing to search) · "Options" overflow menu (also greyed).
+Below that, the actual empty-state block: character illustration (a sad, frowning rounded-rectangle/paper
+figure) · heading "Complete your residue predictions with lab results" · body copy "Add lab results to keep
+residue predictions and lab data aligned in one place." · a SECOND "Add lab result [+]" CTA button (centered,
+duplicate of the toolbar one) · a "Tips & Tricks" callout box (light bulb/lightning icon) containing:
+"Lab details and attachments can be added later" — i.e. production explicitly tells the user up front that
+the Lab Report and Report results steps are optional/deferrable at creation time.
+
+================================================================================
+4. NEW/EDIT SAMPLE — WIZARD STRUCTURE
+================================================================================
+
+Full-page (not modal) form with 3 horizontal sub-tabs: Sample | Lab Report | Report results.
+Tabs 2 and 3 are visually disabled/greyed until the Sample tab has been saved at least once — i.e. the
+sample entity must exist (be persisted) before lab-report metadata or residue results can attach to it.
+This is a real create-then-elaborate pattern, not a single multi-section form.
+
+--- Tab 1: Sample ---
+Fields:
+  Sample name*        text input, placeholder "Type here"
+  Date of sample*      date input, DD/MM/YYYY format, calendar-icon picker + inline clear (X) icon
+  Commodity*            single-select dropdown, placeholder "Choose an option" (options include at least
+                        "Fruit" per the filled screenshot — matches this repo's Commodity vocabulary:
+                        Fruit, Soil, Irrigation water, Leaf)
+  Comments/Notes        free-text textarea, optional (no red asterisk)
+Actions: Cancel (outlined) · Save (filled, brand red) — Save appears to brighten/activate once required
+fields are populated (greyed/muted red when required fields are empty in the blank-state screenshot vs.
+solid vivid red once Sample name/Date/Commodity are filled).
+
+On Save: green "SUCCESS — Lab sample created successfully" toast (top right, auto-dismiss with progress
+bar). Page re-renders with two new elements now visible:
+  1. A "Delete" link + trash icon appears top-right of the form (only after the entity is persisted —
+     you can't delete what doesn't exist yet).
+  2. A right-hand column titled "Sample Code":
+       "To ensure traceability of your sample, you can print the sample label by clicking on
+       'Sample label' below and attach it to the sample container."
+       → "Sample label" button (printer icon) — implies a generated/printable barcode or ID label per
+         sample, tied to physical chain-of-custody in the field.
+     Directly below, an orange/amber warning callout, dynamically driven by the PLOT's actual treatment
+     data (substance-specific lab method guidance):
+       "Note: Residues of most substances can be analyzed using routine multi-residue analytical methods.
+       Nevertheless, if your plot has been sprayed with any of the substances listed below, you should
+       request the laboratory to use the corresponding analytical method:"
+     Followed by a reference table (Substance Applied → Analytical method and target analyte), e.g.:
+       Disodium phosphonate      → Polar compounds: Phosphonic acid
+       Dithianon                 → Polar compounds: Dithianon
+       Ethephon                  → Polar compounds: Ethephon
+       Fosetyl-Al                → Polar compounds: Phosphonic acid
+       Mancozeb / Maneb / Metiram/ Propineb / Thiram → Dithiocarbamates: Carbon disulfide
+       Phosphonic acid / Potassium phosphonates      → Polar compounds: Phosphonic acid
+     This table is a static domain reference (special-case substances that don't show up under their own
+     name in standard multi-residue lab panels) — not necessarily filtered to only substances actually used
+     on this plot; reads as general guidance surfaced at point of relevance.
+
+--- Tab 2: Lab Report ---
+Fields:
+  Laboratory       text input, placeholder "Type here" (e.g. filled: "Any lab name")
+  Lab report ID    text input, placeholder "Type here" (e.g. filled: "ID0923904")
+Right column — "Lab Report Attachments":
+  Constraint copy: "Files are accepted in the following format - .pdf, .csv, .xlsx, .docx" /
+                   "Maximum file size accepted - 5MB"
+  "Attach files" button (paperclip icon) — supports multiple files.
+  After upload: green "SUCCESS — File uploaded successfully" toast; each attached file renders as a
+  clickable link (filename, brand-red underlined text) with its own trash/delete icon, stacked in a list
+  (e.g. "leaflet-pt-BR-DRAFT.pdf", "leaflet-it-DRAFT-compressed.pdf" in the captured example — placeholder/
+  unrelated test files, not meaningful sample data).
+  "Delete" (whole sample) link persists top-right, same as Tab 1.
+
+--- Tab 3: Report results ---
+Opening this tab for the first time triggers a REQUIRED modal dialog before showing the results grid:
+  Title: "Analytes as a result of the treatments reported"
+  Body: "Please complete the reported residue levels for these analytes. These analytes are a result of
+  the plot's reported treatments."
+  → This is the key Predict↔Comply integration point: the list of analytes is NOT user-entered — it's
+    derived automatically from the active substances applied in the plot's logged Treatments, expanded to
+    their known analytes/metabolites (e.g. spirotetramat expands to spirotetramat, spirotetramat-enol,
+    spirotetramat-enol-glucoside, spirotetramat-ketohydroxy, spirotetramat-mono-hydroxy, and "sum
+    spirotetramat"; fluopyram expands to fluopyram + fluopyram-benzamide; tebuconazole stands alone).
+  Table columns: Analyte | Residue level | Residue (mg/kg) | Method LOQ (mg/kg)
+    - Residue level: dropdown, "Choose an option" placeholder (presumably choices like Detected / Not
+      detected-below LOD / Below LOQ, inferred from later warning + grid copy)
+    - Residue (mg/kg): shows "-" while Residue level is unset; presumably becomes an editable numeric
+      value once "Detected" is chosen
+    - Method LOQ (mg/kg): pre-filled default 0.01, editable
+  Actions: Cancel / Save.
+
+  Validation/safety-net behavior: clicking Save with some/all "Residue level" dropdowns still unset
+  triggers a SECOND, smaller confirm dialog stacked on top:
+    "Warning! If you save now all the values not informed will be reported as Below LOQ"
+    Two text-style actions: "Cancel & Review" (left) / "Continue" (right, bold).
+  → Production does NOT block save on incomplete rows; it defaults unset analytes to a "Below LOQ" /
+    not-detected outcome, but forces an explicit acknowledgment step first. This is a deliberate "confirm
+    the implicit default" pattern rather than hard validation.
+
+  On "Continue": modal closes, green "SUCCESS — Lab sample created successfully" toast reappears (same
+  message as the very first Sample-tab save — suggests the whole sample entity, including its residues, is
+  persisted/upserted as one unit rather than the residues being a separate save operation with distinct
+  copy).
+
+  Resulting "Report results" grid (replaces the modal once populated):
+    Toolbar: "Add Residue [+]" button · Search box · "View Not detected" toggle switch (appears ON/red by
+    default) · "Options" overflow menu.
+    Columns: row-select checkbox | Analyte (each name prefixed with an info "ⓘ" icon — likely a tooltip
+    with analyte detail/CAS info) | Residue level (all rows read "Not detected (below LOD)" in the
+    captured example) | Residue (mg/kg) ("-") | Method LOQ (mg/kg) (0.01) | More (pencil-in-box inline
+    edit icon per row).
+
+  TERMINOLOGY INCONSISTENCY WORTH FLAGGING: the pre-save warning dialog says values will be reported as
+  "Below LOQ", but the resulting grid displays "Not detected (below LOD)" for those same rows. LOD (limit
+  of detection) and LOQ (limit of quantification) are technically distinct thresholds — production's own
+  copy conflates them between the warning and the grid. Not necessarily something to replicate; worth
+  deciding deliberately in the prototype whether to unify on one term or preserve the (currently confusing)
+  production distinction.
+
+================================================================================
+5. OVERALL FLOW SUMMARY (linear happy path)
+================================================================================
+
+Plots list → Plot detail ("SintTruiden (Apple)") → Lab results tab (empty state) →
+click "Add lab result" → New/Edit Sample page, Sample tab (blank) → fill Sample name / Date / Commodity →
+Save → [entity persisted; toast; Delete + Sample Code/label + substance-method warning table appear] →
+switch to Lab Report tab (now unlocked) → fill Laboratory / Lab report ID → Attach files → Save →
+switch to Report results tab (now unlocked) → required "Analytes as a result of the treatments reported"
+modal appears, pre-populated with analytes derived from the plot's treatments → leave residue levels unset →
+Save → confirm "Warning! ... reported as Below LOQ" → Continue → modal closes → full Report results grid
+renders with all analytes marked "Not detected (below LOD)", editable per-row via the "More" pencil icon or
+in bulk via "Add Residue".
+
+================================================================================
+6. KEY TAKEAWAYS FOR VARIANT DESIGN COMPARISON
+================================================================================
+
+- Production treats sample creation as progressive disclosure across 3 gated tabs (Sample → Lab Report →
+  Report results), not a single form — later tabs are locked until the sample itself exists.
+- The Report results step is NOT free-form data entry: the analyte list is system-derived from the plot's
+  logged treatments (Predict/Comply integration), and the UI defaults missing entries to "not detected"
+  with an explicit confirm-the-default step rather than hard-blocking incomplete saves.
+- Production surfaces a domain-specific "special analytical method required" reference table inline on the
+  Sample tab, tied to substances that need non-standard lab methods (dithiocarbamates → carbon disulfide,
+  phosphonates → phosphonic acid, etc.) — a piece of domain content not currently modeled in this repo's
+  seed data or components.
+- Production includes a "Sample label" printable-barcode feature for physical chain-of-custody, tied to a
+  right-hand "Sample Code" panel that only appears post-save.
+- Production's empty state keeps the toolbar visible (contradicts this repo's own "hide toolbar on empty"
+  convention) — a deliberate divergence point to note, not necessarily a bug to copy.
+- Production's tab set on the plot detail page is Treatments / Residue forecast / Compare plans / Lab
+  results (4 tabs, "Compare plans" promoted to top-level) vs. this repo's current 3-tab framing.
+- LOD vs. LOQ terminology is used inconsistently between the confirm dialog and the results grid in
+  production — a real production copy bug, useful to avoid replicating.

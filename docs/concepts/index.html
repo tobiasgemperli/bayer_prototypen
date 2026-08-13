@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ResiYou — Concept overview</title>
+<style>
+  :root{ --red:#d4183d; --ink:#111827; --muted:#6b7280; --line:#e8e8ec; --chip:#f4f4f6; }
+  *{ box-sizing:border-box; }
+  body{ margin:0; font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; color:var(--ink); background:#fff; -webkit-font-smoothing:antialiased; }
+  a{ color:var(--red); text-decoration:none; font-weight:600; }
+  a:hover{ text-decoration:underline; }
+  .wrap{ display:flex; min-height:100vh; }
+
+  /* sidebar */
+  .side{ width:240px; flex:0 0 240px; border-right:1px solid var(--line); padding:26px 16px; position:sticky; top:0; height:100vh; overflow:auto; }
+  .brand{ font-weight:700; font-size:15px; padding:0 8px; margin-bottom:22px; }
+  .brand span{ color:var(--muted); font-weight:400; }
+  .nav{ list-style:none; margin:0; padding:0; }
+  .nav button{ display:flex; justify-content:space-between; align-items:center; gap:8px; width:100%; border:0; background:none; text-align:left; padding:10px 10px; border-radius:8px; cursor:pointer; color:var(--ink); font:inherit; font-weight:600; }
+  .nav button:hover{ background:#f7f7f8; }
+  .nav button.active{ color:var(--red); background:#fdeef1; }
+  .nav .count{ font-weight:400; color:var(--muted); font-size:12.5px; }
+
+  /* main */
+  .main{ flex:1; padding:44px 56px; max-width:940px; }
+  .ptitle{ font-size:30px; font-weight:700; margin:0 0 6px; }
+  .psub{ color:var(--muted); margin:0 0 30px; font-size:15px; max-width:680px; }
+  .panel{ display:none; }
+  .panel.active{ display:block; }
+
+  /* variant card */
+  .v{ border:1px solid var(--line); border-radius:10px; padding:18px 20px; margin-bottom:14px; }
+  .v-head{ display:flex; align-items:baseline; gap:11px; margin-bottom:13px; }
+  .v-num{ font-size:11.5px; font-weight:700; color:var(--muted); background:var(--chip); padding:2px 7px; border-radius:5px; letter-spacing:.02em; }
+  .v-name{ font-size:17px; font-weight:700; }
+  .v-tag{ margin-left:auto; font-size:12.5px; color:var(--muted); }
+  .flow{ display:flex; flex-wrap:wrap; align-items:center; gap:6px; margin-bottom:12px; }
+  .step{ background:var(--chip); border-radius:6px; padding:4px 10px; font-size:13px; color:#374151; white-space:nowrap; }
+  .arrow{ color:#c4c4cc; font-size:13px; }
+  .desc{ color:#374151; margin:0 0 14px; font-size:14px; max-width:680px; }
+  .v-foot{ display:flex; justify-content:space-between; align-items:center; border-top:1px solid var(--line); padding-top:12px; }
+  .vid{ font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:12px; color:var(--muted); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <aside class="side">
+    <div class="brand">ResiYou<span> · concepts</span></div>
+    <ul class="nav" id="nav"></ul>
+  </aside>
+  <main class="main" id="main"></main>
+</div>
+
+<script>
+const BASE = 'http://localhost:5174';
+
+const DATA = [
+  { name:'Lab management', jtbd:'Capture a sample’s lab reports and results — one sample, many reports.', variants:[
+    { n:'V1', name:'Reports table', flow:['Lab tab','Reports table','Add report','Save'], desc:'The Lab tab becomes a table of N reports.', id:'v2-reports-table', url:'/v/v2-reports-table/plot/1' },
+    { n:'V2', name:'Stacked reports', flow:['Lab tab','Stacked cards','Edit inline','Save all'], desc:'Reports as stacked inline cards with one Save-all.', id:'v3-stacked-reports', url:'/v/v3-stacked-reports/plot/1' },
+    { n:'V3', name:'Laboratory Management', flow:['Sample','Reports','Results'], desc:'Progressive Sample → Reports → Results, AddPlot-style layout.', id:'v4-laboratory-management', url:'/v/v4-laboratory-management/plot/1' },
+    { n:'V4', name:'Treatments-style grid', flow:['Sub-tab','Editable grid','Add lab report','Results'], desc:'Sub-tabs + a directly-editable grid; lab report on a full page.', id:'v5-lab-management', url:'/v/v5-lab-management/plot/1' },
+    { n:'V5', name:'Sample-first', flow:['Register sample','Print sheet','Send to lab','Results'], desc:'Steers to register-sample-first; report-first one click away.', id:'v6-lab-management', url:'/v/v6-lab-management/plot/1' },
+    { n:'V6', name:'Master–detail', tag:'Best', flow:['Pick sample','Reports inline','Add report','Results'], desc:'Two-pane: samples left, their reports + results right — the full 1→N chain, no page-swaps.', id:'v7-lab-master-detail', url:'/v/v7-lab-master-detail/plot/1' },
+  ]},
+  { name:'Spray plans', jtbd:'Plan a spray programme, track what’s done, and turn a simulation into a committed plan.', variants:[
+    { n:'V1', name:'Plan list', tag:'Lean', flow:['Spray plans tab','List','New / open plan','Edit sprays','Mark completed'], desc:'A list of plans with Pending/Completed status and an editable spray grid.', id:'spray-plans-v1', url:'/v/spray-plans-v1/plot/1' },
+    { n:'V2', name:'Planning board', tag:'Best', flow:['Board','Add to lane','Quick-add sprays','Move → Completed'], desc:'Kanban (Simulations / Pending / Completed); move a card to set status; inline sprays.', id:'spray-plans-v2', url:'/v/spray-plans-v2/plot/1' },
+    { n:'V3', name:'Lifecycle stepper', flow:['Simulate','Commit to plan','Execute sprays','Confirm completed'], desc:'A stepper: Simulated → Planned → In progress → Completed.', id:'spray-plans-v3', url:'/v/spray-plans-v3/plot/1' },
+    { n:'V4', name:'Calendar planner', flow:['Calendar','Add spray on a date','Mark executed','Plan completes'], desc:'Sprays on a month calendar; overdue flagged; auto-completes.', id:'spray-plans-v4', url:'/v/spray-plans-v4/plot/1' },
+  ]},
+  { name:'Draft state', jtbd:'Records saved with missing mandatory data are flagged and quick to finish.', variants:[
+    { n:'V1', name:'Badge + filter', tag:'Lean', flow:['Plots','Filter Drafts','Complete','Fill missing','Complete'], desc:'Draft chip + “3/5” completeness + an All/Drafts/Complete filter + a missing-fields dialog.', id:'draft-state-v1', url:'/v/draft-state-v1/' },
+    { n:'V2', name:'Inline completion', tag:'Best', flow:['Plots','Expand draft row','Fill inline (autosave)','Complete'], desc:'Fill only the missing fields in place, with autosave and live progress.', id:'draft-state-v2', url:'/v/draft-state-v2/' },
+    { n:'V3', name:'Drafts tray', flow:['Drafts tray','Complete','Stepper','Leaves tray'], desc:'A pinned Drafts tray + guided completion; the main list shows only ready records.', id:'draft-state-v3', url:'/v/draft-state-v3/' },
+    { n:'V4', name:'Status + side-panel', flow:['Plots','Click Draft pill','Side-panel checklist','Complete'], desc:'Status pills + a side-panel checklist; also flags draft treatments.', id:'draft-state-v4', url:'/v/draft-state-v4/' },
+  ]},
+  { name:'New onboarding flow', jtbd:'The first-run experience, from sign-up to first forecast.', variants:[
+    { n:'V1', name:'Register flow', flow:['Sign up','Account completion','First plot'], desc:'Sign-up → account completion → first plot.', id:'app flow', url:null },
+    { n:'V2', name:'Onboarding flow', flow:['Empty states','Add first plot','Add treatment','See forecast'], desc:'Guided empty states all the way to the first forecast.', id:'app flow', url:null },
+  ]},
+];
+
+const nav = document.getElementById('nav');
+const main = document.getElementById('main');
+
+DATA.forEach((p, i) => {
+  const li = document.createElement('li');
+  li.innerHTML = `<button id="nav-${i}" onclick="show(${i})">${p.name}<span class="count">${p.variants.length}</span></button>`;
+  nav.appendChild(li);
+
+  const panel = document.createElement('section');
+  panel.className = 'panel';
+  panel.id = 'panel-' + i;
+  panel.innerHTML =
+    `<h2 class="ptitle">${p.name}</h2><p class="psub">${p.jtbd}</p>` +
+    p.variants.map(v => `
+      <div class="v">
+        <div class="v-head"><span class="v-num">${v.n}</span><span class="v-name">${v.name}</span>${v.tag ? `<span class="v-tag">${v.tag}</span>` : ''}</div>
+        <div class="flow">${v.flow.map((s, j) => `<span class="step">${s}</span>${j < v.flow.length - 1 ? '<span class="arrow">→</span>' : ''}`).join('')}</div>
+        <p class="desc">${v.desc}</p>
+        <div class="v-foot"><span class="vid">${v.id}</span>${v.url ? `<a href="${BASE}${v.url}" target="_blank" rel="noopener">Open →</a>` : `<span class="vid">via navigator</span>`}</div>
+      </div>`).join('');
+  main.appendChild(panel);
+});
+
+function show(i) {
+  document.querySelectorAll('.panel').forEach((el, j) => el.classList.toggle('active', j === i));
+  document.querySelectorAll('.nav button').forEach((b, j) => b.classList.toggle('active', j === i));
+}
+show(0);
+</script>
+</body>
+</html>

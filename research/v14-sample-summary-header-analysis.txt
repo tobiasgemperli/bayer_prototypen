@@ -1,0 +1,305 @@
+RESIYOU PROTOTYPE — VARIANT V14 "SAMPLE SUMMARY HEADER" ANALYSIS
+Source: src/app/variants/v14-sample-summary-header/ (this repo, read directly from source — not screenshots)
+Reach in running app: /v/v14-sample-summary-header/plot/1 → "Samples & Reports" tab → open any sample
+Part of: Lab management design project (forked from V13 — Two-step sample creation)
+
+================================================================================
+1. WHERE IT SITS IN THE VARIANT SYSTEM
+================================================================================
+
+V14 overrides two of the six overridable slots defined in variants/registry.ts:
+  PlotDetailPage   → src/app/variants/v14-sample-summary-header/PlotDetailPage.tsx
+  SampleReportPage → src/app/variants/v14-sample-summary-header/SampleReportPage.tsx
+
+PlotDetailPage.tsx (11 lines) is a thin wrapper: it renders the baseline
+`PlotDetailPage` (src/app/main/PlotDetailPage.tsx) with two extension props —
+  samplingTabLabel="Samples & Reports"   (renames the Lab management tab)
+  SamplingContent={LabManagementContent} (replaces the tab body entirely)
+Everything else on the plot page (Treatments tab, Residue forecast tab, header, breadcrumb) is
+inherited unmodified from baseline — this variant only touches the Lab management surface.
+
+================================================================================
+2. FILE MAP AND RESPONSIBILITIES
+================================================================================
+
+PlotDetailPage.tsx          Wrapper mounting LabManagementContent as the tab body (see above).
+LabManagementContent.tsx    The "Samples & Reports" tab itself: table + empty state + all dialog
+                             orchestration (create/edit sample, post-creation success, quick-add
+                             report+results). This is the tab-level state owner.
+SamplesReportsTable.tsx     Presentational read-only table of samples. Also exports `Th`, a shared
+                             table-header cell reused by SampleReportPage's Reports table so both
+                             tables render identical headers.
+SampleFormDialog.tsx        The Create/Edit sample popup. Two distinct modes with different internal
+                             shape (see §4).
+SampleCreatedDialog.tsx     Success confirmation popup shown once, right after a sample is created.
+SampleReportPage.tsx        The full per-sample page (route target when a table row is clicked) —
+                             no more "Sample" card; Reports card + Results card only.
+ReportFields.tsx            Shared layout fragment (Laboratory + Lab report ID row, then a full-width
+                             multi-file drop zone + chip list) — single source used by both
+                             AddReportDialog and AddReportAndResultsDialog so they can't drift apart.
+AddReportDialog.tsx         Sample-page-only, single-purpose report popup. Create or edit ONE report;
+                             never touches residues/results.
+AddReportAndResultsDialog.tsx  Samples-LIST-only, 2-step wizard (Report → Results) — a fast one-shot
+                             way to add a report and its residues together without opening the sample
+                             page at all.
+LabAutocomplete.tsx          Shared laboratory picker (Autocomplete + inline "Add laboratory" action +
+                             an inline API-connection badge overlay for the selected value). Unchanged
+                             from V13.
+AddLaboratoryDialog.tsx      Tiny "type a new lab name" mini-dialog opened from LabAutocomplete.
+                             Unchanged from V13 (not read in full here — README confirms no changes).
+
+================================================================================
+3. THE CORE HYPOTHESIS (from README)
+================================================================================
+
+On the per-sample page, a "Sample" card repeating name/date/commodity/notes is rarely touched again
+after creation — it's competing for space with the page's real job (Reports/Results) for no ongoing
+benefit. V14's answer: collapse that card into a one-line page-title summary
+("Sample name · Sample date · Commodity") with a "View or edit" link that reopens the exact same
+popup used to create it. The same logic is applied one level down to individual Reports: a report is
+created once and rarely tweaked, so each becomes a static one-line row (Laboratory · Lab report ID ·
+Attachments) with Edit/Delete icons, rather than an always-open editable row.
+
+================================================================================
+4. FLOW A — SAMPLES & REPORTS TAB (LabManagementContent.tsx)
+================================================================================
+
+Data source: useLabSamples() (global reactive store, src/app/data/lab-results-data.ts), filtered to:
+  - s.plotId === plotId
+  - !s.isDraft                         (V14 has no draft-sample concept; draft seed rows are hidden)
+  - !isGenericHybridSeed(s.id, plotId) (drops the shared seed sample "ls-demo-<plotId>", which mixes a
+    saved+draft+API-managed report on one sample — useful noise for OTHER variants' stories, not V14's;
+    filtered here in the variant rather than in the shared seed data)
+This scopes each plot down to exactly 3 example states: no report/results yet, manual reports+results,
+API-imported reports+results (ls-v13-empty-1 / ls-v13-manual-1 / ls-api-demo-1 in the seed).
+
+Empty state (samples.length === 0): EmptyState component, illustration + "Manage samples and reports"
+title + CTA "Create sample" (contained). No toolbar shown at all in this branch — an early return, not
+just a hidden toolbar.
+
+Non-empty state: toolbar (px:2 py:1.5, border-bottom) with, right-aligned:
+  "Create sample" button (variant="soft", 40px height, Add icon)
+  Search field (240px wide, 40px height, searches sampleName / sampleCode / commodity / laboratory)
+  OptionsTrigger (bulk-actions kebab) — disabled unless rows are selected
+  ActionMenu with a single bulk action: "Delete sample(s)"
+Below: SamplesReportsTable (all rows, filtered by search).
+
+Table interactions (SamplesReportsTable.tsx):
+  - Sortable columns: Sample name, Sample date, Commodity (client-side sort via useMemo)
+  - Read-only columns: Reports uploaded (report count or em-dash), Sample sheet (opens
+    /sample-sheet/:id in a new tab — RowActionButton), row actions (Duplicate, Delete, "Add report &
+    results")
+  - Clicking anywhere on a row (except the checkbox/action cells, which stopPropagation) navigates to
+    /plot/:plotId/samples/:sampleId → SampleReportPage
+  - "Add report & results" per row opens AddReportAndResultsDialog directly from the list — the
+    combined 2-step wizard — without navigating away
+
+Sample create/edit dialog wiring:
+  openCreate() → editingId=null, formOpen=true → SampleFormDialog in CREATE mode (2-step: Sample
+    details → Next → Choose laboratory) → on final Save, persistSample() creates a fresh sample via
+    createLabSample(plotId) then immediately updateLabSample(...) with the form values and
+    isDraft=false → SampleCreatedDialog opens (see below) instead of just toasting
+  openEdit(s) → editingId=s.id, formOpen=true → SampleFormDialog in EDIT mode (single view, no
+    stepper: all fields including comments, but NOT laboratory — see §5) → onCreate calls
+    persistSample() via updateLabSample() → toast "Sample updated" (no SampleCreatedDialog on edit)
+
+SampleCreatedDialog (post-creation only, never on edit):
+  Centered modal (666px), success-green icon circle. Two content variants depending on
+  LABS_WITH_API_CONNECTION.has(createdLab):
+    - API-connected lab: title "One step left before we take over", cloud icon, 2 numbered steps
+      ("Send in the sample sheet" / "Results import automatically … you'll be notified by email"),
+      single "Close" text action (no manual add-report path offered — API import supersedes it)
+    - Non-API lab: title "Sample created", checkmark icon, 2 numbered steps ("Send in the sample
+      sheet" / "Add the report once it's back"), plus a text link "Already have the results? Add
+      report & results" that closes this dialog and opens AddReportAndResultsDialog for the just-
+      created sample
+  "Open sample sheet" button (soft variant) always present — opens /sample-sheet/:sampleId in a new
+  tab via window.open(..., 'noopener,noreferrer').
+
+AddReportAndResultsDialog re-open mechanics: both the table row action and SampleCreatedDialog's link
+route through openAddReport(id), which bumps addReportOpenToken and is passed as the dialog's React
+`key` — forces a full remount (fresh internal state) every time it's opened, even for the same sample,
+so no stale step/field state can leak between sessions.
+
+================================================================================
+5. FLOW B — CREATE/EDIT SAMPLE (SampleFormDialog.tsx)
+================================================================================
+
+Single component, two structurally different modes selected by whether `title` contains "edit"
+(isEdit = title.toLowerCase().includes('edit')):
+
+CREATE mode (title="Create sample", no `initial`, or explicit call from openCreate):
+  2-step wizard, activeStep state 0|1, dialog title changes with the step ("Create sample" → "Choose
+  laboratory"):
+    Step 0 "Sample details": Sample name* (text) / Sample date* (DatePicker, dd/MM/yyyy) in a 2-col
+      grid, Commodity* (ToggleButtonGroup, exclusive, options from COMMODITY_OPTIONS), Comments/Notes
+      (optional multiline). "Next" is NOT disabled when invalid — clicking always sets touched=true and
+      only advances if canContinueStep0 (name+date+commodity all present); inline field errors appear
+      only after this first failed attempt (showErrors = touched).
+    Step 1 "Choose laboratory": single LabAutocomplete field, labeled "Send sample to" (create-mode-
+      only label), required. Same validate-on-attempt pattern (canSave = canContinueStep0 && !labMissing).
+      If the picked lab is in LABS_WITH_API_CONNECTION, an inline note appears: "This lab is connected
+      to ResiYou. Results will import automatically once submitted." Button reads "Create sample" (not
+      "Save").
+  "Add laboratory" is reachable from the Autocomplete's trailing action at any point in step 1, opening
+  AddLaboratoryDialog; confirming adds the name to a local customLabs list (not persisted beyond this
+  dialog instance) and selects it.
+
+EDIT mode (title="Edit sample", `initial` = toFormValues(existingSample)):
+  Single view, no stepper: shows sampleName/date/commodity/comments (the same `detailsFields` block
+  used in step 0) but deliberately OMITS the laboratory field — "that's owned by reports, not sample
+  details" (comment in source) — so laboratory is never editable from here, only via each report's own
+  Edit action. Actions: Cancel / Save (contained), gated only by canContinueStep0 (name+date+commodity);
+  labMissing is irrelevant in this mode.
+
+Shared `blank(initial)` defaults dateOfSample to `new Date()` when creating fresh (not left null), and
+useEffect resets the whole dialog (values/touched/activeStep) every time `open` flips true — so
+reopening never shows stale step/error state from a previous session.
+
+================================================================================
+6. FLOW C — PER-SAMPLE PAGE (SampleReportPage.tsx)
+================================================================================
+
+Route: /plot/:id/samples/:sampleId (per this repo's own routing — contrast with production's flat,
+param-less URLs noted in the earlier production analysis).
+
+Data: reads `sample` from useLabSamples() by id; local `residues` state is seeded from
+sample.residues and re-synced via a useEffect keyed on sample?.residues (so external mutations, e.g.
+from AddReportDialog which writes reports but not residues, don't fight the local edit buffer). If
+plot or sample isn't found, renders a bare "Loading…" (no dedicated not-found state).
+
+Page chrome (PageLayout, variant="centered", contentMaxWidth=960):
+  Breadcrumb: Plots > {plot.plotName} > Samples & Reports > {sample.sampleName || 'Unnamed sample'}
+    (last crumb, and the "Samples & Reports" crumb, both navigate — the tab-name crumb calls
+    handleBack() which returns to `/plot/:plotId` with router state {activeTab: 2} to reselect the Lab
+    tab specifically)
+  Title: NOT a heading — a Stack containing the summary line
+    `${sampleName} · ${formattedDate} · ${commodity}` (parts joined with " · ", missing parts dropped,
+    dates formatted "MMM d, yyyy" via Intl.DateTimeFormat) plus a "View or edit" text button that opens
+    SampleFormDialog in EDIT mode (title="Edit sample", initial=toFormValues(sample)). This is the
+    literal implementation of the README's "Sample card → header line" hypothesis.
+  Page-level actions (top right): Cancel (text, returns via handleBack) / Save (contained) — this Save
+  ONLY persists `residues` (see handleSave: updateLabSample(sample.id, { residues, isDraft: false })) —
+  sample field edits and report edits each persist immediately and independently through their own
+  dialogs; this Save is purely for the Results grid's pending edits.
+
+Body: two cards stacked (Reports first, then Results — reversed order vs V13):
+
+  ReportsCard (reports prop is pre-filtered in the parent: drops any report whose labReportId is empty
+  AND has no attachments — "draft" leftover reports from shared demo data are hidden here rather than
+  shown as an empty line):
+    Header: "REPORTS" label (uppercase, 700 weight, small) + "Add report" button (soft, 40px) + bulk
+    OptionsTrigger/ActionMenu (only when selection non-empty; single action "Delete report(s)")
+    Empty (reports.length===0): plain muted-text line "No reports added yet." inside a bordered card box
+      (cardSx) — not the shared EmptyState component, a lighter-weight local treatment.
+    Populated: TableCard-wrapped table, columns: checkbox | Laboratory (+ inline condensed
+      ApiConnectionChip if that lab is API-connected) | Lab report ID | Attachments (first filename,
+      "+N more" if multiple, em-dash if none) | row actions.
+    Locked rows (report.managedBy is set — i.e. pushed in via the lab's direct API connection):
+      - checkbox disabled, row not selectable, cursor: not-allowed, hover disabled
+      - all text in that row rendered in text.disabled grey
+      - its ApiConnectionChip is desaturated (opacity 0.6, grayscale(1)) to visually match the muted row
+      - Edit/Delete icons are simply absent (not just disabled)
+      - whole row wrapped in a Tooltip: "This report was submitted automatically via the lab's direct
+        connection to ResiYou."
+    Add report / a row's Edit icon both open AddReportDialog (single-purpose popup, described in §7);
+    Edit passes editingReport=report to prefill it. Deleting a report does NOT cascade-delete its
+    residues — orphaned results are intentionally left in place (comment: flagged via a "Lab report"
+    column warning tag elsewhere in the grid, not deleted).
+
+  ResultsCard — one shared grid for the whole sample, always mounted (even with zero residues):
+    Header: "RESULTS" label + "Add analyte" button (soft) + bulk delete via OptionsTrigger/ActionMenu.
+    "Add analyte" calls gridRef.current?.addRow() with no analyte arg — the grid decides how a blank
+    row is presented; being mounted from the very start (not conditionally rendered) is explicitly why
+    the ref works reliably on the very first click.
+    Suggested-analytes strip: shown above the grid, inside the same TableCard as the grid itself
+    (only this strip gets its own padding — the grid fills the card edge-to-edge like the Reports
+    table does). Built from getAnalytesForPlot(plotId) — the plot's documented-treatment-derived
+    analyte list (same Predict→Comply linkage seen in the production analysis). Rendered as ActionChip
+    pills that stay visible after being used (the same analyte can be added more than once, e.g. it may
+    legitimately appear in more than one report) — clicking one calls
+    gridRef.current?.addRow(analyteName) to prefill a new row with that analyte already set.
+    Grid: LabResiduesGrid (design-system/lab-shared component) — hideSource prop set (this variant
+    doesn't show a "source" column), custom noRowsMessage="No analytes added yet." (replacing AG-Grid's
+    default "No Rows To Show"), height dynamically sized:
+      gridHeight = clamp(residues.length * 52 + 52, 160, 500)   — grows with row count up to a cap,
+      with a fixed 160px floor so the empty state isn't cramped.
+
+================================================================================
+7. FLOW D — ADD/EDIT ONE REPORT (AddReportDialog.tsx) vs. ADD REPORT+RESULTS (AddReportAndResultsDialog.tsx)
+================================================================================
+
+These are two independent components serving two independent entry points — this is the single most
+important structural decision in V14 (called out explicitly in the README as "two distinct report/
+results entry points — not one paired flow"):
+
+AddReportDialog — SAMPLE PAGE ONLY (single step, Save-only, no residue interaction at all):
+  Fields via shared ReportFields.tsx: Laboratory (LabAutocomplete, defaults to editingReport's lab, or
+  the sample's own `laboratory` field if creating fresh, or '' ) + Lab report ID (text) sharing one row,
+  then a full-width AttachmentDropzone (click-or-drag, multiple files, accepts
+  .pdf/.png/.jpg/.jpeg/.csv, "Up to 10 MB" per the dropzone copy — note this differs from production's
+  stated "5MB" / .pdf,.csv,.xlsx,.docx-only constraint) with uploaded files rendered as removable
+  AttachmentChip pills below it.
+  Save disabled until fieldsFilled (labReportId non-empty OR at least one attachment).
+  On save: builds one LabReport object and either replaces the matching id in sample.reports (edit) or
+  appends a new one (create) via updateLabSample — never touches sample.residues. Toasts "Report
+  updated" or "Report added" accordingly. Dialog is keyed by a caller-supplied token
+  (addReportToken in SampleReportPage) so reopening — including switching from "Add" to "Edit" on a
+  different row — always starts from clean internal state (laboratory/labReportId/attachments/
+  reportInternalId are all useState(() => ...) initializers keyed off `editingReport`, evaluated once
+  per mount).
+
+AddReportAndResultsDialog — SAMPLES LIST ONLY (2-step wizard: Report → Results):
+  Step 0: identical ReportFields layout/fields as AddReportDialog. "Next" disabled until step0Filled.
+  Step 1: "Add results" — suggested-analyte chips (same getAnalytesForPlot source) + "Add analyte"
+    button + the same LabResiduesGrid pattern (hideLabReport AND hideSource — this grid never shows a
+    lab-report column since there's inherently exactly one report in scope here) + bulk delete.
+    Dialog maxWidth grows from 'sm' (step 0) to 'md' (step 1) to fit the grid.
+  Final Save (handleSaveReport): builds the LabReport, tags every pending residue with
+    labReportId: trimmedId (so results are traceably associated with this specific report even though
+    they're all persisted together), and writes BOTH sample.reports (append) and sample.residues
+    (append) plus isDraft:false in a single updateLabSample call. Toasts "Report added" (not
+    "results added" — the report is treated as the primary artifact of this flow).
+
+Both dialogs share the exact same ReportFields.tsx layout component specifically so their Laboratory/
+Lab report ID/attachment UI can never visually drift apart, despite serving different call sites and
+different post-save behavior.
+
+================================================================================
+8. SHARED PRIMITIVES USED (not modified by V14, but load-bearing)
+================================================================================
+
+- data/lab-results-data.ts: useLabSamples (reactive store hook), createLabSample / updateLabSample /
+  deleteLabSample, getAnalytesForPlot (plot-treatment → analyte derivation), LABS_WITH_API_CONNECTION
+  (Set of lab names treated as API-integrated), COMMODITY_OPTIONS, LABORATORY_OPTIONS, newReportId,
+  types LabSampleData / LabReport / LabResidue / LabAttachment.
+- lab-shared/LabResiduesGrid: the actual editable AG-Grid-based residue table, reused verbatim by
+  ResultsCard and both wizard dialogs, parameterized via hideSource / hideLabReport / recommendedAnalytes
+  / noRowsMessage / an imperative handle exposing addRow(analyte?) and deleteRows(ids).
+- design-system/: EmptyState, OptionsTrigger, ActionMenu, TableCard, PageLayout, FormField
+  (FieldLabel/fieldSx), AttachmentChip, Chips (ActionChip / ApiConnectionChip / NameWithChip),
+  grid/grid-shared (RowIconButton / RowActionButton).
+
+================================================================================
+9. KEY TAKEAWAYS / WHAT MAKES V14 DISTINCT (vs. V13 and vs. baseline)
+================================================================================
+
+- Progressive disclosure taken further than V13: the sample's own identity collapses from a full card
+  to a one-line page-title summary; edits happen exclusively through a popup, never inline on the page.
+- Reports are demoted from "always-editable list" to "static summary rows + Edit/Delete popup" — the
+  same "rarely touched after creation" argument applied one level down from the sample itself.
+- Two structurally separate code paths for "add a report" depending on entry point (list quick-add vs.
+  sample-page single action) rather than one dialog handling both contexts — a deliberate reuse-of-
+  layout-not-of-flow decision (ReportFields.tsx is shared; the two Dialog components are not).
+  This is the one place V14 forks logic rather than collapsing it, and it's called out explicitly in the
+  README as intentional, not incidental duplication.
+- API-managed (managedBy) reports are visually locked (disabled checkbox, greyed text, desaturated
+  badge, tooltip, no Edit/Delete) rather than merely read-only-styled — mirrors the production concept
+  of lab-API-imported results being non-editable, but implemented with an explicit `managedBy` field
+  rather than production's less clearly-modeled "pushed via API" report.
+- Deleting a report never cascade-deletes its residues (orphan-and-flag, not cascade-delete) — a
+  data-integrity stance worth comparing against whatever production actually does here (production's
+  screenshots didn't exercise report deletion, so this is currently undocumented on the production side).
+- The page-level Save button's scope is narrowed to residues only; sample-field edits and report edits
+  each commit immediately through their own dialogs — three independent save surfaces on one page,
+  each with its own toast, rather than one page-wide dirty/save state.
