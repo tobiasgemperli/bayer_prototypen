@@ -1,3 +1,18 @@
 @import './fonts.css';
 @import './tailwind.css';
 @import './theme.css';
+
+/* Voice command: blob pulse on newly inserted grid rows */
+@keyframes voice-row-pulse {
+  0%   { background-color: rgba(212, 24, 61, 0.25); }
+  25%  { background-color: rgba(212, 24, 61, 0.08); }
+  50%  { background-color: rgba(212, 24, 61, 0.20); }
+  75%  { background-color: rgba(212, 24, 61, 0.05); }
+  100% { background-color: transparent; }
+}
+.ag-row.voice-highlight {
+  animation: voice-row-pulse 2s ease-out forwards;
+}
+.ag-row.voice-highlight .ag-cell {
+  transition: none !important;
+}

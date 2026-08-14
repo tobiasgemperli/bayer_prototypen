@@ -174,6 +174,16 @@ export function PlotDetailPage({
         setActiveTab(0); // switch to Treatments tab
         setGridKey(k => k + 1); // remount grid to pick up new data
         toast.success(`Treatment added: ${tc.product || 'New treatment'}`);
+
+        // Highlight the new row with a pulse animation after grid remounts
+        setTimeout(() => {
+          const row = document.querySelector(`[row-id="${newId}"]`);
+          if (row) {
+            row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            row.classList.add('voice-highlight');
+            row.addEventListener('animationend', () => row.classList.remove('voice-highlight'), { once: true });
+          }
+        }, 300);
       } else if (cmd.action === 'save') {
         handleCreateTreatment();
       } else if (cmd.action === 'navigate') {

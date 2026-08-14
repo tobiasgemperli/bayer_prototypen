@@ -1,20 +1,35 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   Box, IconButton, Paper, Typography, TextField, Fade, CircularProgress,
-  Button, Chip, Stack,
+  Button, Chip, Stack, MenuItem, Select, SelectChangeEvent,
 } from '@mui/material';
 import { Close, Mic, MicOff, Send, Check, Clear } from '@mui/icons-material';
 import { pushCommand, VoiceCommand, AddTreatmentCommand } from '../data/voice-commands';
+import { treatmentsData } from '../data/plots-data';
 import { router } from '../routes';
 
+// ── Domain options (same as TreatmentsGrid) ──────────────────────────────────
+const PRODUCT_OPTIONS = ['DECIS FLUX®', 'Roundup', 'Bumper 25 EC', 'Confidor', 'Karate Zeon', 'Copper oxychloride'];
+const METHOD_OPTIONS = ['Foliar spray', 'Broadcast', 'Soil drench', 'Seed treatment', 'Drip irrigation'];
+const DOSE_UNIT_OPTIONS = ['L/ha', 'kg/ha', 'ml/ha', 'g/ha'];
+const VOLUME_UNIT_OPTIONS = ['L/ha', 'ml/ha', 'gal/ac'];
+
 // ── Types ────────────────────────────────────────────────────────────────────
+/** Tracks which fields came from voice vs assumed from previous data */
+interface FieldMeta {
+  source: 'voice' | 'assumed';
+}
+
+interface EnrichedTreatment extends AddTreatmentCommand {
+  fieldMeta: Record<string, FieldMeta>;
+}
+
 interface ChatEntry {
   id: number;
   role: 'user' | 'assistant' | 'pending';
   content: string;
-  /** Pending commands awaiting approval */
   commands?: VoiceCommand[];
-  /** Status of approval: null = awaiting, 'accepted' | 'rejected' */
+  enriched?: EnrichedTreatment[];
   status?: 'accepted' | 'rejected' | null;
 }
 
@@ -24,6 +39,79 @@ interface LLMMessage {
 }
 
 let entryId = 0;
+
+// ── Assumption logic ─────────────────────────────────────────────────────────
+
+/** Get the current plot ID from the URL */
+function getCurrentPlotId(): string | null {
+  const m = window.location.pathname.match(/\/plot\/([^/]+)/);
+  return m ? m[1] : null;
+}
+
+/** Get the most recent treatment on the current plot to use as defaults */
+function getLastTreatment(): Record<string, string> | null {
+  const plotId = getCurrentPlotId();
+  if (!plotId) return null;
+  const plotTreatments = treatmentsData
+    .filter(t => t.plotId === plotId && t.product)
+    .sort((a, b) => b.date.getTime() - a.date.getTime());
+  if (plotTreatments.length === 0) return null;
+  const last = plotTreatments[0];
+  return {
+    method: last.method,
+    productDoseValue: last.productDoseValue,
+    productDoseUnit: last.productDoseUnit || 'L/ha',
+    waterVolumeValue: last.waterVolumeValue,
+    waterVolumeUnit: last.waterVolumeUnit || 'L/ha',
+  };
+}
+
+/** Enrich a command with assumptions from previous data */
+function enrichCommand(cmd: AddTreatmentCommand): EnrichedTreatment {
+  const last = getLastTreatment();
+  const fieldMeta: Record<string, FieldMeta> = {};
+  const enriched = { ...cmd, fieldMeta };
+
+  // Fields the user explicitly provided
+  const voiceFields = ['product', 'method', 'date', 'productDoseValue', 'productDoseUnit', 'waterVolumeValue', 'waterVolumeUnit'] as const;
+  for (const f of voiceFields) {
+    if (cmd[f]) {
+      fieldMeta[f] = { source: 'voice' };
+    }
+  }
+
+  // Fill missing fields from last treatment
+  if (last) {
+    if (!enriched.method && last.method) {
+      enriched.method = last.method;
+      fieldMeta.method = { source: 'assumed' };
+    }
+    if (!enriched.productDoseValue && last.productDoseValue) {
+      enriched.productDoseValue = last.productDoseValue;
+      fieldMeta.productDoseValue = { source: 'assumed' };
+    }
+    if (!enriched.productDoseUnit && last.productDoseUnit) {
+      enriched.productDoseUnit = last.productDoseUnit;
+      fieldMeta.productDoseUnit = { source: 'assumed' };
+    }
+    if (!enriched.waterVolumeValue && last.waterVolumeValue) {
+      enriched.waterVolumeValue = last.waterVolumeValue;
+      fieldMeta.waterVolumeValue = { source: 'assumed' };
+    }
+    if (!enriched.waterVolumeUnit && last.waterVolumeUnit) {
+      enriched.waterVolumeUnit = last.waterVolumeUnit;
+      fieldMeta.waterVolumeUnit = { source: 'assumed' };
+    }
+  }
+
+  // Default date to today if missing
+  if (!enriched.date) {
+    enriched.date = new Date().toISOString().slice(0, 10);
+    fieldMeta.date = { source: 'assumed' };
+  }
+
+  return enriched;
+}
 
 // ── System prompt ────────────────────────────────────────────────────────────
 const SYSTEM_PROMPT = `You are a voice-controlled UI assistant for ResiYou, a crop-protection residue management app.
@@ -40,7 +128,8 @@ Available commands:
 
 1. addTreatment — adds a treatment row to the current plot's grid
    {"action":"addTreatment", "product":"...", "method":"...", "date":"YYYY-MM-DD", "productDoseValue":"...", "productDoseUnit":"...", "waterVolumeValue":"...", "waterVolumeUnit":"..."}
-   All fields optional. Products: DECIS FLUX®, Roundup, Bumper 25 EC, Confidor, Karate Zeon, Copper oxychloride.
+   Only include fields the user explicitly mentioned. Missing fields will be auto-filled from previous treatments.
+   Products: DECIS FLUX®, Roundup, Bumper 25 EC, Confidor, Karate Zeon, Copper oxychloride.
    Methods: Foliar spray, Broadcast, Soil drench, Seed treatment, Drip irrigation.
    Dose units: L/ha, kg/ha, ml/ha, g/ha. Water units: L/ha, ml/ha, gal/ac.
 
@@ -60,23 +149,20 @@ User: "Add Roundup, foliar spray, 2 liters per hectare"
 → {"action":"addTreatment","product":"Roundup","method":"Foliar spray","productDoseValue":"2","productDoseUnit":"L/ha"}
 Adding Roundup treatment.
 
-User: "Add Confidor on March 1st and Karate Zeon on March 15th"
-→ [{"action":"addTreatment","product":"Confidor","date":"2026-03-01"},{"action":"addTreatment","product":"Karate Zeon","date":"2026-03-15"}]
-Adding 2 treatments.
+User: "Add Confidor"
+→ {"action":"addTreatment","product":"Confidor"}
+Adding Confidor (other fields will be assumed from previous treatment).
 
-User: "yes" / "accept" / "approve" / "confirm"
+User: "yes" / "accept"
 → {"action":"approve"}
 
-User: "no" / "reject" / "cancel" / "discard"
+User: "no" / "reject"
 → {"action":"reject"}`;
 
 // ── LLM call ─────────────────────────────────────────────────────────────────
 const ANTHROPIC_KEY = import.meta.env.VITE_ANTHROPIC_API_KEY as string | undefined;
 
-async function callLLM(
-  messages: LLMMessage[],
-  signal: AbortSignal,
-): Promise<string> {
+async function callLLM(messages: LLMMessage[], signal: AbortSignal): Promise<string> {
   if (ANTHROPIC_KEY) {
     const body = {
       model: 'claude-sonnet-4-6',
@@ -95,69 +181,37 @@ async function callLLM(
       body: JSON.stringify(body),
       signal,
     });
-    if (!res.ok) {
-      const err = await res.text();
-      throw new Error(`API error ${res.status}: ${err}`);
-    }
+    if (!res.ok) throw new Error(`API error ${res.status}: ${await res.text()}`);
     const data = await res.json();
     return data.content?.[0]?.text ?? '';
   }
-
-  // Mock
   return '{"action":"message","text":"Add VITE_ANTHROPIC_API_KEY to .env to enable voice commands."}';
 }
 
-/** Parse Claude's response into commands + display text */
 function parseResponse(text: string): { commands: VoiceCommand[]; display: string } {
   const trimmed = text.trim();
   const jsonMatch = trimmed.match(/^(\{[\s\S]*?\}|\[[\s\S]*?\])/);
   const commands: VoiceCommand[] = [];
   let rest = trimmed;
-
   if (jsonMatch) {
     try {
       const parsed = JSON.parse(jsonMatch[1]);
       if (Array.isArray(parsed)) commands.push(...parsed);
       else commands.push(parsed);
       rest = trimmed.slice(jsonMatch[1].length).trim();
-    } catch { /* treat as plain text */ }
+    } catch { /* plain text */ }
   }
-
   let display = rest;
   if (!display && commands.length === 1 && commands[0].action === 'message') {
     display = (commands[0] as any).text;
   }
-
   return { commands, display };
-}
-
-/** Format a treatment command as a readable preview */
-function formatTreatmentPreview(cmd: AddTreatmentCommand): { label: string; value: string }[] {
-  const fields: { label: string; value: string }[] = [];
-  if (cmd.product) fields.push({ label: 'Product', value: cmd.product });
-  if (cmd.method) fields.push({ label: 'Method', value: cmd.method });
-  if (cmd.date) fields.push({ label: 'Date', value: cmd.date });
-  if (cmd.productDoseValue) {
-    fields.push({ label: 'Dose', value: `${cmd.productDoseValue} ${cmd.productDoseUnit || 'L/ha'}` });
-  }
-  if (cmd.waterVolumeValue) {
-    fields.push({ label: 'Water', value: `${cmd.waterVolumeValue} ${cmd.waterVolumeUnit || 'L/ha'}` });
-  }
-  return fields;
-}
-
-function formatCommandPreview(cmd: VoiceCommand): string {
-  if (cmd.action === 'addTreatment') return 'Add treatment';
-  if (cmd.action === 'navigate') return `Navigate to ${(cmd as any).to}`;
-  if (cmd.action === 'save') return 'Save changes';
-  return cmd.action;
 }
 
 // ── Speech recognition ───────────────────────────────────────────────────────
 function useSpeechRecognition(onResult: (text: string, isFinal: boolean) => void) {
   const recogRef = useRef<SpeechRecognition | null>(null);
   const [listening, setListening] = useState(false);
-
   const start = useCallback(() => {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SR) return;
@@ -166,12 +220,10 @@ function useSpeechRecognition(onResult: (text: string, isFinal: boolean) => void
     recog.interimResults = true;
     recog.lang = 'en-US';
     recog.onresult = (e: SpeechRecognitionEvent) => {
-      let interim = '';
-      let final = '';
+      let interim = '', final = '';
       for (let i = e.resultIndex; i < e.results.length; i++) {
-        const transcript = e.results[i][0].transcript;
-        if (e.results[i].isFinal) final += transcript;
-        else interim += transcript;
+        const t = e.results[i][0].transcript;
+        if (e.results[i].isFinal) final += t; else interim += t;
       }
       if (final) onResult(final, true);
       else if (interim) onResult(interim, false);
@@ -182,24 +234,62 @@ function useSpeechRecognition(onResult: (text: string, isFinal: boolean) => void
     recogRef.current = recog;
     setListening(true);
   }, [onResult]);
-
-  const stop = useCallback(() => {
-    recogRef.current?.stop();
-    recogRef.current = null;
-    setListening(false);
-  }, []);
-
+  const stop = useCallback(() => { recogRef.current?.stop(); recogRef.current = null; setListening(false); }, []);
   return { listening, start, stop };
 }
 
-// ── Pending command card ─────────────────────────────────────────────────────
-function PendingCard({ entry, onAccept, onReject }: {
+// ── Editable field components ────────────────────────────────────────────────
+
+const ASSUMED_BG = 'rgba(33, 150, 243, 0.08)';
+const ASSUMED_BORDER = 'rgba(33, 150, 243, 0.3)';
+
+function EditableTextField({ value, onChange, assumed, disabled }: {
+  value: string; onChange: (v: string) => void; assumed: boolean; disabled: boolean;
+}) {
+  return (
+    <TextField
+      size="small" variant="outlined" value={value} disabled={disabled}
+      onChange={e => onChange(e.target.value)}
+      sx={{
+        flex: 1, '& .MuiOutlinedInput-root': {
+          fontSize: '0.75rem', height: 28, borderRadius: '6px',
+          bgcolor: assumed ? ASSUMED_BG : 'transparent',
+          '& fieldset': { borderColor: assumed ? ASSUMED_BORDER : undefined },
+        },
+      }}
+    />
+  );
+}
+
+function EditableSelect({ value, options, onChange, assumed, disabled }: {
+  value: string; options: string[]; onChange: (v: string) => void; assumed: boolean; disabled: boolean;
+}) {
+  return (
+    <Select
+      size="small" value={value} disabled={disabled}
+      onChange={(e: SelectChangeEvent) => onChange(e.target.value)}
+      sx={{
+        flex: 1, fontSize: '0.75rem', height: 28, borderRadius: '6px',
+        bgcolor: assumed ? ASSUMED_BG : 'transparent',
+        '& fieldset': { borderColor: assumed ? ASSUMED_BORDER : undefined },
+      }}
+    >
+      {options.map(o => <MenuItem key={o} value={o} sx={{ fontSize: '0.75rem' }}>{o}</MenuItem>)}
+    </Select>
+  );
+}
+
+// ── Pending card with editable fields ────────────────────────────────────────
+function PendingCard({ entry, onAccept, onReject, onUpdate }: {
   entry: ChatEntry;
   onAccept: () => void;
   onReject: () => void;
+  onUpdate: (entryId: number, cmdIndex: number, field: string, value: string) => void;
 }) {
+  const enrichedList = entry.enriched ?? [];
   const commands = entry.commands ?? [];
   const resolved = entry.status != null;
+  const hasAssumptions = enrichedList.some(e => Object.values(e.fieldMeta).some(m => m.source === 'assumed'));
 
   return (
     <Paper variant="outlined" sx={{
@@ -209,26 +299,88 @@ function PendingCard({ entry, onAccept, onReject }: {
         : 'warning.main',
       opacity: resolved ? 0.7 : 1,
     }}>
-      {commands.map((cmd, i) => (
-        <Box key={i} sx={{ px: 1.5, pt: 1, pb: commands.length > 1 && i < commands.length - 1 ? 0.5 : 0 }}>
-          <Typography sx={{ fontSize: '0.75rem', fontWeight: 700, color: 'text.secondary', mb: 0.5 }}>
-            {formatCommandPreview(cmd)}
+      {enrichedList.map((enriched, i) => (
+        <Box key={i} sx={{ px: 1.5, pt: 1, pb: 0.5 }}>
+          <Typography sx={{ fontSize: '0.7rem', fontWeight: 700, color: 'text.secondary', mb: 0.75 }}>
+            Add treatment
           </Typography>
-          {cmd.action === 'addTreatment' && (
-            <Stack spacing={0.25}>
-              {formatTreatmentPreview(cmd as AddTreatmentCommand).map(({ label, value }) => (
-                <Box key={label} sx={{ display: 'flex', gap: 1 }}>
-                  <Typography sx={{ fontSize: '0.75rem', color: 'text.secondary', minWidth: 48 }}>{label}</Typography>
-                  <Typography sx={{ fontSize: '0.75rem', fontWeight: 600 }}>{value}</Typography>
-                </Box>
-              ))}
-            </Stack>
-          )}
-          {cmd.action === 'navigate' && (
-            <Typography sx={{ fontSize: '0.75rem' }}>→ {(cmd as any).to}</Typography>
-          )}
+
+          {/* Product */}
+          <FieldRow label="Product" assumed={enriched.fieldMeta.product?.source === 'assumed'}>
+            <EditableSelect
+              value={enriched.product || ''} options={PRODUCT_OPTIONS} disabled={resolved}
+              assumed={enriched.fieldMeta.product?.source === 'assumed'}
+              onChange={v => onUpdate(entry.id, i, 'product', v)}
+            />
+          </FieldRow>
+
+          {/* Method */}
+          <FieldRow label="Method" assumed={enriched.fieldMeta.method?.source === 'assumed'}>
+            <EditableSelect
+              value={enriched.method || ''} options={METHOD_OPTIONS} disabled={resolved}
+              assumed={enriched.fieldMeta.method?.source === 'assumed'}
+              onChange={v => onUpdate(entry.id, i, 'method', v)}
+            />
+          </FieldRow>
+
+          {/* Date */}
+          <FieldRow label="Date" assumed={enriched.fieldMeta.date?.source === 'assumed'}>
+            <EditableTextField
+              value={enriched.date || ''} disabled={resolved}
+              assumed={enriched.fieldMeta.date?.source === 'assumed'}
+              onChange={v => onUpdate(entry.id, i, 'date', v)}
+            />
+          </FieldRow>
+
+          {/* Dose */}
+          <FieldRow label="Dose" assumed={enriched.fieldMeta.productDoseValue?.source === 'assumed'}>
+            <EditableTextField
+              value={enriched.productDoseValue || ''} disabled={resolved}
+              assumed={enriched.fieldMeta.productDoseValue?.source === 'assumed'}
+              onChange={v => onUpdate(entry.id, i, 'productDoseValue', v)}
+            />
+            <EditableSelect
+              value={enriched.productDoseUnit || 'L/ha'} options={DOSE_UNIT_OPTIONS} disabled={resolved}
+              assumed={enriched.fieldMeta.productDoseUnit?.source === 'assumed'}
+              onChange={v => onUpdate(entry.id, i, 'productDoseUnit', v)}
+            />
+          </FieldRow>
+
+          {/* Water volume */}
+          <FieldRow label="Water" assumed={enriched.fieldMeta.waterVolumeValue?.source === 'assumed'}>
+            <EditableTextField
+              value={enriched.waterVolumeValue || ''} disabled={resolved}
+              assumed={enriched.fieldMeta.waterVolumeValue?.source === 'assumed'}
+              onChange={v => onUpdate(entry.id, i, 'waterVolumeValue', v)}
+            />
+            <EditableSelect
+              value={enriched.waterVolumeUnit || 'L/ha'} options={VOLUME_UNIT_OPTIONS} disabled={resolved}
+              assumed={enriched.fieldMeta.waterVolumeUnit?.source === 'assumed'}
+              onChange={v => onUpdate(entry.id, i, 'waterVolumeUnit', v)}
+            />
+          </FieldRow>
         </Box>
       ))}
+
+      {/* Non-treatment commands */}
+      {commands.filter(c => c.action !== 'addTreatment').map((cmd, i) => (
+        <Box key={`other-${i}`} sx={{ px: 1.5, pt: 1, pb: 0.5 }}>
+          <Typography sx={{ fontSize: '0.7rem', fontWeight: 700, color: 'text.secondary' }}>
+            {cmd.action === 'navigate' ? `Navigate to ${(cmd as any).to}` : cmd.action === 'save' ? 'Save changes' : cmd.action}
+          </Typography>
+        </Box>
+      ))}
+
+      {/* Legend + buttons */}
+      {!resolved && hasAssumptions && (
+        <Box sx={{ px: 1.5, pt: 0.25 }}>
+          <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, px: 0.75, py: 0.25, borderRadius: '4px', bgcolor: ASSUMED_BG, border: `1px solid ${ASSUMED_BORDER}` }}>
+            <Typography sx={{ fontSize: '0.625rem', color: 'info.main' }}>
+              Blue = assumed from previous treatment
+            </Typography>
+          </Box>
+        </Box>
+      )}
 
       {resolved ? (
         <Box sx={{ px: 1.5, py: 1 }}>
@@ -264,6 +416,15 @@ function PendingCard({ entry, onAccept, onReject }: {
   );
 }
 
+function FieldRow({ label, assumed, children }: { label: string; assumed: boolean; children: React.ReactNode }) {
+  return (
+    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mb: 0.5 }}>
+      <Typography sx={{ fontSize: '0.7rem', color: 'text.secondary', minWidth: 40, flexShrink: 0 }}>{label}</Typography>
+      {children}
+    </Box>
+  );
+}
+
 // ── Main component ───────────────────────────────────────────────────────────
 export function ChatAssistant() {
   const [open, setOpen] = useState(false);
@@ -282,9 +443,26 @@ export function ChatAssistant() {
     setTimeout(() => scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' }), 50);
   };
 
-  /** Find the most recent pending entry (status === null) */
   const findPendingEntry = useCallback((): ChatEntry | undefined => {
     return [...entriesRef.current].reverse().find(e => e.role === 'pending' && e.status == null);
+  }, []);
+
+  /** Update a field in an enriched command (user editing in the card) */
+  const handleFieldUpdate = useCallback((entryId: number, cmdIndex: number, field: string, value: string) => {
+    setEntries(prev => prev.map(e => {
+      if (e.id !== entryId || !e.enriched) return e;
+      const newEnriched = [...e.enriched];
+      const updated = { ...newEnriched[cmdIndex], [field]: value };
+      // Once the user edits an assumed field, mark it as voice (user-confirmed)
+      updated.fieldMeta = { ...updated.fieldMeta, [field]: { source: 'voice' as const } };
+      newEnriched[cmdIndex] = updated;
+      // Also update the commands array to match
+      const newCommands = [...(e.commands ?? [])];
+      if (newCommands[cmdIndex]?.action === 'addTreatment') {
+        newCommands[cmdIndex] = { ...newCommands[cmdIndex], [field]: value };
+      }
+      return { ...e, enriched: newEnriched, commands: newCommands };
+    }));
   }, []);
 
   const acceptPending = useCallback((pendingEntryId?: number) => {
@@ -296,12 +474,13 @@ export function ChatAssistant() {
     target.status = 'accepted';
     setEntries([...entriesRef.current]);
 
-    // Execute commands
-    for (const cmd of target.commands ?? []) {
+    // Use enriched commands (with assumptions + user edits applied)
+    const cmdsToExecute = target.enriched ?? target.commands ?? [];
+    for (const cmd of cmdsToExecute) {
       if (cmd.action === 'navigate') {
         router.navigate((cmd as any).to);
       } else {
-        pushCommand(cmd);
+        pushCommand(cmd as VoiceCommand);
       }
     }
   }, [findPendingEntry]);
@@ -311,7 +490,6 @@ export function ChatAssistant() {
       ? entriesRef.current.find(e => e.id === pendingEntryId)
       : findPendingEntry();
     if (!target || target.status != null) return;
-
     target.status = 'rejected';
     setEntries([...entriesRef.current]);
   }, [findPendingEntry]);
@@ -320,7 +498,6 @@ export function ChatAssistant() {
     if (!text.trim() || loadingRef.current) return;
     const trimmed = text.trim();
 
-    // Add user entry
     const userEntry: ChatEntry = { id: ++entryId, role: 'user', content: trimmed };
     setEntries(prev => [...prev, userEntry]);
     setInput('');
@@ -328,63 +505,55 @@ export function ChatAssistant() {
     loadingRef.current = true;
     scrollToBottom();
 
-    // Add to LLM history
     llmHistoryRef.current.push({ role: 'user', content: trimmed });
-
     const abort = new AbortController();
     abortRef.current = abort;
 
     try {
       const fullResponse = await callLLM(llmHistoryRef.current, abort.signal);
       llmHistoryRef.current.push({ role: 'assistant', content: fullResponse });
-
       const { commands, display } = parseResponse(fullResponse);
 
-      // Check for approve/reject voice commands
       const isApprove = commands.some(c => (c as any).action === 'approve');
       const isReject = commands.some(c => (c as any).action === 'reject');
 
       if (isApprove) {
         acceptPending();
-        const confirmEntry: ChatEntry = { id: ++entryId, role: 'assistant', content: display || 'Accepted.' };
-        setEntries(prev => [...prev, confirmEntry]);
+        setEntries(prev => [...prev, { id: ++entryId, role: 'assistant', content: display || 'Accepted.' }]);
       } else if (isReject) {
         rejectPending();
-        const confirmEntry: ChatEntry = { id: ++entryId, role: 'assistant', content: display || 'Rejected.' };
-        setEntries(prev => [...prev, confirmEntry]);
+        setEntries(prev => [...prev, { id: ++entryId, role: 'assistant', content: display || 'Rejected.' }]);
       } else {
-        // Filter actionable commands (not message)
         const actionCommands = commands.filter(c => c.action !== 'message');
         const messageCommands = commands.filter(c => c.action === 'message');
 
         if (actionCommands.length > 0) {
-          // Show pending card for approval
+          // Enrich addTreatment commands with assumptions
+          const enriched = actionCommands
+            .filter(c => c.action === 'addTreatment')
+            .map(c => enrichCommand(c as AddTreatmentCommand));
+
           const pendingEntry: ChatEntry = {
             id: ++entryId,
             role: 'pending',
             content: display || '',
             commands: actionCommands,
+            enriched: enriched.length > 0 ? enriched : undefined,
             status: null,
           };
           setEntries(prev => [...prev, pendingEntry]);
         }
 
-        // Show any message text
         if (display && actionCommands.length === 0) {
-          const msgEntry: ChatEntry = { id: ++entryId, role: 'assistant', content: display };
-          setEntries(prev => [...prev, msgEntry]);
+          setEntries(prev => [...prev, { id: ++entryId, role: 'assistant', content: display }]);
         } else if (messageCommands.length > 0) {
           const msgText = messageCommands.map(c => (c as any).text).join('\n');
-          if (msgText) {
-            const msgEntry: ChatEntry = { id: ++entryId, role: 'assistant', content: msgText };
-            setEntries(prev => [...prev, msgEntry]);
-          }
+          if (msgText) setEntries(prev => [...prev, { id: ++entryId, role: 'assistant', content: msgText }]);
         }
       }
     } catch (e: any) {
       if (e.name !== 'AbortError') {
-        const errEntry: ChatEntry = { id: ++entryId, role: 'assistant', content: `Error: ${e.message}` };
-        setEntries(prev => [...prev, errEntry]);
+        setEntries(prev => [...prev, { id: ++entryId, role: 'assistant', content: `Error: ${e.message}` }]);
       }
     }
 
@@ -394,32 +563,18 @@ export function ChatAssistant() {
   }, [acceptPending, rejectPending]);
 
   const handleSpeechResult = useCallback((text: string, isFinal: boolean) => {
-    if (isFinal) {
-      setInterimText('');
-      doSend(text);
-    } else {
-      setInterimText(text);
-    }
+    if (isFinal) { setInterimText(''); doSend(text); }
+    else setInterimText(text);
   }, [doSend]);
 
   const { listening, start: startListening, stop: stopListening } = useSpeechRecognition(handleSpeechResult);
 
-  const sendMessage = () => {
-    stopListening();
-    setInterimText('');
-    doSend(input);
-  };
-
+  const sendMessage = () => { stopListening(); setInterimText(''); doSend(input); };
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      sendMessage();
-    }
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
   };
 
-  useEffect(() => {
-    return () => abortRef.current?.abort();
-  }, []);
+  useEffect(() => { return () => abortRef.current?.abort(); }, []);
 
   return (
     <Box sx={{ position: 'fixed', right: 16, bottom: 16, zIndex: 1300 }}>
@@ -428,7 +583,7 @@ export function ChatAssistant() {
       <Fade in={open}>
         <Paper elevation={8} sx={{
           position: 'absolute', bottom: 'calc(100% + 8px)', right: 0,
-          width: 380, height: 520, display: 'flex', flexDirection: 'column',
+          width: 420, height: 600, display: 'flex', flexDirection: 'column',
           borderRadius: '12px', overflow: 'hidden',
         }}>
           {/* Header */}
@@ -441,17 +596,18 @@ export function ChatAssistant() {
           <Box ref={scrollRef} sx={{ flex: 1, overflowY: 'auto', p: 2, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
             {entries.length === 0 && (
               <Typography sx={{ color: 'text.secondary', fontSize: '0.8125rem', textAlign: 'center', mt: 4, whiteSpace: 'pre-wrap' }}>
-                {'Tap the mic and speak to control the app.\n\nTry: "Add a treatment with Roundup, foliar spray, 2 liters per hectare"\n\nAll changes need your approval before they are applied.'}
+                {'Tap the mic and speak to control the app.\n\nTry: "Add a treatment with Roundup"\n\nMissing fields are auto-filled from your previous treatments (shown in blue). You can edit any field before accepting.'}
               </Typography>
             )}
             {entries.map((entry) => {
               if (entry.role === 'pending') {
                 return (
-                  <Box key={entry.id} sx={{ alignSelf: 'flex-start', maxWidth: '90%' }}>
+                  <Box key={entry.id} sx={{ alignSelf: 'flex-start', maxWidth: '95%' }}>
                     <PendingCard
                       entry={entry}
                       onAccept={() => acceptPending(entry.id)}
                       onReject={() => rejectPending(entry.id)}
+                      onUpdate={handleFieldUpdate}
                     />
                   </Box>
                 );
@@ -504,14 +660,9 @@ export function ChatAssistant() {
               {listening ? <Mic /> : <MicOff />}
             </IconButton>
             <TextField
-              fullWidth
-              size="small"
-              multiline
-              maxRows={3}
+              fullWidth size="small" multiline maxRows={3}
               placeholder={listening ? 'Listening…' : 'Type a command…'}
-              value={input}
-              onChange={e => setInput(e.target.value)}
-              onKeyDown={handleKeyDown}
+              value={input} onChange={e => setInput(e.target.value)} onKeyDown={handleKeyDown}
               sx={{ '& .MuiOutlinedInput-root': { borderRadius: '10px', fontSize: '0.8125rem' } }}
             />
             <IconButton size="small" onClick={sendMessage} disabled={!input.trim() || loading} color="primary">
