@@ -75,14 +75,14 @@ export function VariantPicker() {
   } as const;
 
   return (
-    <Box sx={{ position: 'fixed', right: 16, bottom: 16, zIndex: 1300 }}>
+    <Box sx={{ position: 'fixed', left: 16, bottom: 16, zIndex: 1300 }}>
       {/* click-away backdrop */}
       {open && <Box onClick={() => setOpen(false)} sx={{ position: 'fixed', inset: 0 }} />}
 
       {/* panel — pinned bottom-right above the button, grows up + left */}
       {open && (
         <Paper elevation={8} sx={{
-          position: 'absolute', bottom: 'calc(100% + 8px)', right: 0,
+          position: 'absolute', bottom: 'calc(100% + 8px)', left: 0,
           width: 320, maxHeight: 'calc(100vh - 96px)', overflowY: 'auto',
           borderRadius: '12px',
         }}>

@@ -11,6 +11,7 @@ import {
 } from '@mui/icons-material';
 import { toast } from 'sonner';
 import { usePlots, treatmentsData, TreatmentData, useTreatmentsVersion, TREATMENT_MANDATORY, updateTreatments } from '../data/plots-data';
+import { usePendingCommands, consumeCommands, AddTreatmentCommand } from '../data/voice-commands';
 import { ColDef } from 'ag-grid-community';
 import { useDemoMode, setOnboardingStep, setDemoMode, setAuthPhase } from '../data/auth-state';
 import { TreatmentsGrid, TreatmentsGridHandle } from './TreatmentsGrid';
@@ -146,6 +147,41 @@ export function PlotDetailPage({
   }, [searchQuery]);
 
   const handleAddTreatment = () => gridRef.current?.addRow(id!);
+
+  // ── Voice command execution ──────────────────────────────────────────────
+  const pendingCommands = usePendingCommands();
+  useEffect(() => {
+    const cmds = consumeCommands();
+    if (cmds.length === 0) return;
+
+    for (const cmd of cmds) {
+      if (cmd.action === 'addTreatment') {
+        const tc = cmd as AddTreatmentCommand;
+        const newId = `voice-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+        const treatment: TreatmentData = {
+          id: newId,
+          plotId: tc.plotId || id!,
+          date: tc.date ? new Date(tc.date) : new Date(),
+          product: tc.product || '',
+          method: tc.method || '',
+          productDoseValue: tc.productDoseValue || '',
+          productDoseUnit: tc.productDoseUnit || 'L/ha',
+          waterVolumeValue: tc.waterVolumeValue || '',
+          waterVolumeUnit: tc.waterVolumeUnit || 'L/ha',
+          type: 'Real',
+        };
+        updateTreatments([treatment]);
+        setActiveTab(0); // switch to Treatments tab
+        setGridKey(k => k + 1); // remount grid to pick up new data
+        toast.success(`Treatment added: ${tc.product || 'New treatment'}`);
+      } else if (cmd.action === 'save') {
+        handleCreateTreatment();
+      } else if (cmd.action === 'navigate') {
+        navigate((cmd as any).to);
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingCommands]);
 
   /** Walk every treatment row in the grid and call back with a draft verdict.
    *  Used by both save handlers so the same "completeness" definition drives

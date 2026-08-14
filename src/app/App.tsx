@@ -6,6 +6,7 @@ import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { theme } from './theme';
 import { router } from './routes';
 import { Toaster } from 'sonner';
+import { ChatAssistant } from './main/ChatAssistant';
 
 export default function App(props: any) {
   // Filter out Figma-specific tracking properties (data-fg-* and data-fgid-*) to prevent MUI warnings
@@ -23,6 +24,7 @@ export default function App(props: any) {
           <CssBaseline />
           <Toaster position="top-right" richColors />
           <RouterProvider router={router} />
+          <ChatAssistant />
         </LocalizationProvider>
       </ThemeProvider>
     </div>
