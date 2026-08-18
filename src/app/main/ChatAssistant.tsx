@@ -5,9 +5,6 @@ import {
 } from '@mui/material';
 import { Close, Mic, MicOff, Send, Check, Clear, ImageOutlined, AttachFile, AutoAwesome, Tune } from '@mui/icons-material';
 import { useAssistantLayout, setAssistantLayout, ASSISTANT_LAYOUTS } from '../data/assistant-layout';
-// Bundled demo fixtures offered as one-tap examples in the empty state.
-import csvSampleUrl from '../../../treatments.csv?url';
-import pngSampleUrl from '../../../farm-ui-screenshot.png?url';
 import { pushCommand, VoiceCommand, AddTreatmentCommand } from '../data/voice-commands';
 import { treatmentsData, usePlots, getPlots } from '../data/plots-data';
 import { getLastOpenedPlot, focusPlotRow, useAssistantOpenSignal } from '../data/plot-focus';
@@ -18,6 +15,31 @@ const PRODUCT_OPTIONS = ['DECIS FLUX®', 'Roundup', 'Bumper 25 EC', 'Confidor', 
 const METHOD_OPTIONS = ['Foliar spray', 'Broadcast', 'Soil drench', 'Seed treatment', 'Drip irrigation'];
 const DOSE_UNIT_OPTIONS = ['L/ha', 'kg/ha', 'ml/ha', 'g/ha'];
 const VOLUME_UNIT_OPTIONS = ['L/ha', 'ml/ha', 'gal/ac'];
+
+// ── Canned demo results ──────────────────────────────────────────────────────
+// The empty-state "sample" chips return these pre-baked extractions instead of
+// calling the API — so the demo is instant, free, and deterministic.
+// CSV sample mirrors treatments.csv (7 active-substance rows).
+const SAMPLE_CSV_COMMANDS: AddTreatmentCommand[] = [
+  { action: 'addTreatment', date: '2025-04-12', product: 'Mancozeb', method: 'Foliar spray', productDoseValue: '1.5', productDoseUnit: 'L/ha', waterVolumeValue: '900', waterVolumeUnit: 'L/ha' },
+  { action: 'addTreatment', date: '2025-04-28', product: 'Glyphosate', method: 'Broadcast', productDoseValue: '1.8', productDoseUnit: 'L/ha', waterVolumeValue: '450', waterVolumeUnit: 'L/ha' },
+  { action: 'addTreatment', date: '2025-05-15', product: 'Imidacloprid', method: 'Soil drench', productDoseValue: '2', productDoseUnit: 'L/ha', waterVolumeValue: '1100', waterVolumeUnit: 'L/ha' },
+  { action: 'addTreatment', date: '2025-06-03', product: 'Captan', method: 'Foliar spray', productDoseValue: '0.8', productDoseUnit: 'L/ha', waterVolumeValue: '700', waterVolumeUnit: 'L/ha' },
+  { action: 'addTreatment', date: '2025-07-20', product: 'Tebuconazole', method: 'Foliar spray', productDoseValue: '0.6', productDoseUnit: 'L/ha', waterVolumeValue: '850', waterVolumeUnit: 'L/ha' },
+  { action: 'addTreatment', date: '2025-08-05', product: 'Chlorpyrifos', method: 'Soil drench', productDoseValue: '1.2', productDoseUnit: 'L/ha', waterVolumeValue: '1000', waterVolumeUnit: 'L/ha' },
+  { action: 'addTreatment', date: '2025-09-10', product: 'Lambda-cyhalothrin', method: 'Foliar spray', productDoseValue: '0.4', productDoseUnit: 'L/ha', waterVolumeValue: '550', waterVolumeUnit: 'L/ha' },
+];
+// Screenshot sample mirrors the AgriTrack Pro journal (8 trade-name rows).
+const SAMPLE_SCREENSHOT_COMMANDS: AddTreatmentCommand[] = [
+  { action: 'addTreatment', date: '2025-04-12', product: 'Mancozeb 80 WP', method: 'Foliar spray', productDoseValue: '1.5', productDoseUnit: 'kg/ha', waterVolumeValue: '900', waterVolumeUnit: 'L/ha' },
+  { action: 'addTreatment', date: '2025-04-28', product: 'Touchdown Quattro', method: 'Broadcast', productDoseValue: '1.8', productDoseUnit: 'L/ha', waterVolumeValue: '450', waterVolumeUnit: 'L/ha' },
+  { action: 'addTreatment', date: '2025-05-15', product: 'Confidor WG 70', method: 'Soil drench', productDoseValue: '2.0', productDoseUnit: 'L/ha', waterVolumeValue: '1100', waterVolumeUnit: 'L/ha' },
+  { action: 'addTreatment', date: '2025-06-03', product: 'Captan 80 WDG', method: 'Foliar spray', productDoseValue: '0.8', productDoseUnit: 'kg/ha', waterVolumeValue: '700', waterVolumeUnit: 'L/ha' },
+  { action: 'addTreatment', date: '2025-06-20', product: 'Folicur EW 250', method: 'Foliar spray', productDoseValue: '0.6', productDoseUnit: 'L/ha', waterVolumeValue: '850', waterVolumeUnit: 'L/ha' },
+  { action: 'addTreatment', date: '2025-07-05', product: 'Dursban 480 EC', method: 'Soil drench', productDoseValue: '1.2', productDoseUnit: 'L/ha', waterVolumeValue: '1000', waterVolumeUnit: 'L/ha' },
+  { action: 'addTreatment', date: '2025-07-22', product: 'Score 250 EC', method: 'Foliar spray', productDoseValue: '0.5', productDoseUnit: 'L/ha', waterVolumeValue: '750', waterVolumeUnit: 'L/ha' },
+  { action: 'addTreatment', date: '2025-08-10', product: 'Karate Zeon', method: 'Foliar spray', productDoseValue: '0.4', productDoseUnit: 'L/ha', waterVolumeValue: '550', waterVolumeUnit: 'L/ha' },
+];
 
 // ── Types ────────────────────────────────────────────────────────────────────
 /** Tracks which fields came from voice vs assumed from previous data */
@@ -590,7 +612,7 @@ function CapabilityRow({ icon, title, desc }: { icon: React.ReactNode; title: st
       <Box sx={{
         width: 32, height: 32, flexShrink: 0, borderRadius: '8px',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        bgcolor: 'rgba(212, 24, 61, 0.08)', color: 'primary.main',
+        bgcolor: 'grey.100', color: 'text.primary',
       }}>
         {icon}
       </Box>
@@ -871,13 +893,30 @@ export function ChatAssistant() {
     else if (file.type === 'text/csv' || file.name.toLowerCase().endsWith('.csv') || file.type.startsWith('text/')) handleCsvAnalysis(file);
   }, [handleImageAnalysis, handleCsvAnalysis]);
 
-  /** Load one of the bundled demo fixtures and run it through the same path as a drop. */
-  const loadSample = useCallback(async (url: string, name: string, type: string) => {
+  /** Demo sample chips: return a canned extraction — no API call. */
+  const runSample = useCallback((source: string, cmds: AddTreatmentCommand[]) => {
     if (loadingRef.current) return;
-    const res = await fetch(url);
-    const blob = await res.blob();
-    handleFile(new File([blob], name, { type }));
-  }, [handleFile]);
+    setEntries(prev => [...prev, { id: ++entryId, role: 'user', content: source }]);
+    setLoading(true);
+    loadingRef.current = true;
+    scrollToBottom();
+    // Brief beat so it reads as "processing", then show the pre-baked proposal.
+    setTimeout(() => {
+      const enriched = cmds.map(c => enrichCommand(c, true));
+      setEntries(prev => [...prev, {
+        id: ++entryId,
+        role: 'pending',
+        content: `Extracted ${cmds.length} treatments.`,
+        commands: cmds,
+        enriched,
+        status: null,
+        source,
+      }]);
+      setLoading(false);
+      loadingRef.current = false;
+      scrollToBottom();
+    }, 650);
+  }, []);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -1035,13 +1074,13 @@ export function ChatAssistant() {
                   <Chip
                     icon={<AttachFile sx={{ fontSize: 15 }} />} label="CSV example" size="small"
                     variant="outlined" color="primary" clickable
-                    onClick={() => loadSample(csvSampleUrl, 'treatments.csv', 'text/csv')}
+                    onClick={() => runSample('📄 treatments.csv', SAMPLE_CSV_COMMANDS)}
                     sx={{ fontSize: '0.72rem', height: 26, borderRadius: '8px' }}
                   />
                   <Chip
                     icon={<ImageOutlined sx={{ fontSize: 15 }} />} label="Screenshot example" size="small"
                     variant="outlined" color="primary" clickable
-                    onClick={() => loadSample(pngSampleUrl, 'farm-ui-screenshot.png', 'image/png')}
+                    onClick={() => runSample('📷 farm-ui-screenshot.png', SAMPLE_SCREENSHOT_COMMANDS)}
                     sx={{ fontSize: '0.72rem', height: 26, borderRadius: '8px' }}
                   />
                 </Stack>
