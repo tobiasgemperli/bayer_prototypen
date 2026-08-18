@@ -15,6 +15,7 @@ import {
 } from '@mui/material';
 import { TableCard } from '../design-system/TableCard';
 import { isPlotDraft, type PlotData } from '../data/plots-data';
+import { useFocusedPlot } from '../data/plot-focus';
 
 type SortField = 'plotName' | 'owner' | 'variety' | 'location' | 'lastTreatment' | 'plantingDate';
 type SortOrder = 'asc' | 'desc';
@@ -33,6 +34,21 @@ export function PlotsTable({ data, selected, onSelectChange, showDraftBadge = fa
   const navigate = useNavigate();
   const [orderBy, setOrderBy] = React.useState<SortField | null>(null);
   const [order, setOrder] = React.useState<SortOrder>('asc');
+
+  // Voice assistant: blink a row when the assistant "browses into" that plot.
+  const focused = useFocusedPlot();
+  React.useEffect(() => {
+    if (!focused) return;
+    const row = document.querySelector<HTMLTableRowElement>(`tr[data-plot-id="${focused.plotId}"]`);
+    if (!row) return;
+    row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    row.classList.remove('plot-blink');
+    void row.offsetWidth; // restart the animation
+    row.classList.add('plot-blink');
+    const clear = () => row.classList.remove('plot-blink');
+    row.addEventListener('animationend', clear, { once: true });
+    return () => row.removeEventListener('animationend', clear);
+  }, [focused]);
 
   const handleSort = (field: SortField) => {
     const isAsc = orderBy === field && order === 'asc';
@@ -178,6 +194,7 @@ export function PlotsTable({ data, selected, onSelectChange, showDraftBadge = fa
                   <TableRow
                     hover
                     key={row.id}
+                    data-plot-id={row.id}
                     selected={isItemSelected}
                     onClick={() => navigate(`/plot/${row.id}`)}
                     sx={{ cursor: 'pointer' }}

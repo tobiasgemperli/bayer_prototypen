@@ -12,6 +12,7 @@ import {
 import { toast } from 'sonner';
 import { usePlots, treatmentsData, TreatmentData, useTreatmentsVersion, TREATMENT_MANDATORY, updateTreatments } from '../data/plots-data';
 import { usePendingCommands, consumeCommands, AddTreatmentCommand } from '../data/voice-commands';
+import { setLastOpenedPlot } from '../data/plot-focus';
 import { ColDef } from 'ag-grid-community';
 import { useDemoMode, setOnboardingStep, setDemoMode, setAuthPhase } from '../data/auth-state';
 import { TreatmentsGrid, TreatmentsGridHandle } from './TreatmentsGrid';
@@ -140,6 +141,7 @@ export function PlotDetailPage({
     setHasUnsavedChanges(false);
     setSearchQuery('');
     setTreatmentCount(treatmentsData.filter(t => t.plotId === id).length);
+    if (id) setLastOpenedPlot(id);
   }, [id]);
 
   useEffect(() => {

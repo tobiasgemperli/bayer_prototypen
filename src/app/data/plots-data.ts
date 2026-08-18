@@ -106,6 +106,9 @@ export function usePlots(): PlotData[] {
   return useSyncExternalStore(subscribe, getSnapshot);
 }
 
+/** Non-reactive read of the current plots (for use outside React). */
+export function getPlots(): PlotData[] { return _plots; }
+
 let _nextId = 100;
 
 export function addPlot(plot: Omit<PlotData, 'id'>): PlotData {

@@ -3,9 +3,10 @@ import {
   Box, IconButton, Paper, Typography, TextField, Fade, CircularProgress,
   Button, Chip, Stack, MenuItem, Select, SelectChangeEvent,
 } from '@mui/material';
-import { Close, Mic, MicOff, Send, Check, Clear, ImageOutlined } from '@mui/icons-material';
+import { Close, Mic, MicOff, Send, Check, Clear, ImageOutlined, AttachFile, AutoAwesome } from '@mui/icons-material';
 import { pushCommand, VoiceCommand, AddTreatmentCommand } from '../data/voice-commands';
-import { treatmentsData } from '../data/plots-data';
+import { treatmentsData, usePlots, getPlots } from '../data/plots-data';
+import { getLastOpenedPlot, focusPlotRow } from '../data/plot-focus';
 import { router } from '../routes';
 
 // ── Domain options (same as TreatmentsGrid) ──────────────────────────────────
@@ -78,10 +79,20 @@ function enrichCommand(cmd: AddTreatmentCommand, fromImage = false): EnrichedTre
   const enriched = { ...cmd, fieldMeta };
 
   // Fields the user explicitly provided
-  const voiceFields = ['product', 'method', 'date', 'productDoseValue', 'productDoseUnit', 'waterVolumeValue', 'waterVolumeUnit'] as const;
+  const voiceFields = ['plotId', 'product', 'method', 'date', 'productDoseValue', 'productDoseUnit', 'waterVolumeValue', 'waterVolumeUnit'] as const;
   for (const f of voiceFields) {
     if (cmd[f]) {
       fieldMeta[f] = { source: 'voice' };
+    }
+  }
+
+  // Plot: if the user didn't say which plot, assume the last-opened plot
+  // (or the first plot in the list) and flag it as an assumption (blue).
+  if (!enriched.plotId) {
+    const assumedPlot = getCurrentPlotId() ?? getLastOpenedPlot() ?? getPlots()[0]?.id;
+    if (assumedPlot) {
+      enriched.plotId = assumedPlot;
+      fieldMeta.plotId = { source: 'assumed' };
     }
   }
 
@@ -170,7 +181,14 @@ When the user sends an IMAGE (screenshot of a spray journal, treatment table, et
 - Include ALL fields you can read: product, method, date (as YYYY-MM-DD), productDoseValue, productDoseUnit, waterVolumeValue, waterVolumeUnit
 - Use the exact product names and values shown in the image
 - After the JSON array, add a summary like "Extracted 8 treatments from screenshot."
-- Product names from screenshots may differ from our dropdown list — that's OK, include them as-is`;
+- Product names from screenshots may differ from our dropdown list — that's OK, include them as-is
+
+When the user sends CSV TEXT (a spray-journal export):
+- Treat the first row as headers and every following row as one treatment
+- Map columns to the fields (application date → date as YYYY-MM-DD, product, method, product dose value + unit, water volume value + unit)
+- Return one addTreatment command per data row, as a JSON array
+- Only fill fields present in the CSV — leave the rest out so the app can auto-fill them
+- After the JSON array, add a summary like "Extracted 7 treatments from CSV."`;
 
 // ── LLM call ─────────────────────────────────────────────────────────────────
 const ANTHROPIC_KEY = import.meta.env.VITE_ANTHROPIC_API_KEY as string | undefined;
@@ -307,17 +325,85 @@ function EditableSelect({ value, options, onChange, assumed, disabled }: {
   );
 }
 
+// ── Table preview for an extracted list of treatments ────────────────────────
+// Columns mirror the plot's treatments grid exactly, in the same order:
+// Application date · Product · Method · Product dose · Dose unit · Water volume · Water unit
+const TABLE_COLS = 'minmax(104px,1.3fr) minmax(140px,1.7fr) minmax(120px,1.5fr) minmax(76px,0.8fr) minmax(84px,0.8fr) minmax(84px,0.8fr) minmax(84px,0.8fr)';
+const TABLE_MIN_WIDTH = 748;
+const TABLE_HEADERS = ['Application date', 'Product', 'Method', 'Product dose', 'Dose unit', 'Water volume', 'Water unit'];
+
+function TreatmentTable({ enrichedList, resolved, entryId, onUpdate }: {
+  enrichedList: EnrichedTreatment[];
+  resolved: boolean;
+  entryId: number;
+  onUpdate: (entryId: number, cmdIndex: number, field: string, value: string) => void;
+}) {
+  const headSx = { fontSize: '0.625rem', fontWeight: 700, color: 'text.secondary', textTransform: 'uppercase', letterSpacing: '0.03em' } as const;
+  const scroll = enrichedList.length > 6;
+  return (
+    <Box sx={{ px: 1.5, pt: 1, pb: 0.5, overflowX: 'auto' }}>
+      <Box sx={{ minWidth: TABLE_MIN_WIDTH }}>
+        {/* Header */}
+        <Box sx={{ display: 'grid', gridTemplateColumns: TABLE_COLS, gap: 0.75, alignItems: 'end', pb: 0.5, borderBottom: 1, borderColor: 'divider' }}>
+          {TABLE_HEADERS.map(h => <Typography key={h} sx={headSx}>{h}</Typography>)}
+        </Box>
+        {/* Rows */}
+        <Box sx={{ maxHeight: scroll ? 320 : undefined, overflowY: scroll ? 'auto' : undefined }}>
+          {enrichedList.map((t, i) => (
+            <Box key={i} sx={{ display: 'grid', gridTemplateColumns: TABLE_COLS, gap: 0.75, alignItems: 'center', py: 0.5, borderBottom: i < enrichedList.length - 1 ? 1 : 0, borderColor: 'divider' }}>
+              <EditableTextField value={t.date || ''} disabled={resolved} assumed={t.fieldMeta.date?.source === 'assumed'} onChange={v => onUpdate(entryId, i, 'date', v)} />
+              <EditableSelect value={t.product || ''} options={PRODUCT_OPTIONS} disabled={resolved} assumed={t.fieldMeta.product?.source === 'assumed'} onChange={v => onUpdate(entryId, i, 'product', v)} />
+              <EditableSelect value={t.method || ''} options={METHOD_OPTIONS} disabled={resolved} assumed={t.fieldMeta.method?.source === 'assumed'} onChange={v => onUpdate(entryId, i, 'method', v)} />
+              <EditableTextField value={t.productDoseValue || ''} disabled={resolved} assumed={t.fieldMeta.productDoseValue?.source === 'assumed'} onChange={v => onUpdate(entryId, i, 'productDoseValue', v)} />
+              <EditableSelect value={t.productDoseUnit || 'L/ha'} options={DOSE_UNIT_OPTIONS} disabled={resolved} assumed={t.fieldMeta.productDoseUnit?.source === 'assumed'} onChange={v => onUpdate(entryId, i, 'productDoseUnit', v)} />
+              <EditableTextField value={t.waterVolumeValue || ''} disabled={resolved} assumed={t.fieldMeta.waterVolumeValue?.source === 'assumed'} onChange={v => onUpdate(entryId, i, 'waterVolumeValue', v)} />
+              <EditableSelect value={t.waterVolumeUnit || 'L/ha'} options={VOLUME_UNIT_OPTIONS} disabled={resolved} assumed={t.fieldMeta.waterVolumeUnit?.source === 'assumed'} onChange={v => onUpdate(entryId, i, 'waterVolumeUnit', v)} />
+            </Box>
+          ))}
+        </Box>
+      </Box>
+    </Box>
+  );
+}
+
+function EditablePlotSelect({ plotId, onChange, assumed, disabled }: {
+  plotId: string; onChange: (v: string) => void; assumed: boolean; disabled: boolean;
+}) {
+  const plots = usePlots();
+  return (
+    <Select
+      size="small" value={plots.some(p => p.id === plotId) ? plotId : ''} disabled={disabled}
+      displayEmpty
+      onChange={(e: SelectChangeEvent) => onChange(e.target.value)}
+      sx={{
+        flex: 1, fontSize: '0.75rem', height: 28, borderRadius: '6px',
+        bgcolor: assumed ? ASSUMED_BG : 'transparent',
+        '& fieldset': { borderColor: assumed ? ASSUMED_BORDER : undefined },
+      }}
+    >
+      {plots.map(p => <MenuItem key={p.id} value={p.id} sx={{ fontSize: '0.75rem' }}>{p.plotName}</MenuItem>)}
+    </Select>
+  );
+}
+
 // ── Pending card with editable fields ────────────────────────────────────────
-function PendingCard({ entry, onAccept, onReject, onUpdate }: {
+function PendingCard({ entry, onAccept, onReject, onUpdate, onPlotChange }: {
   entry: ChatEntry;
   onAccept: () => void;
   onReject: () => void;
   onUpdate: (entryId: number, cmdIndex: number, field: string, value: string) => void;
+  onPlotChange: (plotId: string) => void;
 }) {
   const enrichedList = entry.enriched ?? [];
   const commands = entry.commands ?? [];
   const resolved = entry.status != null;
   const hasAssumptions = enrichedList.some(e => Object.values(e.fieldMeta).some(m => m.source === 'assumed'));
+  const plotId = enrichedList[0]?.plotId ?? '';
+  const plotAssumed = enrichedList[0]?.fieldMeta.plotId?.source === 'assumed';
+  const plots = usePlots();
+  const plotName = plots.find(p => p.id === plotId)?.plotName ?? '';
+  // Accepting will browse to another plot unless we're already on it.
+  const willNavigate = !resolved && enrichedList.length > 0 && !!plotId && getCurrentPlotId() !== plotId;
 
   return (
     <Paper variant="outlined" sx={{
@@ -327,12 +413,26 @@ function PendingCard({ entry, onAccept, onReject, onUpdate }: {
         : 'warning.main',
       opacity: resolved ? 0.7 : 1,
     }}>
-      {enrichedList.length > 1 && (
-        <Box sx={{ px: 1.5, pt: 1 }}>
-          <Chip size="small" label={`${enrichedList.length} treatments`} color="primary" variant="outlined" sx={{ fontSize: '0.7rem', height: 20 }} />
+      {/* Target plot — one selector for the whole proposal */}
+      {enrichedList.length > 0 && (
+        <Box sx={{ px: 1.5, pt: 1.25, pb: 0.25 }}>
+          <FieldRow label="Plot" assumed={plotAssumed}>
+            <EditablePlotSelect
+              plotId={plotId} disabled={resolved} assumed={plotAssumed}
+              onChange={onPlotChange}
+            />
+          </FieldRow>
         </Box>
       )}
-      <Box sx={{ maxHeight: enrichedList.length > 2 ? 300 : undefined, overflowY: enrichedList.length > 2 ? 'auto' : undefined }}>
+      {enrichedList.length > 1 ? (
+        <>
+          <Box sx={{ px: 1.5, pt: 1 }}>
+            <Chip size="small" label={`${enrichedList.length} treatments extracted`} color="primary" variant="outlined" sx={{ fontSize: '0.7rem', height: 20 }} />
+          </Box>
+          <TreatmentTable enrichedList={enrichedList} resolved={resolved} entryId={entry.id} onUpdate={onUpdate} />
+        </>
+      ) : (
+      <Box>
       {enrichedList.map((enriched, i) => (
         <Box key={i} sx={{ px: 1.5, pt: 1, pb: 0.5, borderTop: i > 0 ? 1 : 0, borderColor: 'divider' }}>
           <Typography sx={{ fontSize: '0.7rem', fontWeight: 700, color: 'text.secondary', mb: 0.75 }}>
@@ -395,8 +495,8 @@ function PendingCard({ entry, onAccept, onReject, onUpdate }: {
           </FieldRow>
         </Box>
       ))}
-
       </Box>
+      )}
       {/* Non-treatment commands */}
       {commands.filter(c => c.action !== 'addTreatment').map((cmd, i) => (
         <Box key={`other-${i}`} sx={{ px: 1.5, pt: 1, pb: 0.5 }}>
@@ -411,7 +511,7 @@ function PendingCard({ entry, onAccept, onReject, onUpdate }: {
         <Box sx={{ px: 1.5, pt: 0.25 }}>
           <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, px: 0.75, py: 0.25, borderRadius: '4px', bgcolor: ASSUMED_BG, border: `1px solid ${ASSUMED_BORDER}` }}>
             <Typography sx={{ fontSize: '0.625rem', color: 'info.main' }}>
-              Blue = assumed from previous treatment
+              Blue = assumed (plot & fields auto-filled) — edit before accepting
             </Typography>
           </Box>
         </Box>
@@ -428,6 +528,14 @@ function PendingCard({ entry, onAccept, onReject, onUpdate }: {
           />
         </Box>
       ) : (
+        <>
+        {willNavigate && (
+          <Box sx={{ px: 1.5, pt: 0.75 }}>
+            <Typography sx={{ fontSize: '0.7rem', color: 'info.main', display: 'flex', alignItems: 'center', gap: 0.5 }}>
+              ↪ On accept, I'll open <strong>{plotName || 'the plot'}</strong> and add {enrichedList.length > 1 ? `these ${enrichedList.length} treatments` : 'this treatment'}.
+            </Typography>
+          </Box>
+        )}
         <Stack direction="row" spacing={1} sx={{ px: 1.5, py: 1 }}>
           <Button
             size="small" variant="contained" color="success"
@@ -446,6 +554,7 @@ function PendingCard({ entry, onAccept, onReject, onUpdate }: {
             Reject
           </Button>
         </Stack>
+        </>
       )}
     </Paper>
   );
@@ -456,6 +565,25 @@ function FieldRow({ label, assumed, children }: { label: string; assumed: boolea
     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mb: 0.5 }}>
       <Typography sx={{ fontSize: '0.7rem', color: 'text.secondary', minWidth: 40, flexShrink: 0 }}>{label}</Typography>
       {children}
+    </Box>
+  );
+}
+
+// ── Empty-state capability row ────────────────────────────────────────────────
+function CapabilityRow({ icon, title, desc }: { icon: React.ReactNode; title: string; desc: string }) {
+  return (
+    <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.25 }}>
+      <Box sx={{
+        width: 32, height: 32, flexShrink: 0, borderRadius: '8px',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        bgcolor: 'rgba(212, 24, 61, 0.08)', color: 'primary.main',
+      }}>
+        {icon}
+      </Box>
+      <Box>
+        <Typography sx={{ fontSize: '0.8125rem', fontWeight: 600, lineHeight: 1.3 }}>{title}</Typography>
+        <Typography sx={{ fontSize: '0.75rem', color: 'text.secondary', lineHeight: 1.3 }}>{desc}</Typography>
+      </Box>
     </Box>
   );
 }
@@ -500,6 +628,21 @@ export function ChatAssistant() {
     }));
   }, []);
 
+  /** Retarget every treatment in a proposal to a different plot (one selector
+   *  controls the whole card). Marks the plot as user-confirmed (no longer blue). */
+  const handlePlotUpdate = useCallback((entryId: number, plotId: string) => {
+    setEntries(prev => prev.map(e => {
+      if (e.id !== entryId || !e.enriched) return e;
+      const newEnriched = e.enriched.map(en => ({
+        ...en, plotId,
+        fieldMeta: { ...en.fieldMeta, plotId: { source: 'voice' as const } },
+      }));
+      const newCommands = (e.commands ?? []).map(c =>
+        c.action === 'addTreatment' ? { ...c, plotId } : c);
+      return { ...e, enriched: newEnriched, commands: newCommands };
+    }));
+  }, []);
+
   const acceptPending = useCallback((pendingEntryId?: number) => {
     const target = pendingEntryId != null
       ? entriesRef.current.find(e => e.id === pendingEntryId)
@@ -510,14 +653,34 @@ export function ChatAssistant() {
     setEntries([...entriesRef.current]);
 
     // Use enriched commands (with assumptions + user edits applied)
-    const cmdsToExecute = target.enriched ?? target.commands ?? [];
-    for (const cmd of cmdsToExecute) {
-      if (cmd.action === 'navigate') {
-        router.navigate((cmd as any).to);
-      } else {
-        pushCommand(cmd as VoiceCommand);
-      }
+    const cmdsToExecute = (target.enriched ?? target.commands ?? []) as VoiceCommand[];
+    const treatmentCmds = cmdsToExecute.filter(c => c.action === 'addTreatment') as AddTreatmentCommand[];
+    const otherCmds = cmdsToExecute.filter(c => c.action !== 'addTreatment');
+
+    for (const cmd of otherCmds) {
+      if (cmd.action === 'navigate') router.navigate((cmd as any).to);
+      else pushCommand(cmd);
     }
+
+    if (treatmentCmds.length === 0) return;
+
+    // The proposal's target plot (assumed = last-opened / first in list).
+    const targetPlot = treatmentCmds[0].plotId ?? getLastOpenedPlot() ?? getPlots()[0]?.id;
+    if (!targetPlot) return;
+
+    // Already viewing that plot → add inline (existing row-pulse highlight).
+    if (getCurrentPlotId() === targetPlot) {
+      treatmentCmds.forEach(c => pushCommand(c));
+      return;
+    }
+
+    // Otherwise browse into it: show the list, blink the plot row, then open it.
+    router.navigate('/');
+    setTimeout(() => focusPlotRow(targetPlot), 350);
+    setTimeout(() => {
+      treatmentCmds.forEach(c => pushCommand(c));
+      router.navigate(`/plot/${targetPlot}`);
+    }, 1600);
   }, [findPendingEntry]);
 
   const rejectPending = useCallback((pendingEntryId?: number) => {
@@ -597,8 +760,9 @@ export function ChatAssistant() {
     scrollToBottom();
   }, [acceptPending, rejectPending]);
 
-  // ── Image drop / paste handling ───────────────────────────────────────────
+  // ── File drop / paste handling (images + CSV) ─────────────────────────────
   const [dragging, setDragging] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const fileToBase64 = (file: File): Promise<{ data: string; mediaType: string }> =>
     new Promise((resolve, reject) => {
@@ -612,28 +776,21 @@ export function ChatAssistant() {
       reader.readAsDataURL(file);
     });
 
-  const handleImageAnalysis = useCallback(async (file: File) => {
+  /** Run one extraction turn (image or CSV) through the LLM and show a pending card.
+   *  Extracted rows are enriched so any field the extractor couldn't read is
+   *  auto-filled from the last treatment and highlighted blue. */
+  const runExtraction = useCallback(async (
+    userLabel: string,
+    llmContent: string | LLMContentBlock[],
+    fallbackSummary: string,
+  ) => {
     if (loadingRef.current) return;
-    const { data, mediaType } = await fileToBase64(file);
-
-    // Show image thumbnail as user entry
-    const thumbUrl = URL.createObjectURL(file);
-    const userEntry: ChatEntry = { id: ++entryId, role: 'user', content: `📷 Screenshot dropped` };
-    setEntries(prev => [...prev, userEntry]);
+    setEntries(prev => [...prev, { id: ++entryId, role: 'user', content: userLabel }]);
     setLoading(true);
     loadingRef.current = true;
     scrollToBottom();
 
-    // Build message with image for Claude Vision
-    const imageMessage: LLMMessage = {
-      role: 'user',
-      content: [
-        { type: 'image', source: { type: 'base64', media_type: mediaType, data } },
-        { type: 'text', text: 'Extract all treatment/application rows from this screenshot and return them as addTreatment commands.' },
-      ],
-    };
-    llmHistoryRef.current.push(imageMessage);
-
+    llmHistoryRef.current.push({ role: 'user', content: llmContent });
     const abort = new AbortController();
     abortRef.current = abort;
 
@@ -646,32 +803,18 @@ export function ChatAssistant() {
       const messageCommands = commands.filter(c => c.action === 'message');
 
       if (actionCommands.length > 0) {
-        // All fields from image are explicit — mark as 'voice' source
-        const enriched = actionCommands.map(c => {
-          const cmd = c as AddTreatmentCommand;
-          const fieldMeta: Record<string, FieldMeta> = {};
-          for (const f of ['product', 'method', 'date', 'productDoseValue', 'productDoseUnit', 'waterVolumeValue', 'waterVolumeUnit'] as const) {
-            if (cmd[f]) fieldMeta[f] = { source: 'voice' };
-          }
-          return { ...cmd, fieldMeta } as EnrichedTreatment;
-        });
-
-        const pendingEntry: ChatEntry = {
+        const enriched = actionCommands.map(c => enrichCommand(c as AddTreatmentCommand, true));
+        setEntries(prev => [...prev, {
           id: ++entryId,
           role: 'pending',
-          content: display || `Extracted ${actionCommands.length} treatments from screenshot.`,
+          content: display || fallbackSummary,
           commands: actionCommands,
           enriched,
           status: null,
-        };
-        setEntries(prev => [...prev, pendingEntry]);
-      }
-
-      if (display && actionCommands.length === 0) {
-        setEntries(prev => [...prev, { id: ++entryId, role: 'assistant', content: display }]);
-      } else if (messageCommands.length > 0) {
-        const msgText = messageCommands.map(c => (c as any).text).join('\n');
-        if (msgText) setEntries(prev => [...prev, { id: ++entryId, role: 'assistant', content: msgText }]);
+        }]);
+      } else {
+        const msg = display || messageCommands.map(c => (c as any).text).join('\n');
+        if (msg) setEntries(prev => [...prev, { id: ++entryId, role: 'assistant', content: msg }]);
       }
     } catch (e: any) {
       if (e.name !== 'AbortError') {
@@ -682,16 +825,40 @@ export function ChatAssistant() {
     setLoading(false);
     loadingRef.current = false;
     scrollToBottom();
-  }, [acceptPending, rejectPending]);
+  }, []);
+
+  const handleImageAnalysis = useCallback(async (file: File) => {
+    const { data, mediaType } = await fileToBase64(file);
+    runExtraction(
+      `📷 ${file.name || 'Screenshot'}`,
+      [
+        { type: 'image', source: { type: 'base64', media_type: mediaType, data } },
+        { type: 'text', text: 'Extract all treatment/application rows from this image and return them as addTreatment commands.' },
+      ],
+      'Extracted treatments from screenshot.',
+    );
+  }, [runExtraction]);
+
+  const handleCsvAnalysis = useCallback(async (file: File) => {
+    const text = await file.text();
+    runExtraction(
+      `📄 ${file.name}`,
+      `Here is a CSV export of a spray journal. Extract every data row as an addTreatment command.\n\n${text}`,
+      'Extracted treatments from CSV.',
+    );
+  }, [runExtraction]);
+
+  const handleFile = useCallback((file: File) => {
+    if (file.type.startsWith('image/')) handleImageAnalysis(file);
+    else if (file.type === 'text/csv' || file.name.toLowerCase().endsWith('.csv') || file.type.startsWith('text/')) handleCsvAnalysis(file);
+  }, [handleImageAnalysis, handleCsvAnalysis]);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     setDragging(false);
     const file = e.dataTransfer.files[0];
-    if (file && file.type.startsWith('image/')) {
-      handleImageAnalysis(file);
-    }
-  }, [handleImageAnalysis]);
+    if (file) handleFile(file);
+  }, [handleFile]);
 
   const handlePaste = useCallback((e: React.ClipboardEvent) => {
     const items = e.clipboardData.items;
@@ -717,6 +884,9 @@ export function ChatAssistant() {
 
   useEffect(() => { return () => abortRef.current?.abort(); }, []);
 
+  // Widen the panel once an extracted list (>1 treatment) is on screen
+  const wide = entries.some(e => (e.enriched?.length ?? 0) > 1);
+
   return (
     <Box sx={{ position: 'fixed', right: 16, bottom: 16, zIndex: 1300 }}>
       {open && <Box onClick={() => setOpen(false)} sx={{ position: 'fixed', inset: 0 }} />}
@@ -730,7 +900,9 @@ export function ChatAssistant() {
           onPaste={handlePaste}
           sx={{
             position: 'absolute', bottom: 'calc(100% + 8px)', right: 0,
-            width: 420, height: 600, display: 'flex', flexDirection: 'column',
+            width: wide ? 880 : 420, maxWidth: 'calc(100vw - 32px)',
+            height: 600, display: 'flex', flexDirection: 'column',
+            transition: 'width 0.25s ease',
             borderRadius: '12px', overflow: 'hidden',
             border: dragging ? '2px dashed' : undefined,
             borderColor: dragging ? 'primary.main' : undefined,
@@ -738,7 +910,7 @@ export function ChatAssistant() {
         >
           {/* Header */}
           <Box sx={{ px: 2, py: 1.5, display: 'flex', alignItems: 'center', borderBottom: 1, borderColor: 'divider' }}>
-            <Typography sx={{ flex: 1, fontSize: '0.875rem', fontWeight: 700 }}>Voice Control</Typography>
+            <Typography sx={{ flex: 1, fontSize: '0.875rem', fontWeight: 700 }}>Assistant</Typography>
             <IconButton size="small" onClick={() => setOpen(false)}><Close fontSize="small" /></IconButton>
           </Box>
 
@@ -750,9 +922,9 @@ export function ChatAssistant() {
               bgcolor: 'rgba(255,255,255,0.92)', gap: 1,
             }}>
               <ImageOutlined sx={{ fontSize: 48, color: 'primary.main' }} />
-              <Typography sx={{ fontWeight: 700, color: 'primary.main' }}>Drop screenshot here</Typography>
+              <Typography sx={{ fontWeight: 700, color: 'primary.main' }}>Drop screenshot or CSV here</Typography>
               <Typography sx={{ fontSize: '0.75rem', color: 'text.secondary' }}>
-                We'll extract treatments from the image
+                We'll extract treatments from the file
               </Typography>
             </Box>
           )}
@@ -760,19 +932,49 @@ export function ChatAssistant() {
           {/* Entries */}
           <Box ref={scrollRef} sx={{ flex: 1, overflowY: 'auto', p: 2, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
             {entries.length === 0 && (
-              <Typography sx={{ color: 'text.secondary', fontSize: '0.8125rem', textAlign: 'center', mt: 4, whiteSpace: 'pre-wrap' }}>
-                {'Tap the mic and speak to control the app.\n\nTry: "Add a treatment with Roundup"\n\nYou can also drop a screenshot of a spray journal to extract treatments automatically.\n\nMissing fields are auto-filled from previous treatments (shown in blue). Edit any field before accepting.'}
-              </Typography>
+              <Box sx={{ mt: 2, px: 0.5 }}>
+                <Box sx={{ textAlign: 'center' }}>
+                  <Box sx={{
+                    width: 52, height: 52, borderRadius: '50%', mx: 'auto',
+                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                    bgcolor: 'rgba(212, 24, 61, 0.08)',
+                  }}>
+                    <AutoAwesome sx={{ color: 'primary.main', fontSize: 26 }} />
+                  </Box>
+                  <Typography sx={{ fontWeight: 700, fontSize: '0.95rem', mt: 1.25 }}>How can I help?</Typography>
+                  <Typography sx={{ color: 'text.secondary', fontSize: '0.8rem', mt: 0.5 }}>
+                    Speak, type, or drop a file — I'll turn it into treatments for you to review.
+                  </Typography>
+                </Box>
+
+                <Stack spacing={1.5} sx={{ mt: 3 }}>
+                  <CapabilityRow icon={<Mic sx={{ fontSize: 18 }} />} title="Speak or type a command" desc="“Add Roundup, 2 litres per hectare”" />
+                  <CapabilityRow icon={<AttachFile sx={{ fontSize: 18 }} />} title="Drop a screenshot or CSV" desc="Extract a whole spray journal at once" />
+                  <CapabilityRow icon={<Check sx={{ fontSize: 18 }} />} title="Review, then accept" desc="Anything I guessed is shown in blue" />
+                </Stack>
+
+                <Typography sx={{ fontSize: '0.7rem', color: 'text.secondary', mt: 3, mb: 1 }}>Try one:</Typography>
+                <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 1 }}>
+                  {['Add Roundup 2 L/ha', 'Add Confidor, soil drench', 'Add DECIS FLUX®'].map(ex => (
+                    <Chip
+                      key={ex} label={ex} size="small" variant="outlined" clickable
+                      onClick={() => doSend(ex)}
+                      sx={{ fontSize: '0.72rem', height: 26, borderRadius: '8px' }}
+                    />
+                  ))}
+                </Stack>
+              </Box>
             )}
             {entries.map((entry) => {
               if (entry.role === 'pending') {
                 return (
-                  <Box key={entry.id} sx={{ alignSelf: 'flex-start', maxWidth: '95%' }}>
+                  <Box key={entry.id} sx={{ alignSelf: 'flex-start', width: '100%', maxWidth: '100%' }}>
                     <PendingCard
                       entry={entry}
                       onAccept={() => acceptPending(entry.id)}
                       onReject={() => rejectPending(entry.id)}
                       onUpdate={handleFieldUpdate}
+                      onPlotChange={(plotId) => handlePlotUpdate(entry.id, plotId)}
                     />
                   </Box>
                 );
@@ -813,6 +1015,21 @@ export function ChatAssistant() {
 
           {/* Input bar */}
           <Box sx={{ p: 1.5, borderTop: 1, borderColor: 'divider', display: 'flex', gap: 1, alignItems: 'flex-end' }}>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*,.csv,text/csv"
+              hidden
+              onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); e.target.value = ''; }}
+            />
+            <IconButton
+              size="small"
+              onClick={() => fileInputRef.current?.click()}
+              sx={{ color: 'text.secondary' }}
+              title="Attach screenshot or CSV"
+            >
+              <AttachFile />
+            </IconButton>
             <IconButton
               size="small"
               onClick={listening ? stopListening : startListening}

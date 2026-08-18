@@ -16,3 +16,13 @@
 .ag-row.voice-highlight .ag-cell {
   transition: none !important;
 }
+
+/* Voice command: blink a plots-list row before "browsing into" the plot */
+@keyframes plot-row-blink {
+  0%, 100% { background-color: transparent; }
+  20%, 60% { background-color: rgba(212, 24, 61, 0.22); }
+  40%, 80% { background-color: rgba(212, 24, 61, 0.04); }
+}
+tr.plot-blink {
+  animation: plot-row-blink 1.2s ease-in-out 1;
+}
