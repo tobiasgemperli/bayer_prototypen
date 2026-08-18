@@ -30,3 +30,22 @@ export function useFocusedPlot(): FocusState | null {
     () => _focus,
   );
 }
+
+// ── Open-assistant signal ─────────────────────────────────────────────────────
+// Inline entry points (e.g. the Treatments toolbar) ask the global assistant to
+// open. `nonce` re-fires even if it's already been requested before.
+
+let _openNonce = 0;
+const _openListeners = new Set<() => void>();
+
+export function requestAssistantOpen(): void {
+  _openNonce++;
+  _openListeners.forEach(l => l());
+}
+
+export function useAssistantOpenSignal(): number {
+  return useSyncExternalStore(
+    cb => { _openListeners.add(cb); return () => _openListeners.delete(cb); },
+    () => _openNonce,
+  );
+}

@@ -7,12 +7,12 @@ import {
 } from '@mui/material';
 import {
   Add, Save, Search, NavigateNext, ArrowForward,
-  ContentCopy, Download, PictureAsPdf, DeleteOutline, SwapHoriz
+  ContentCopy, Download, PictureAsPdf, DeleteOutline, SwapHoriz, AutoAwesome
 } from '@mui/icons-material';
 import { toast } from 'sonner';
-import { usePlots, treatmentsData, TreatmentData, useTreatmentsVersion, TREATMENT_MANDATORY, updateTreatments } from '../data/plots-data';
+import { usePlots, treatmentsData, TreatmentData, useTreatmentsVersion, TREATMENT_MANDATORY, updateTreatments, removeTreatments } from '../data/plots-data';
 import { usePendingCommands, consumeCommands, AddTreatmentCommand } from '../data/voice-commands';
-import { setLastOpenedPlot } from '../data/plot-focus';
+import { setLastOpenedPlot, requestAssistantOpen } from '../data/plot-focus';
 import { ColDef } from 'ag-grid-community';
 import { useDemoMode, setOnboardingStep, setDemoMode, setAuthPhase } from '../data/auth-state';
 import { TreatmentsGrid, TreatmentsGridHandle } from './TreatmentsGrid';
@@ -156,10 +156,11 @@ export function PlotDetailPage({
     const cmds = consumeCommands();
     if (cmds.length === 0) return;
 
+    const addedIds: string[] = [];
     for (const cmd of cmds) {
       if (cmd.action === 'addTreatment') {
         const tc = cmd as AddTreatmentCommand;
-        const newId = `voice-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+        const newId = `voice-${Date.now()}-${Math.random().toString(36).slice(2, 6)}-${addedIds.length}`;
         const treatment: TreatmentData = {
           id: newId,
           plotId: tc.plotId || id!,
@@ -173,24 +174,41 @@ export function PlotDetailPage({
           type: 'Real',
         };
         updateTreatments([treatment]);
-        setActiveTab(0); // switch to Treatments tab
-        setGridKey(k => k + 1); // remount grid to pick up new data
-        toast.success(`Treatment added: ${tc.product || 'New treatment'}`);
-
-        // Highlight the new row with a pulse animation after grid remounts
-        setTimeout(() => {
-          const row = document.querySelector(`[row-id="${newId}"]`);
-          if (row) {
-            row.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            row.classList.add('voice-highlight');
-            row.addEventListener('animationend', () => row.classList.remove('voice-highlight'), { once: true });
-          }
-        }, 300);
+        addedIds.push(newId);
       } else if (cmd.action === 'save') {
         handleCreateTreatment();
       } else if (cmd.action === 'navigate') {
         navigate((cmd as any).to);
       }
+    }
+
+    if (addedIds.length > 0) {
+      setActiveTab(0); // switch to Treatments tab
+      setGridKey(k => k + 1); // remount grid to pick up new data
+
+      // F1: single toast for the whole batch, with an Undo action.
+      const n = addedIds.length;
+      toast.success(`${n} treatment${n !== 1 ? 's' : ''} added`, {
+        action: {
+          label: 'Undo',
+          onClick: () => {
+            removeTreatments(addedIds);
+            setGridKey(k => k + 1);
+            toast.info(`${n} treatment${n !== 1 ? 's' : ''} removed`);
+          },
+        },
+      });
+
+      // Pulse every newly added row after the grid remounts.
+      setTimeout(() => {
+        addedIds.forEach((rid, idx) => {
+          const row = document.querySelector(`[row-id="${rid}"]`);
+          if (!row) return;
+          if (idx === 0) row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          row.classList.add('voice-highlight');
+          row.addEventListener('animationend', () => row.classList.remove('voice-highlight'), { once: true });
+        });
+      }, 300);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pendingCommands]);
@@ -403,6 +421,11 @@ export function PlotDetailPage({
                 </SecondaryTabs>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                   {treatmentsCustomization?.toolbarExtras}
+                  <Button variant="outlined" color="primary" startIcon={<AutoAwesome />}
+                    onClick={() => requestAssistantOpen()}
+                    sx={{ px: 2, height: 36, fontWeight: 600, borderRadius: '8px', textTransform: 'none' }}>
+                    Import with AI
+                  </Button>
                   <Button variant="soft" color="primary" startIcon={<Add />}
                     onClick={handleAddTreatment}
                     sx={{ px: 2, height: 36, fontWeight: 600, borderRadius: '8px', textTransform: 'none' }}>

@@ -6,7 +6,7 @@ import {
 import { Close, Mic, MicOff, Send, Check, Clear, ImageOutlined, AttachFile, AutoAwesome } from '@mui/icons-material';
 import { pushCommand, VoiceCommand, AddTreatmentCommand } from '../data/voice-commands';
 import { treatmentsData, usePlots, getPlots } from '../data/plots-data';
-import { getLastOpenedPlot, focusPlotRow } from '../data/plot-focus';
+import { getLastOpenedPlot, focusPlotRow, useAssistantOpenSignal } from '../data/plot-focus';
 import { router } from '../routes';
 
 // ── Domain options (same as TreatmentsGrid) ──────────────────────────────────
@@ -32,6 +32,8 @@ interface ChatEntry {
   commands?: VoiceCommand[];
   enriched?: EnrichedTreatment[];
   status?: 'accepted' | 'rejected' | null;
+  /** Where an extracted proposal came from, e.g. "📄 treatments.csv" or "📷 screenshot". */
+  source?: string;
 }
 
 type LLMContentBlock =
@@ -413,9 +415,17 @@ function PendingCard({ entry, onAccept, onReject, onUpdate, onPlotChange }: {
         : 'warning.main',
       opacity: resolved ? 0.7 : 1,
     }}>
+      {/* Provenance — where this proposal came from */}
+      {entry.source && (
+        <Box sx={{ px: 1.5, pt: 1.25 }}>
+          <Typography sx={{ fontSize: '0.7rem', color: 'text.secondary' }}>
+            Source: <Box component="span" sx={{ fontWeight: 600, color: 'text.primary' }}>{entry.source}</Box>
+          </Typography>
+        </Box>
+      )}
       {/* Target plot — one selector for the whole proposal */}
       {enrichedList.length > 0 && (
-        <Box sx={{ px: 1.5, pt: 1.25, pb: 0.25 }}>
+        <Box sx={{ px: 1.5, pt: entry.source ? 0.75 : 1.25, pb: 0.25 }}>
           <FieldRow label="Plot" assumed={plotAssumed}>
             <EditablePlotSelect
               plotId={plotId} disabled={resolved} assumed={plotAssumed}
@@ -783,6 +793,7 @@ export function ChatAssistant() {
     userLabel: string,
     llmContent: string | LLMContentBlock[],
     fallbackSummary: string,
+    source: string,
   ) => {
     if (loadingRef.current) return;
     setEntries(prev => [...prev, { id: ++entryId, role: 'user', content: userLabel }]);
@@ -811,6 +822,7 @@ export function ChatAssistant() {
           commands: actionCommands,
           enriched,
           status: null,
+          source,
         }]);
       } else {
         const msg = display || messageCommands.map(c => (c as any).text).join('\n');
@@ -836,6 +848,7 @@ export function ChatAssistant() {
         { type: 'text', text: 'Extract all treatment/application rows from this image and return them as addTreatment commands.' },
       ],
       'Extracted treatments from screenshot.',
+      `📷 ${file.name || 'screenshot'}`,
     );
   }, [runExtraction]);
 
@@ -845,6 +858,7 @@ export function ChatAssistant() {
       `📄 ${file.name}`,
       `Here is a CSV export of a spray journal. Extract every data row as an addTreatment command.\n\n${text}`,
       'Extracted treatments from CSV.',
+      `📄 ${file.name}`,
     );
   }, [runExtraction]);
 
@@ -883,6 +897,10 @@ export function ChatAssistant() {
   };
 
   useEffect(() => { return () => abortRef.current?.abort(); }, []);
+
+  // F4: inline entry points (e.g. the Treatments toolbar) can open the assistant.
+  const openSignal = useAssistantOpenSignal();
+  useEffect(() => { if (openSignal > 0) setOpen(true); }, [openSignal]);
 
   // Widen the panel once an extracted list (>1 treatment) is on screen
   const wide = entries.some(e => (e.enriched?.length ?? 0) > 1);
@@ -1063,7 +1081,7 @@ export function ChatAssistant() {
           '&:hover': { bgcolor: 'primary.dark' },
         }}
       >
-        {open ? <Close /> : <Mic />}
+        {open ? <Close /> : <AutoAwesome />}
       </IconButton>
     </Box>
   );

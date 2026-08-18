@@ -187,6 +187,15 @@ export function updateTreatments(updates: TreatmentData[]): void {
   emitTreatmentChange();
 }
 
+/** Remove treatments by id (used to undo an assistant insert). */
+export function removeTreatments(ids: string[]): void {
+  const set = new Set(ids);
+  for (let i = treatmentsData.length - 1; i >= 0; i--) {
+    if (set.has(treatmentsData[i].id)) treatmentsData.splice(i, 1);
+  }
+  emitTreatmentChange();
+}
+
 // ── Draft / completeness model (system-managed) ─────────────────────────────────
 // A record is a Draft until all mandatory fields are filled. Completeness is derived,
 // never stored — the system decides Draft vs Complete from the data itself.
