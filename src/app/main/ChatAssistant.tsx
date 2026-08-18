@@ -5,6 +5,9 @@ import {
 } from '@mui/material';
 import { Close, Mic, MicOff, Send, Check, Clear, ImageOutlined, AttachFile, AutoAwesome, Tune } from '@mui/icons-material';
 import { useAssistantLayout, setAssistantLayout, ASSISTANT_LAYOUTS } from '../data/assistant-layout';
+// Bundled demo fixtures offered as one-tap examples in the empty state.
+import csvSampleUrl from '../../../treatments.csv?url';
+import pngSampleUrl from '../../../farm-ui-screenshot.png?url';
 import { pushCommand, VoiceCommand, AddTreatmentCommand } from '../data/voice-commands';
 import { treatmentsData, usePlots, getPlots } from '../data/plots-data';
 import { getLastOpenedPlot, focusPlotRow, useAssistantOpenSignal } from '../data/plot-focus';
@@ -868,6 +871,14 @@ export function ChatAssistant() {
     else if (file.type === 'text/csv' || file.name.toLowerCase().endsWith('.csv') || file.type.startsWith('text/')) handleCsvAnalysis(file);
   }, [handleImageAnalysis, handleCsvAnalysis]);
 
+  /** Load one of the bundled demo fixtures and run it through the same path as a drop. */
+  const loadSample = useCallback(async (url: string, name: string, type: string) => {
+    if (loadingRef.current) return;
+    const res = await fetch(url);
+    const blob = await res.blob();
+    handleFile(new File([blob], name, { type }));
+  }, [handleFile]);
+
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     setDragging(false);
@@ -1017,6 +1028,22 @@ export function ChatAssistant() {
                       sx={{ fontSize: '0.72rem', height: 26, borderRadius: '8px' }}
                     />
                   ))}
+                </Stack>
+
+                <Typography sx={{ fontSize: '0.7rem', color: 'text.secondary', mt: 2, mb: 1 }}>Or import a sample:</Typography>
+                <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 1 }}>
+                  <Chip
+                    icon={<AttachFile sx={{ fontSize: 15 }} />} label="CSV example" size="small"
+                    variant="outlined" color="primary" clickable
+                    onClick={() => loadSample(csvSampleUrl, 'treatments.csv', 'text/csv')}
+                    sx={{ fontSize: '0.72rem', height: 26, borderRadius: '8px' }}
+                  />
+                  <Chip
+                    icon={<ImageOutlined sx={{ fontSize: 15 }} />} label="Screenshot example" size="small"
+                    variant="outlined" color="primary" clickable
+                    onClick={() => loadSample(pngSampleUrl, 'farm-ui-screenshot.png', 'image/png')}
+                    sx={{ fontSize: '0.72rem', height: 26, borderRadius: '8px' }}
+                  />
                 </Stack>
               </Box>
             )}
