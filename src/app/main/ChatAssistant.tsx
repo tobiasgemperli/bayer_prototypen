@@ -3,7 +3,7 @@ import {
   Box, IconButton, Paper, Typography, TextField, Fade, CircularProgress,
   Button, Chip, Stack, MenuItem, Select, SelectChangeEvent,
 } from '@mui/material';
-import { Close, Mic, MicOff, Send, Check, Clear } from '@mui/icons-material';
+import { Close, Mic, MicOff, Send, Check, Clear, ImageOutlined } from '@mui/icons-material';
 import { pushCommand, VoiceCommand, AddTreatmentCommand } from '../data/voice-commands';
 import { treatmentsData } from '../data/plots-data';
 import { router } from '../routes';
@@ -33,9 +33,13 @@ interface ChatEntry {
   status?: 'accepted' | 'rejected' | null;
 }
 
+type LLMContentBlock =
+  | { type: 'text'; text: string }
+  | { type: 'image'; source: { type: 'base64'; media_type: string; data: string } };
+
 interface LLMMessage {
   role: 'user' | 'assistant';
-  content: string;
+  content: string | LLMContentBlock[];
 }
 
 let entryId = 0;
@@ -66,8 +70,9 @@ function getLastTreatment(): Record<string, string> | null {
   };
 }
 
-/** Enrich a command with assumptions from previous data */
-function enrichCommand(cmd: AddTreatmentCommand): EnrichedTreatment {
+/** Enrich a command with assumptions from previous data.
+ *  If fromImage=true, all provided fields are treated as explicit (not assumed). */
+function enrichCommand(cmd: AddTreatmentCommand, fromImage = false): EnrichedTreatment {
   const last = getLastTreatment();
   const fieldMeta: Record<string, FieldMeta> = {};
   const enriched = { ...cmd, fieldMeta };
@@ -157,7 +162,15 @@ User: "yes" / "accept"
 → {"action":"approve"}
 
 User: "no" / "reject"
-→ {"action":"reject"}`;
+→ {"action":"reject"}
+
+When the user sends an IMAGE (screenshot of a spray journal, treatment table, etc.):
+- Analyze the image and extract ALL treatment/application rows visible in the table
+- Return an array of addTreatment commands, one per row
+- Include ALL fields you can read: product, method, date (as YYYY-MM-DD), productDoseValue, productDoseUnit, waterVolumeValue, waterVolumeUnit
+- Use the exact product names and values shown in the image
+- After the JSON array, add a summary like "Extracted 8 treatments from screenshot."
+- Product names from screenshots may differ from our dropdown list — that's OK, include them as-is`;
 
 // ── LLM call ─────────────────────────────────────────────────────────────────
 const ANTHROPIC_KEY = import.meta.env.VITE_ANTHROPIC_API_KEY as string | undefined;
@@ -166,7 +179,7 @@ async function callLLM(messages: LLMMessage[], signal: AbortSignal): Promise<str
   if (ANTHROPIC_KEY) {
     const body = {
       model: 'claude-sonnet-4-6',
-      max_tokens: 1024,
+      max_tokens: 4096,
       system: SYSTEM_PROMPT,
       messages: messages.map(m => ({ role: m.role, content: m.content })),
     };
@@ -190,17 +203,30 @@ async function callLLM(messages: LLMMessage[], signal: AbortSignal): Promise<str
 
 function parseResponse(text: string): { commands: VoiceCommand[]; display: string } {
   const trimmed = text.trim();
-  const jsonMatch = trimmed.match(/^(\{[\s\S]*?\}|\[[\s\S]*?\])/);
   const commands: VoiceCommand[] = [];
   let rest = trimmed;
-  if (jsonMatch) {
-    try {
-      const parsed = JSON.parse(jsonMatch[1]);
-      if (Array.isArray(parsed)) commands.push(...parsed);
-      else commands.push(parsed);
-      rest = trimmed.slice(jsonMatch[1].length).trim();
-    } catch { /* plain text */ }
+
+  // Try to extract JSON — find the first { or [ and parse from there
+  const firstBrace = trimmed.indexOf('{');
+  const firstBracket = trimmed.indexOf('[');
+  const jsonStart = firstBrace >= 0 && (firstBracket < 0 || firstBrace < firstBracket) ? firstBrace : firstBracket;
+
+  if (jsonStart >= 0) {
+    const jsonStr = trimmed.slice(jsonStart);
+    // Try progressively shorter substrings to find valid JSON
+    for (let end = jsonStr.length; end > 0; end--) {
+      try {
+        const candidate = jsonStr.slice(0, end);
+        const parsed = JSON.parse(candidate);
+        if (Array.isArray(parsed)) commands.push(...parsed);
+        else if (typeof parsed === 'object') commands.push(parsed);
+        rest = trimmed.slice(0, jsonStart).trim() + ' ' + jsonStr.slice(end).trim();
+        rest = rest.trim();
+        break;
+      } catch { continue; }
+    }
   }
+
   let display = rest;
   if (!display && commands.length === 1 && commands[0].action === 'message') {
     display = (commands[0] as any).text;
@@ -264,6 +290,8 @@ function EditableTextField({ value, onChange, assumed, disabled }: {
 function EditableSelect({ value, options, onChange, assumed, disabled }: {
   value: string; options: string[]; onChange: (v: string) => void; assumed: boolean; disabled: boolean;
 }) {
+  // Include current value in options if it's not in the predefined list (e.g. from screenshot)
+  const allOptions = options.includes(value) || !value ? options : [value, ...options];
   return (
     <Select
       size="small" value={value} disabled={disabled}
@@ -274,7 +302,7 @@ function EditableSelect({ value, options, onChange, assumed, disabled }: {
         '& fieldset': { borderColor: assumed ? ASSUMED_BORDER : undefined },
       }}
     >
-      {options.map(o => <MenuItem key={o} value={o} sx={{ fontSize: '0.75rem' }}>{o}</MenuItem>)}
+      {allOptions.map(o => <MenuItem key={o} value={o} sx={{ fontSize: '0.75rem' }}>{o}</MenuItem>)}
     </Select>
   );
 }
@@ -299,10 +327,16 @@ function PendingCard({ entry, onAccept, onReject, onUpdate }: {
         : 'warning.main',
       opacity: resolved ? 0.7 : 1,
     }}>
+      {enrichedList.length > 1 && (
+        <Box sx={{ px: 1.5, pt: 1 }}>
+          <Chip size="small" label={`${enrichedList.length} treatments`} color="primary" variant="outlined" sx={{ fontSize: '0.7rem', height: 20 }} />
+        </Box>
+      )}
+      <Box sx={{ maxHeight: enrichedList.length > 2 ? 300 : undefined, overflowY: enrichedList.length > 2 ? 'auto' : undefined }}>
       {enrichedList.map((enriched, i) => (
-        <Box key={i} sx={{ px: 1.5, pt: 1, pb: 0.5 }}>
+        <Box key={i} sx={{ px: 1.5, pt: 1, pb: 0.5, borderTop: i > 0 ? 1 : 0, borderColor: 'divider' }}>
           <Typography sx={{ fontSize: '0.7rem', fontWeight: 700, color: 'text.secondary', mb: 0.75 }}>
-            Add treatment
+            {enrichedList.length > 1 ? `Treatment ${i + 1}` : 'Add treatment'}
           </Typography>
 
           {/* Product */}
@@ -362,6 +396,7 @@ function PendingCard({ entry, onAccept, onReject, onUpdate }: {
         </Box>
       ))}
 
+      </Box>
       {/* Non-treatment commands */}
       {commands.filter(c => c.action !== 'addTreatment').map((cmd, i) => (
         <Box key={`other-${i}`} sx={{ px: 1.5, pt: 1, pb: 0.5 }}>
@@ -562,6 +597,112 @@ export function ChatAssistant() {
     scrollToBottom();
   }, [acceptPending, rejectPending]);
 
+  // ── Image drop / paste handling ───────────────────────────────────────────
+  const [dragging, setDragging] = useState(false);
+
+  const fileToBase64 = (file: File): Promise<{ data: string; mediaType: string }> =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = reader.result as string;
+        const data = result.split(',')[1];
+        resolve({ data, mediaType: file.type });
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+
+  const handleImageAnalysis = useCallback(async (file: File) => {
+    if (loadingRef.current) return;
+    const { data, mediaType } = await fileToBase64(file);
+
+    // Show image thumbnail as user entry
+    const thumbUrl = URL.createObjectURL(file);
+    const userEntry: ChatEntry = { id: ++entryId, role: 'user', content: `📷 Screenshot dropped` };
+    setEntries(prev => [...prev, userEntry]);
+    setLoading(true);
+    loadingRef.current = true;
+    scrollToBottom();
+
+    // Build message with image for Claude Vision
+    const imageMessage: LLMMessage = {
+      role: 'user',
+      content: [
+        { type: 'image', source: { type: 'base64', media_type: mediaType, data } },
+        { type: 'text', text: 'Extract all treatment/application rows from this screenshot and return them as addTreatment commands.' },
+      ],
+    };
+    llmHistoryRef.current.push(imageMessage);
+
+    const abort = new AbortController();
+    abortRef.current = abort;
+
+    try {
+      const fullResponse = await callLLM(llmHistoryRef.current, abort.signal);
+      llmHistoryRef.current.push({ role: 'assistant', content: fullResponse });
+      const { commands, display } = parseResponse(fullResponse);
+
+      const actionCommands = commands.filter(c => c.action === 'addTreatment');
+      const messageCommands = commands.filter(c => c.action === 'message');
+
+      if (actionCommands.length > 0) {
+        // All fields from image are explicit — mark as 'voice' source
+        const enriched = actionCommands.map(c => {
+          const cmd = c as AddTreatmentCommand;
+          const fieldMeta: Record<string, FieldMeta> = {};
+          for (const f of ['product', 'method', 'date', 'productDoseValue', 'productDoseUnit', 'waterVolumeValue', 'waterVolumeUnit'] as const) {
+            if (cmd[f]) fieldMeta[f] = { source: 'voice' };
+          }
+          return { ...cmd, fieldMeta } as EnrichedTreatment;
+        });
+
+        const pendingEntry: ChatEntry = {
+          id: ++entryId,
+          role: 'pending',
+          content: display || `Extracted ${actionCommands.length} treatments from screenshot.`,
+          commands: actionCommands,
+          enriched,
+          status: null,
+        };
+        setEntries(prev => [...prev, pendingEntry]);
+      }
+
+      if (display && actionCommands.length === 0) {
+        setEntries(prev => [...prev, { id: ++entryId, role: 'assistant', content: display }]);
+      } else if (messageCommands.length > 0) {
+        const msgText = messageCommands.map(c => (c as any).text).join('\n');
+        if (msgText) setEntries(prev => [...prev, { id: ++entryId, role: 'assistant', content: msgText }]);
+      }
+    } catch (e: any) {
+      if (e.name !== 'AbortError') {
+        setEntries(prev => [...prev, { id: ++entryId, role: 'assistant', content: `Error: ${e.message}` }]);
+      }
+    }
+
+    setLoading(false);
+    loadingRef.current = false;
+    scrollToBottom();
+  }, [acceptPending, rejectPending]);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setDragging(false);
+    const file = e.dataTransfer.files[0];
+    if (file && file.type.startsWith('image/')) {
+      handleImageAnalysis(file);
+    }
+  }, [handleImageAnalysis]);
+
+  const handlePaste = useCallback((e: React.ClipboardEvent) => {
+    const items = e.clipboardData.items;
+    for (const item of Array.from(items)) {
+      if (item.type.startsWith('image/')) {
+        const file = item.getAsFile();
+        if (file) { e.preventDefault(); handleImageAnalysis(file); return; }
+      }
+    }
+  }, [handleImageAnalysis]);
+
   const handleSpeechResult = useCallback((text: string, isFinal: boolean) => {
     if (isFinal) { setInterimText(''); doSend(text); }
     else setInterimText(text);
@@ -581,22 +722,46 @@ export function ChatAssistant() {
       {open && <Box onClick={() => setOpen(false)} sx={{ position: 'fixed', inset: 0 }} />}
 
       <Fade in={open}>
-        <Paper elevation={8} sx={{
-          position: 'absolute', bottom: 'calc(100% + 8px)', right: 0,
-          width: 420, height: 600, display: 'flex', flexDirection: 'column',
-          borderRadius: '12px', overflow: 'hidden',
-        }}>
+        <Paper
+          elevation={8}
+          onDragOver={e => { e.preventDefault(); setDragging(true); }}
+          onDragLeave={() => setDragging(false)}
+          onDrop={handleDrop}
+          onPaste={handlePaste}
+          sx={{
+            position: 'absolute', bottom: 'calc(100% + 8px)', right: 0,
+            width: 420, height: 600, display: 'flex', flexDirection: 'column',
+            borderRadius: '12px', overflow: 'hidden',
+            border: dragging ? '2px dashed' : undefined,
+            borderColor: dragging ? 'primary.main' : undefined,
+          }}
+        >
           {/* Header */}
           <Box sx={{ px: 2, py: 1.5, display: 'flex', alignItems: 'center', borderBottom: 1, borderColor: 'divider' }}>
             <Typography sx={{ flex: 1, fontSize: '0.875rem', fontWeight: 700 }}>Voice Control</Typography>
             <IconButton size="small" onClick={() => setOpen(false)}><Close fontSize="small" /></IconButton>
           </Box>
 
+          {/* Drop overlay */}
+          {dragging && (
+            <Box sx={{
+              position: 'absolute', inset: 0, zIndex: 10,
+              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+              bgcolor: 'rgba(255,255,255,0.92)', gap: 1,
+            }}>
+              <ImageOutlined sx={{ fontSize: 48, color: 'primary.main' }} />
+              <Typography sx={{ fontWeight: 700, color: 'primary.main' }}>Drop screenshot here</Typography>
+              <Typography sx={{ fontSize: '0.75rem', color: 'text.secondary' }}>
+                We'll extract treatments from the image
+              </Typography>
+            </Box>
+          )}
+
           {/* Entries */}
           <Box ref={scrollRef} sx={{ flex: 1, overflowY: 'auto', p: 2, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
             {entries.length === 0 && (
               <Typography sx={{ color: 'text.secondary', fontSize: '0.8125rem', textAlign: 'center', mt: 4, whiteSpace: 'pre-wrap' }}>
-                {'Tap the mic and speak to control the app.\n\nTry: "Add a treatment with Roundup"\n\nMissing fields are auto-filled from your previous treatments (shown in blue). You can edit any field before accepting.'}
+                {'Tap the mic and speak to control the app.\n\nTry: "Add a treatment with Roundup"\n\nYou can also drop a screenshot of a spray journal to extract treatments automatically.\n\nMissing fields are auto-filled from previous treatments (shown in blue). Edit any field before accepting.'}
               </Typography>
             )}
             {entries.map((entry) => {
