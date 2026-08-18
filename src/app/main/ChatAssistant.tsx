@@ -1,9 +1,10 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   Box, IconButton, Paper, Typography, TextField, Fade, CircularProgress,
-  Button, Chip, Stack, MenuItem, Select, SelectChangeEvent,
+  Button, Chip, Stack, MenuItem, Select, SelectChangeEvent, Menu, ListItemText, ListItemIcon,
 } from '@mui/material';
-import { Close, Mic, MicOff, Send, Check, Clear, ImageOutlined, AttachFile, AutoAwesome } from '@mui/icons-material';
+import { Close, Mic, MicOff, Send, Check, Clear, ImageOutlined, AttachFile, AutoAwesome, Tune } from '@mui/icons-material';
+import { useAssistantLayout, setAssistantLayout, ASSISTANT_LAYOUTS } from '../data/assistant-layout';
 import { pushCommand, VoiceCommand, AddTreatmentCommand } from '../data/voice-commands';
 import { treatmentsData, usePlots, getPlots } from '../data/plots-data';
 import { getLastOpenedPlot, focusPlotRow, useAssistantOpenSignal } from '../data/plot-focus';
@@ -905,9 +906,33 @@ export function ChatAssistant() {
   // Widen the panel once an extracted list (>1 treatment) is on screen
   const wide = entries.some(e => (e.enriched?.length ?? 0) > 1);
 
+  // Switchable layout: floating (bubble) / sidebar (right rail) / inline (bottom console)
+  const layout = useAssistantLayout();
+  const [layoutAnchor, setLayoutAnchor] = useState<null | HTMLElement>(null);
+  const sidebarWidth = wide ? 820 : 400;
+
+  // Sidebar pushes the page content left so the assistant doesn't overlap it.
+  // (Inline overlays the bottom as a sheet — the app shell is a fixed 100vh
+  // column, so padding-bottom there would spawn a page scrollbar.)
+  useEffect(() => {
+    const b = document.body;
+    b.style.transition = 'padding 0.25s ease';
+    b.style.paddingRight = open && layout === 'sidebar' ? `${sidebarWidth}px` : '';
+    return () => { b.style.paddingRight = ''; };
+  }, [open, layout, sidebarWidth]);
+
+  const shellSx = layout === 'sidebar'
+    ? { top: 0, right: 0, bottom: 0, width: sidebarWidth, maxWidth: '100vw', borderRadius: 0, borderLeft: 1, borderColor: 'divider' as const }
+    : layout === 'inline'
+    ? { left: 0, right: 0, bottom: 0, height: '48vh', borderRadius: 0, borderTop: 1, borderColor: 'divider' as const }
+    : { right: 16, bottom: 80, width: wide ? 880 : 420, maxWidth: 'calc(100vw - 32px)', height: 600, borderRadius: '12px' };
+
   return (
-    <Box sx={{ position: 'fixed', right: 16, bottom: 16, zIndex: 1300 }}>
-      {open && <Box onClick={() => setOpen(false)} sx={{ position: 'fixed', inset: 0 }} />}
+    <>
+      {/* Click-away backdrop only for the floating bubble; docked modes coexist with content */}
+      {open && layout === 'floating' && (
+        <Box onClick={() => setOpen(false)} sx={{ position: 'fixed', inset: 0, zIndex: 1290 }} />
+      )}
 
       <Fade in={open}>
         <Paper
@@ -917,18 +942,30 @@ export function ChatAssistant() {
           onDrop={handleDrop}
           onPaste={handlePaste}
           sx={{
-            position: 'absolute', bottom: 'calc(100% + 8px)', right: 0,
-            width: wide ? 880 : 420, maxWidth: 'calc(100vw - 32px)',
-            height: 600, display: 'flex', flexDirection: 'column',
-            transition: 'width 0.25s ease',
-            borderRadius: '12px', overflow: 'hidden',
-            border: dragging ? '2px dashed' : undefined,
-            borderColor: dragging ? 'primary.main' : undefined,
+            position: 'fixed', zIndex: 1300,
+            display: 'flex', flexDirection: 'column', overflow: 'hidden',
+            transition: 'width 0.25s ease, height 0.25s ease',
+            ...shellSx,
+            ...(dragging && { outline: '2px dashed', outlineColor: 'primary.main', outlineOffset: '-2px' }),
           }}
         >
           {/* Header */}
-          <Box sx={{ px: 2, py: 1.5, display: 'flex', alignItems: 'center', borderBottom: 1, borderColor: 'divider' }}>
+          <Box sx={{ px: 2, py: 1.5, display: 'flex', alignItems: 'center', gap: 0.5, borderBottom: 1, borderColor: 'divider' }}>
             <Typography sx={{ flex: 1, fontSize: '0.875rem', fontWeight: 700 }}>Assistant</Typography>
+            <IconButton size="small" onClick={e => setLayoutAnchor(e.currentTarget)} title="Layout">
+              <Tune fontSize="small" />
+            </IconButton>
+            <Menu anchorEl={layoutAnchor} open={Boolean(layoutAnchor)} onClose={() => setLayoutAnchor(null)}>
+              {ASSISTANT_LAYOUTS.map(opt => (
+                <MenuItem
+                  key={opt.id} selected={layout === opt.id}
+                  onClick={() => { setAssistantLayout(opt.id); setLayoutAnchor(null); }}
+                >
+                  <ListItemIcon>{layout === opt.id ? <Check fontSize="small" /> : null}</ListItemIcon>
+                  <ListItemText primary={opt.label} secondary={opt.hint} />
+                </MenuItem>
+              ))}
+            </Menu>
             <IconButton size="small" onClick={() => setOpen(false)}><Close fontSize="small" /></IconButton>
           </Box>
 
@@ -1072,10 +1109,11 @@ export function ChatAssistant() {
         </Paper>
       </Fade>
 
-      {/* FAB */}
+      {/* FAB — always bottom-right, toggles the assistant in every layout */}
       <IconButton
         onClick={() => setOpen(o => !o)}
         sx={{
+          position: 'fixed', right: 16, bottom: 16, zIndex: 1500,
           bgcolor: 'primary.main', color: 'white',
           width: 48, height: 48, boxShadow: 3,
           '&:hover': { bgcolor: 'primary.dark' },
@@ -1083,6 +1121,6 @@ export function ChatAssistant() {
       >
         {open ? <Close /> : <AutoAwesome />}
       </IconButton>
-    </Box>
+    </>
   );
 }
