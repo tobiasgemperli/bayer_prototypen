@@ -1073,19 +1073,6 @@ export function ChatAssistant() {
                       sx={{ fontSize: '0.72rem', height: 26, borderRadius: '8px' }}
                     />
                   ))}
-                  {/* File imports (canned) */}
-                  <Chip
-                    icon={<AttachFile sx={{ fontSize: 15 }} />} label="CSV example" size="small"
-                    variant="outlined" color="primary" clickable
-                    onClick={() => runSample('📄 treatments.csv', SAMPLE_CSV_COMMANDS)}
-                    sx={{ fontSize: '0.72rem', height: 26, borderRadius: '8px' }}
-                  />
-                  <Chip
-                    icon={<ImageOutlined sx={{ fontSize: 15 }} />} label="Screenshot example" size="small"
-                    variant="outlined" color="primary" clickable
-                    onClick={() => runSample('📷 farm-ui-screenshot.png', SAMPLE_SCREENSHOT_COMMANDS)}
-                    sx={{ fontSize: '0.72rem', height: 26, borderRadius: '8px' }}
-                  />
                   {/* Navigation / query samples */}
                   {[
                     { label: 'Show me all plots', to: '/', tab: undefined as number | undefined, confirm: 'Here are all your plots.' },
@@ -1099,6 +1086,22 @@ export function ChatAssistant() {
                       sx={{ fontSize: '0.72rem', height: 26, borderRadius: '8px' }}
                     />
                   ))}
+                </Stack>
+
+                <Typography sx={{ fontSize: '0.7rem', color: 'text.secondary', mt: 2, mb: 1 }}>More:</Typography>
+                <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 1 }}>
+                  <Chip
+                    icon={<AttachFile sx={{ fontSize: 15 }} />} label="CSV example" size="small"
+                    variant="outlined" clickable
+                    onClick={() => runSample('📄 treatments.csv', SAMPLE_CSV_COMMANDS)}
+                    sx={{ fontSize: '0.72rem', height: 26, borderRadius: '8px' }}
+                  />
+                  <Chip
+                    icon={<ImageOutlined sx={{ fontSize: 15 }} />} label="Screenshot example" size="small"
+                    variant="outlined" clickable
+                    onClick={() => runSample('📷 farm-ui-screenshot.png', SAMPLE_SCREENSHOT_COMMANDS)}
+                    sx={{ fontSize: '0.72rem', height: 26, borderRadius: '8px' }}
+                  />
                 </Stack>
               </Box>
             )}
