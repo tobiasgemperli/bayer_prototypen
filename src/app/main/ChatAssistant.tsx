@@ -422,12 +422,14 @@ function EditablePlotSelect({ plotId, onChange, assumed, disabled }: {
 }
 
 // ── Pending card with editable fields ────────────────────────────────────────
-export function PendingCard({ entry, onAccept, onReject, onUpdate, onPlotChange }: {
+export function PendingCard({ entry, onAccept, onReject, onUpdate, onPlotChange, neutral = false }: {
   entry: ChatEntry;
   onAccept: () => void;
   onReject: () => void;
   onUpdate: (entryId: number, cmdIndex: number, field: string, value: string) => void;
   onPlotChange: (plotId: string) => void;
+  /** Drop the green (accepted) / red (extracted) accents for a monochrome look. */
+  neutral?: boolean;
 }) {
   const enrichedList = entry.enriched ?? [];
   const commands = entry.commands ?? [];
@@ -444,7 +446,7 @@ export function PendingCard({ entry, onAccept, onReject, onUpdate, onPlotChange 
     <Paper variant="outlined" sx={{
       borderRadius: '10px', overflow: 'hidden',
       borderColor: resolved
-        ? (entry.status === 'accepted' ? 'success.main' : 'text.disabled')
+        ? (entry.status === 'accepted' && !neutral ? 'success.main' : 'text.disabled')
         : 'grey.900',
       opacity: resolved ? 0.7 : 1,
     }}>
@@ -470,7 +472,7 @@ export function PendingCard({ entry, onAccept, onReject, onUpdate, onPlotChange 
       {enrichedList.length > 1 ? (
         <>
           <Box sx={{ px: 1.5, pt: 1 }}>
-            <Chip size="small" label={`${enrichedList.length} treatments extracted`} color="primary" variant="outlined" sx={{ fontSize: '0.7rem', height: 20 }} />
+            <Chip size="small" label={`${enrichedList.length} treatments extracted`} color={neutral ? 'default' : 'primary'} variant="outlined" sx={{ fontSize: '0.7rem', height: 20 }} />
           </Box>
           <TreatmentTable enrichedList={enrichedList} resolved={resolved} entryId={entry.id} onUpdate={onUpdate} />
         </>
@@ -563,7 +565,7 @@ export function PendingCard({ entry, onAccept, onReject, onUpdate, onPlotChange 
           <Chip
             size="small"
             label={entry.status === 'accepted' ? 'Accepted' : 'Rejected'}
-            color={entry.status === 'accepted' ? 'success' : 'default'}
+            color={entry.status === 'accepted' && !neutral ? 'success' : 'default'}
             variant="outlined"
             sx={{ fontSize: '0.7rem', height: 22 }}
           />

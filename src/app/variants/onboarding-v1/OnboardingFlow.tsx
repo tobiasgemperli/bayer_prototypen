@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   Box, Paper, Typography, Button, IconButton, TextField, CircularProgress, Chip,
   Table, TableHead, TableBody, TableRow, TableCell, TableContainer,
@@ -104,6 +104,17 @@ export function OnboardingFlow() {
   const [samples, setSamples] = useState<typeof CANNED_SAMPLES | null>(null);
   const [samplesAdded, setSamplesAdded] = useState(0);
 
+  // Resizable split ratio.
+  const [leftWidth, setLeftWidth] = useState<number>(() => Math.round((typeof window !== 'undefined' ? window.innerWidth : 1200) * 0.44));
+  const draggingRef = useRef(false);
+  useEffect(() => {
+    const move = (e: MouseEvent) => { if (draggingRef.current) setLeftWidth(Math.min(Math.max(e.clientX, 300), window.innerWidth - 440)); };
+    const up = () => { if (draggingRef.current) { draggingRef.current = false; document.body.style.cursor = ''; document.body.style.userSelect = ''; } };
+    window.addEventListener('mousemove', move);
+    window.addEventListener('mouseup', up);
+    return () => { window.removeEventListener('mousemove', move); window.removeEventListener('mouseup', up); };
+  }, []);
+
   const triggerExtract = () => {
     if (loading) return;
     setInput('');
@@ -192,9 +203,15 @@ export function OnboardingFlow() {
   return (
     <Box sx={{ position: 'fixed', top: HEADER_H, left: 0, right: 0, bottom: 0, zIndex: 1100, bgcolor: 'background.default', display: 'flex' }}>
       {/* Left — the data that now exists */}
-      <Box sx={{ width: '42%', maxWidth: 620, borderRight: 1, borderColor: 'divider', bgcolor: 'background.paper', overflowY: 'auto', p: 3 }}>
+      <Box sx={{ width: leftWidth, flexShrink: 0, bgcolor: 'background.paper', overflowY: 'auto', p: 3 }}>
         <DataPane step={step} />
       </Box>
+
+      {/* Drag handle to resize the split */}
+      <Box
+        onMouseDown={(e) => { e.preventDefault(); draggingRef.current = true; document.body.style.cursor = 'col-resize'; document.body.style.userSelect = 'none'; }}
+        sx={{ width: 6, flexShrink: 0, cursor: 'col-resize', bgcolor: 'divider', transition: 'background-color .12s', '&:hover': { bgcolor: 'text.disabled' } }}
+      />
 
       {/* Right — the AI */}
       <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
@@ -262,7 +279,7 @@ export function OnboardingFlow() {
 
             {step === 2 && pending && (
               <Box sx={{ mt: 3 }}>
-                <PendingCard entry={pending} onAccept={acceptTreatments} onReject={() => setPending(p => p ? { ...p, status: 'rejected' } : p)} onUpdate={updateField} onPlotChange={(plotId) => updatePlot(pending.id, plotId)} />
+                <PendingCard entry={pending} neutral onAccept={acceptTreatments} onReject={() => setPending(p => p ? { ...p, status: 'rejected' } : p)} onUpdate={updateField} onPlotChange={(plotId) => updatePlot(pending.id, plotId)} />
               </Box>
             )}
             {step === 2 && txAdded > 0 && <Done label={`${txAdded} treatments added`} />}
@@ -315,9 +332,9 @@ export function OnboardingFlow() {
 
 function Done({ label }: { label: string }) {
   return (
-    <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75, mt: 2, px: 1.5, py: 0.75, borderRadius: '8px', bgcolor: 'success.50', border: 1, borderColor: 'success.light' }}>
-      <CheckCircle sx={{ fontSize: 18, color: 'success.main' }} />
-      <Typography sx={{ fontSize: '0.85rem', fontWeight: 600, color: 'success.dark' }}>{label}</Typography>
+    <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75, mt: 2, px: 1.5, py: 0.75, borderRadius: '8px', bgcolor: 'grey.100', border: 1, borderColor: 'divider' }}>
+      <CheckCircle sx={{ fontSize: 18, color: 'text.primary' }} />
+      <Typography sx={{ fontSize: '0.85rem', fontWeight: 600, color: 'text.primary' }}>{label}</Typography>
     </Box>
   );
 }

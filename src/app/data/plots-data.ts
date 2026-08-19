@@ -130,6 +130,22 @@ export function clearPlots() {
   emitChange();
 }
 
+/** Snapshot of the seed treatments, captured at load, for reset. */
+const SEED_TREATMENTS: TreatmentData[] = treatmentsData.map(t => ({ ...t }));
+
+/** Empty all treatments (blank-account state). */
+export function clearTreatments() {
+  treatmentsData.length = 0;
+  emitTreatmentChange();
+}
+
+/** Restore the seed treatments. */
+export function resetTreatments() {
+  treatmentsData.length = 0;
+  treatmentsData.push(...SEED_TREATMENTS.map(t => ({ ...t })));
+  emitTreatmentChange();
+}
+
 /** Delete the given plots by id. */
 export function deletePlots(ids: string[]) {
   const set = new Set(ids);

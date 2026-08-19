@@ -4,6 +4,7 @@ import { requestAssistantOpen } from './plot-focus';
 import { setChatFirstMode } from './chat-first';
 import { setAudioMode, AudioMode } from './audio-mode';
 import { setOnboardingStep } from './onboarding-flow';
+import { clearAllDemoData, resetAllDemoData } from './demo-data';
 import { router } from '../routes';
 
 // Demo spine: a single registry of switchable prototype experiences, grouped
@@ -90,6 +91,10 @@ export function launchPrototype(id: string): void {
   _current = id;
   try { localStorage.setItem(KEY, id); } catch { /* ignore */ }
   listeners.forEach(l => l());
+  // Onboarding starts from a blank account; every other prototype gets the
+  // standard seeded demo data.
+  if (id === 'onboarding') clearAllDemoData();
+  else resetAllDemoData();
   p.launch();
 }
 

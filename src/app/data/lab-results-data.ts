@@ -260,6 +260,19 @@ export function useLabSamples(): LabSampleData[] {
   return useSyncExternalStore(subscribe, getSnapshot);
 }
 
+/** Empty all lab samples (blank-account state). */
+export function clearSamples(): void {
+  _samples = [];
+  emitChange();
+}
+
+/** Restore the seeded demo samples. */
+export function resetSamples(): void {
+  _samples = [];
+  seedDemoSamples();
+  emitChange();
+}
+
 let _nextId = 1;
 const CODE_CHARS = 'abcdefghijklmnopqrstuvwxyz';
 function generateSampleCode(): string {
