@@ -1,10 +1,12 @@
 import { useSyncExternalStore } from 'react';
 import { setAssistantLayout, AssistantLayout } from './assistant-layout';
 import { requestAssistantOpen } from './plot-focus';
+import { setChatFirstMode } from './chat-first';
+import { router } from '../routes';
 
-// Demo spine: a single registry of switchable prototype experiences. Adding a
-// new prototype = append one entry; the header switcher and the /prototypes
-// gallery both read this list, so they never drift.
+// Demo spine: a single registry of switchable prototype experiences, grouped
+// into sections. Adding a prototype = append one entry; the header switcher and
+// the /prototypes gallery both read this, so they never drift.
 export interface Prototype {
   id: string;
   name: string;
@@ -13,16 +15,49 @@ export interface Prototype {
   launch: () => void;
 }
 
-function assistant(id: string, name: string, blurb: string, layout: AssistantLayout): Prototype {
-  return { id, name, blurb, launch: () => { setAssistantLayout(layout); requestAssistantOpen(); } };
+export interface PrototypeSection {
+  title: string;
+  /** Shown greyed with a "coming soon" note when there are no prototypes yet. */
+  comingSoon?: boolean;
+  prototypes: Prototype[];
 }
 
-export const PROTOTYPES: Prototype[] = [
-  assistant('assistant-floating', 'Assistant · Floating', 'AI in a bottom-right chat bubble that floats over the app.', 'floating'),
-  assistant('assistant-sidebar', 'Assistant · Sidebar', 'AI docked as a right rail that pushes the page aside.', 'sidebar'),
-  assistant('assistant-inline', 'Assistant · Inline', 'AI docked as a full-width console under the content.', 'inline'),
-  // Chat-first (segmented Chat/UI) will be appended here once built.
+function assistant(id: string, name: string, blurb: string, layout: AssistantLayout): Prototype {
+  return {
+    id, name, blurb,
+    launch: () => { setAssistantLayout(layout); requestAssistantOpen(); },
+  };
+}
+
+export const PROTOTYPE_SECTIONS: PrototypeSection[] = [
+  {
+    title: 'Placement',
+    prototypes: [
+      assistant('assistant-floating', 'Assistant · Floating', 'AI in a bottom-right chat bubble that floats over the app.', 'floating'),
+      assistant('assistant-sidebar', 'Assistant · Sidebar', 'AI docked as a right rail that pushes the page aside.', 'sidebar'),
+      assistant('assistant-inline', 'Assistant · Inline', 'AI docked as a full-width console under the content.', 'inline'),
+    ],
+  },
+  {
+    title: 'Audio Interaction',
+    comingSoon: true,
+    prototypes: [],
+  },
+  {
+    title: 'Fullscreen',
+    prototypes: [
+      {
+        id: 'chat-first',
+        name: 'Chat-first · Segmented',
+        blurb: 'A top segmented control flips fullscreen between a chat and the UI; results render inside the chat.',
+        launch: () => { setChatFirstMode('chat'); router.navigate('/'); },
+      },
+    ],
+  },
 ];
+
+/** Flat list for lookups / persistence. */
+export const PROTOTYPES: Prototype[] = PROTOTYPE_SECTIONS.flatMap(s => s.prototypes);
 
 const KEY = 'resiyou:prototype';
 const listeners = new Set<() => void>();

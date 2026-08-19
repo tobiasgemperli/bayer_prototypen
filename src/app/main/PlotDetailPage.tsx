@@ -13,6 +13,7 @@ import { toast } from 'sonner';
 import { usePlots, treatmentsData, TreatmentData, useTreatmentsVersion, TREATMENT_MANDATORY, updateTreatments, removeTreatments } from '../data/plots-data';
 import { usePendingCommands, consumeCommands, AddTreatmentCommand } from '../data/voice-commands';
 import { setLastOpenedPlot, requestAssistantOpen } from '../data/plot-focus';
+import { useCurrentPrototype } from '../data/prototypes';
 import { ColDef } from 'ag-grid-community';
 import { useDemoMode, setOnboardingStep, setDemoMode, setAuthPhase } from '../data/auth-state';
 import { TreatmentsGrid, TreatmentsGridHandle } from './TreatmentsGrid';
@@ -100,6 +101,7 @@ export function PlotDetailPage({
   const location = useLocation();
   const demoMode = useDemoMode();
   const isOnboarding = demoMode === 'onboarding';
+  const aiHidden = useCurrentPrototype().id === 'chat-first'; // AI lives in Chat mode only
 
   const initialTab = (location.state as { activeTab?: number } | null)?.activeTab ?? 0;
   const [activeTab, setActiveTab] = useState(initialTab);
@@ -421,11 +423,13 @@ export function PlotDetailPage({
                 </SecondaryTabs>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                   {treatmentsCustomization?.toolbarExtras}
-                  <Button variant="outlined" color="primary" startIcon={<AutoAwesome />}
-                    onClick={() => requestAssistantOpen()}
-                    sx={{ px: 2, height: 36, fontWeight: 600, borderRadius: '8px', textTransform: 'none' }}>
-                    Import with AI
-                  </Button>
+                  {!aiHidden && (
+                    <Button variant="outlined" color="primary" startIcon={<AutoAwesome />}
+                      onClick={() => requestAssistantOpen()}
+                      sx={{ px: 2, height: 36, fontWeight: 600, borderRadius: '8px', textTransform: 'none' }}>
+                      Import with AI
+                    </Button>
+                  )}
                   <Button variant="soft" color="primary" startIcon={<Add />}
                     onClick={handleAddTreatment}
                     sx={{ px: 2, height: 36, fontWeight: 600, borderRadius: '8px', textTransform: 'none' }}>

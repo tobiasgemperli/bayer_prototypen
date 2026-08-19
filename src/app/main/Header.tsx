@@ -12,12 +12,19 @@ import ResiYouLogo from '../../imports/ResiYouLogo1';
 import { useDemoMode } from '../data/auth-state';
 import { demoUser } from '../data/demo-content';
 import { PrototypeSwitcher } from './PrototypeSwitcher';
+import { ToggleButton, ToggleButtonGroup } from '@mui/material';
+import { ChatBubbleOutline, GridViewOutlined } from '@mui/icons-material';
+import { useCurrentPrototype } from '../data/prototypes';
+import { useChatFirstMode, setChatFirstMode } from '../data/chat-first';
 
 export function Header() {
   const demoMode = useDemoMode();
   const isOnboarding = demoMode === 'onboarding';
   const navigate = useNavigate();
   const location = useLocation();
+  const proto = useCurrentPrototype();
+  const chatFirstMode = useChatFirstMode();
+  const isChatFirst = proto.id === 'chat-first';
 
   // Logo always goes to the Plots list (keeps the current variant prefix, if any).
   const goToPlots = () => {
@@ -46,6 +53,18 @@ export function Header() {
         </Box>
 
         <Box sx={{ flexGrow: 1 }} />
+
+        {/* Chat-first: fullscreen Chat / UI segmented control */}
+        {isChatFirst && (
+          <ToggleButtonGroup
+            exclusive size="small" value={chatFirstMode}
+            onChange={(_, v) => { if (v) setChatFirstMode(v); }}
+            sx={{ mr: 3, '& .MuiToggleButton-root': { textTransform: 'none', px: 2, py: 0.5, borderRadius: '8px' } }}
+          >
+            <ToggleButton value="chat"><ChatBubbleOutline sx={{ fontSize: 18, mr: 0.75 }} />Chat</ToggleButton>
+            <ToggleButton value="ui"><GridViewOutlined sx={{ fontSize: 18, mr: 0.75 }} />UI</ToggleButton>
+          </ToggleButtonGroup>
+        )}
 
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
           {/* Demo prototype switcher */}

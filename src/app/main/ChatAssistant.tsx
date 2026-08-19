@@ -20,7 +20,7 @@ const VOLUME_UNIT_OPTIONS = ['L/ha', 'ml/ha', 'gal/ac'];
 // The empty-state "sample" chips return these pre-baked extractions instead of
 // calling the API — so the demo is instant, free, and deterministic.
 // CSV sample mirrors treatments.csv (7 active-substance rows).
-const SAMPLE_CSV_COMMANDS: AddTreatmentCommand[] = [
+export const SAMPLE_CSV_COMMANDS: AddTreatmentCommand[] = [
   { action: 'addTreatment', date: '2025-04-12', product: 'Mancozeb', method: 'Foliar spray', productDoseValue: '1.5', productDoseUnit: 'L/ha', waterVolumeValue: '900', waterVolumeUnit: 'L/ha' },
   { action: 'addTreatment', date: '2025-04-28', product: 'Glyphosate', method: 'Broadcast', productDoseValue: '1.8', productDoseUnit: 'L/ha', waterVolumeValue: '450', waterVolumeUnit: 'L/ha' },
   { action: 'addTreatment', date: '2025-05-15', product: 'Imidacloprid', method: 'Soil drench', productDoseValue: '2', productDoseUnit: 'L/ha', waterVolumeValue: '1100', waterVolumeUnit: 'L/ha' },
@@ -30,7 +30,7 @@ const SAMPLE_CSV_COMMANDS: AddTreatmentCommand[] = [
   { action: 'addTreatment', date: '2025-09-10', product: 'Lambda-cyhalothrin', method: 'Foliar spray', productDoseValue: '0.4', productDoseUnit: 'L/ha', waterVolumeValue: '550', waterVolumeUnit: 'L/ha' },
 ];
 // Screenshot sample mirrors the AgriTrack Pro journal (8 trade-name rows).
-const SAMPLE_SCREENSHOT_COMMANDS: AddTreatmentCommand[] = [
+export const SAMPLE_SCREENSHOT_COMMANDS: AddTreatmentCommand[] = [
   { action: 'addTreatment', date: '2025-04-12', product: 'Mancozeb 80 WP', method: 'Foliar spray', productDoseValue: '1.5', productDoseUnit: 'kg/ha', waterVolumeValue: '900', waterVolumeUnit: 'L/ha' },
   { action: 'addTreatment', date: '2025-04-28', product: 'Touchdown Quattro', method: 'Broadcast', productDoseValue: '1.8', productDoseUnit: 'L/ha', waterVolumeValue: '450', waterVolumeUnit: 'L/ha' },
   { action: 'addTreatment', date: '2025-05-15', product: 'Confidor WG 70', method: 'Soil drench', productDoseValue: '2.0', productDoseUnit: 'L/ha', waterVolumeValue: '1100', waterVolumeUnit: 'L/ha' },
@@ -43,15 +43,15 @@ const SAMPLE_SCREENSHOT_COMMANDS: AddTreatmentCommand[] = [
 
 // ── Types ────────────────────────────────────────────────────────────────────
 /** Tracks which fields came from voice vs assumed from previous data */
-interface FieldMeta {
+export interface FieldMeta {
   source: 'voice' | 'assumed';
 }
 
-interface EnrichedTreatment extends AddTreatmentCommand {
+export interface EnrichedTreatment extends AddTreatmentCommand {
   fieldMeta: Record<string, FieldMeta>;
 }
 
-interface ChatEntry {
+export interface ChatEntry {
   id: number;
   role: 'user' | 'assistant' | 'pending';
   content: string;
@@ -101,7 +101,7 @@ function getLastTreatment(): Record<string, string> | null {
 
 /** Enrich a command with assumptions from previous data.
  *  If fromImage=true, all provided fields are treated as explicit (not assumed). */
-function enrichCommand(cmd: AddTreatmentCommand, fromImage = false): EnrichedTreatment {
+export function enrichCommand(cmd: AddTreatmentCommand, fromImage = false): EnrichedTreatment {
   const last = getLastTreatment();
   const fieldMeta: Record<string, FieldMeta> = {};
   const enriched = { ...cmd, fieldMeta };
@@ -228,7 +228,7 @@ When the user sends CSV TEXT (a spray-journal export):
 // ── LLM call ─────────────────────────────────────────────────────────────────
 const ANTHROPIC_KEY = import.meta.env.VITE_ANTHROPIC_API_KEY as string | undefined;
 
-async function callLLM(messages: LLMMessage[], signal: AbortSignal): Promise<string> {
+export async function callLLM(messages: LLMMessage[], signal: AbortSignal): Promise<string> {
   if (ANTHROPIC_KEY) {
     const plotList = getPlots().map(p => `  ${p.id}: ${p.plotName}`).join('\n');
     const body = {
@@ -255,7 +255,7 @@ async function callLLM(messages: LLMMessage[], signal: AbortSignal): Promise<str
   return '{"action":"message","text":"Add VITE_ANTHROPIC_API_KEY to .env to enable voice commands."}';
 }
 
-function parseResponse(text: string): { commands: VoiceCommand[]; display: string } {
+export function parseResponse(text: string): { commands: VoiceCommand[]; display: string } {
   const trimmed = text.trim();
   const commands: VoiceCommand[] = [];
   let rest = trimmed;
@@ -423,7 +423,7 @@ function EditablePlotSelect({ plotId, onChange, assumed, disabled }: {
 }
 
 // ── Pending card with editable fields ────────────────────────────────────────
-function PendingCard({ entry, onAccept, onReject, onUpdate, onPlotChange }: {
+export function PendingCard({ entry, onAccept, onReject, onUpdate, onPlotChange }: {
   entry: ChatEntry;
   onAccept: () => void;
   onReject: () => void;
