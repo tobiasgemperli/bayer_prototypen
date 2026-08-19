@@ -3,7 +3,7 @@ import {
   Box, IconButton, Paper, Typography, TextField, Fade, CircularProgress,
   Button, Chip, Stack, MenuItem, Select, SelectChangeEvent, Menu, ListItemText, ListItemIcon,
 } from '@mui/material';
-import { Close, Mic, MicOff, Send, Check, Clear, ImageOutlined, AttachFile, AutoAwesome, Tune } from '@mui/icons-material';
+import { Close, Mic, MicOff, Send, Check, Clear, ImageOutlined, AttachFile, AutoAwesome, Tune, RestartAlt } from '@mui/icons-material';
 import { useAssistantLayout, setAssistantLayout, ASSISTANT_LAYOUTS } from '../data/assistant-layout';
 import { pushCommand, VoiceCommand, AddTreatmentCommand } from '../data/voice-commands';
 import { treatmentsData, usePlots, getPlots } from '../data/plots-data';
@@ -972,6 +972,18 @@ export function ChatAssistant() {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
   };
 
+  /** Reset the conversation back to the initial empty state. */
+  const handleReset = useCallback(() => {
+    abortRef.current?.abort();
+    llmHistoryRef.current = [];
+    setEntries([]);
+    setInput('');
+    setInterimText('');
+    setLoading(false);
+    loadingRef.current = false;
+    stopListening();
+  }, [stopListening]);
+
   useEffect(() => { return () => abortRef.current?.abort(); }, []);
 
   // F4: inline entry points (e.g. the Treatments toolbar) can open the assistant.
@@ -1027,6 +1039,11 @@ export function ChatAssistant() {
           {/* Header */}
           <Box sx={{ px: 2, py: 1.5, display: 'flex', alignItems: 'center', gap: 0.5, borderBottom: 1, borderColor: 'divider' }}>
             <Typography sx={{ flex: 1, fontSize: '0.875rem', fontWeight: 700 }}>Assistant</Typography>
+            {entries.length > 0 && (
+              <IconButton size="small" onClick={handleReset} title="Reset conversation">
+                <RestartAlt fontSize="small" />
+              </IconButton>
+            )}
             <IconButton size="small" onClick={e => setLayoutAnchor(e.currentTarget)} title="Layout">
               <Tune fontSize="small" />
             </IconButton>
