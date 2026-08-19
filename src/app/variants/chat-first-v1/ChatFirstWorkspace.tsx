@@ -14,6 +14,7 @@ import {
   usePlots, getPlots, treatmentsData, useTreatmentsVersion, updateTreatments, TreatmentData,
 } from '../../data/plots-data';
 import { useChatFirstMode, setChatFirstMode } from '../../data/chat-first';
+import { useLabSamples } from '../../data/lab-results-data';
 import { router } from '../../routes';
 
 const HEADER_H = 56;
@@ -28,9 +29,56 @@ const matchOwner = (owner: string, query: string) => {
   const o = owner.toLowerCase();
   return query.toLowerCase().split(/\s+/).filter(Boolean).every(tok => o.includes(tok));
 };
+/** Resolve a plot id or name (e.g. "West Valley") to its id. */
+const resolvePlot = (q: string): string | undefined => {
+  const plots = getPlots();
+  return plots.find(p => p.id === q)?.id ?? plots.find(p => p.plotName.toLowerCase().includes(q.toLowerCase()))?.id;
+};
+/** Find a plot whose name appears anywhere in a free-form sentence. */
+const plotIdFromText = (text: string): string | undefined => {
+  const lower = text.toLowerCase();
+  return getPlots().find(p => lower.includes(p.plotName.toLowerCase()))?.id;
+};
 
 // ── Inline result blocks ─────────────────────────────────────────────────────
-interface Block { kind: 'treatments' | 'plots' | 'open-ui'; title: string; plotId?: string; date?: string; owner?: string; tab?: number }
+interface Block { kind: 'treatments' | 'plots' | 'samples' | 'open-ui'; title: string; plotId?: string; date?: string; owner?: string; tab?: number }
+
+function SamplesBlock({ plotId }: { plotId?: string }) {
+  const samples = useLabSamples().filter(s => (plotId ? s.plotId === plotId : true));
+  const showPlot = !plotId;
+  const head = { fontWeight: 700, fontSize: '0.72rem', color: 'text.secondary' };
+  const cell = { fontSize: '0.8rem' };
+  return (
+    <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: '10px', maxHeight: 360 }}>
+      <Table size="small" stickyHeader>
+        <TableHead>
+          <TableRow>
+            {showPlot && <TableCell sx={head}>Plot</TableCell>}
+            <TableCell sx={head}>Sample code</TableCell>
+            <TableCell sx={head}>Name</TableCell>
+            <TableCell sx={head}>Date of sample</TableCell>
+            <TableCell sx={head}>Commodity</TableCell>
+            <TableCell sx={head}>Laboratory</TableCell>
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          {samples.length === 0 ? (
+            <TableRow><TableCell colSpan={showPlot ? 6 : 5} sx={{ color: 'text.secondary' }}>No samples yet.</TableCell></TableRow>
+          ) : samples.map(s => (
+            <TableRow key={s.id} hover>
+              {showPlot && <TableCell sx={cell}>{plotName(s.plotId)}</TableCell>}
+              <TableCell sx={cell}>{s.sampleCode || '—'}</TableCell>
+              <TableCell sx={cell}>{s.sampleName || '—'}</TableCell>
+              <TableCell sx={cell}>{fmtDate(s.dateOfSample)}</TableCell>
+              <TableCell sx={cell}>{s.commodity || '—'}</TableCell>
+              <TableCell sx={cell}>{s.laboratory || '—'}</TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </TableContainer>
+  );
+}
 
 function TreatmentsBlock({ plotId, date, owner }: { plotId?: string; date?: string; owner?: string }) {
   useTreatmentsVersion(); // re-render when treatments change (e.g. after an accept)
@@ -156,6 +204,8 @@ export function ChatFirstWorkspace() {
     add({ role: 'block', content: '', block: { kind: 'treatments', plotId: opts.plotId, date: opts.date, owner: opts.owner, title } });
   };
   const showPlots = () => add({ role: 'block', content: '', block: { kind: 'plots', title: 'All plots' } });
+  const showSamples = (plotId?: string) =>
+    add({ role: 'block', content: '', block: { kind: 'samples', plotId, title: plotId ? `Samples — ${plotName(plotId)}` : 'All samples' } });
 
   const enrichAll = (cmds: AddTreatmentCommand[]) => cmds.map(c => enrichCommand(c, true));
 
@@ -208,8 +258,9 @@ export function ChatFirstWorkspace() {
   // treatments, treatments on a date, or treatments by a person.
   const handleLocalQuery = (text: string): boolean => {
     const lower = text.toLowerCase();
-    const isQuery = /^(show|find|list|display|which|what)\b/i.test(text.trim()) || lower.includes('show me') || lower.includes('find ');
+    const isQuery = /^(show|find|list|display|which|what)\b/i.test(text.trim()) || lower.includes('show me') || lower.includes('find ') || lower.includes('sample');
     if (!isQuery) return false;
+    if (lower.includes('sample')) { add({ role: 'user', content: text }); showSamples(plotIdFromText(text)); return true; }
     if (lower.includes('plot') && !lower.includes('treatment')) { add({ role: 'user', content: text }); showPlots(); return true; }
     const by = text.match(/\bby\s+([A-Za-z][A-Za-z .'-]+)/);
     if (by) { add({ role: 'user', content: text }); showTreatments({ owner: by[1].trim().replace(/[?.!]+$/, '') }); return true; }
@@ -305,6 +356,7 @@ export function ChatFirstWorkspace() {
     { label: 'Show me all plots', run: () => echo('Show me all plots', () => showPlots()) },
     { label: 'Find treatments on 20 Mar 2024', run: () => echo('Find treatments on 20 Mar 2024', () => showTreatments({ date: '2024-03-20' })) },
     { label: 'Find treatments by John Smith', run: () => echo('Find treatments by John Smith', () => showTreatments({ owner: 'John Smith' })) },
+    { label: 'Show me all samples of West Valley', run: () => echo('Show me all samples of West Valley', () => showSamples(resolvePlot('West Valley'))) },
     { label: 'Add Roundup 2 L/ha', run: () => runSample('Add Roundup 2 L/ha', [{ action: 'addTreatment', product: 'Roundup', productDoseValue: '2', productDoseUnit: 'L/ha' }] as AddTreatmentCommand[]) },
     { label: 'Add Confidor, soil drench', run: () => runSample('Add Confidor, soil drench', [{ action: 'addTreatment', product: 'Confidor', method: 'Soil drench' }] as AddTreatmentCommand[]) },
   ];
@@ -373,6 +425,10 @@ export function ChatFirstWorkspace() {
                   {b.kind === 'plots' && (<>
                     <PlotsBlock />
                     <OpenInUi to="/" />
+                  </>)}
+                  {b.kind === 'samples' && (<>
+                    <SamplesBlock plotId={b.plotId} />
+                    <OpenInUi to={b.plotId ? `/plot/${b.plotId}` : '/'} tab={b.plotId ? 2 : undefined} />
                   </>)}
                   {b.kind === 'open-ui' && (
                     <Button variant="outlined" startIcon={<OpenInNew />} sx={{ textTransform: 'none', borderRadius: '8px' }}
