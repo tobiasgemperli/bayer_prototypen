@@ -322,7 +322,7 @@ function useSpeechRecognition(onResult: (text: string, isFinal: boolean) => void
 const ASSUMED_BG = 'rgba(33, 150, 243, 0.08)';
 const ASSUMED_BORDER = 'rgba(33, 150, 243, 0.3)';
 
-function EditableTextField({ value, onChange, assumed, disabled }: {
+export function EditableTextField({ value, onChange, assumed, disabled }: {
   value: string; onChange: (v: string) => void; assumed: boolean; disabled: boolean;
 }) {
   return (
@@ -340,7 +340,7 @@ function EditableTextField({ value, onChange, assumed, disabled }: {
   );
 }
 
-function EditableSelect({ value, options, onChange, assumed, disabled }: {
+export function EditableSelect({ value, options, onChange, assumed, disabled }: {
   value: string; options: string[]; onChange: (v: string) => void; assumed: boolean; disabled: boolean;
 }) {
   // Include current value in options if it's not in the predefined list (e.g. from screenshot)
@@ -603,7 +603,7 @@ export function PendingCard({ entry, onAccept, onReject, onUpdate, onPlotChange,
   );
 }
 
-function FieldRow({ label, assumed, children }: { label: string; assumed: boolean; children: React.ReactNode }) {
+export function FieldRow({ label, assumed, children }: { label: string; assumed: boolean; children: React.ReactNode }) {
   return (
     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mb: 0.5 }}>
       <Typography sx={{ fontSize: '0.7rem', color: 'text.secondary', minWidth: 40, flexShrink: 0 }}>{label}</Typography>

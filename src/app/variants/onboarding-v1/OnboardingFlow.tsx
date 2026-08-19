@@ -1,13 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
-  Box, Paper, Typography, Button, IconButton, TextField, CircularProgress, Chip,
+  Box, Paper, Typography, Button, IconButton, TextField, CircularProgress, Chip, Stack,
   Table, TableHead, TableBody, TableRow, TableCell, TableContainer,
 } from '@mui/material';
 import {
-  CloudUploadOutlined, AttachFile, Mic, Send, CheckCircle, ArrowBack, AutoAwesome,
+  CloudUploadOutlined, AttachFile, Mic, Send, CheckCircle, ArrowBack, AutoAwesome, Check, Clear,
 } from '@mui/icons-material';
 import {
-  enrichCommand, PendingCard, SAMPLE_CSV_COMMANDS,
+  enrichCommand, PendingCard, SAMPLE_CSV_COMMANDS, EditableTextField, EditableSelect,
   type ChatEntry,
 } from '../../main/ChatAssistant';
 import {
@@ -31,6 +31,14 @@ const CANNED_PLOTS = [
   { plotName: 'Berry Field 3', crop: 'Strawberries', variety: 'Elsanta', location: 'Zone 6' },
   { plotName: 'Stone Hill', crop: 'Stone fruits', variety: 'Regina', location: 'Zone 7' },
 ];
+const CROP_OPTIONS = ['Strawberries', 'Pome fruits', 'Stone fruits', 'Wheat', 'Corn'];
+const SEASON_OPTIONS = ['Spring 2024', 'Winter 2023', 'Spring 2025'];
+
+/** An extracted plot with per-field provenance (voice = read, assumed = auto-filled). */
+interface OnbPlot {
+  plotName: string; crop: string; variety: string; location: string; owner: string; season: string;
+  meta: Record<string, 'voice' | 'assumed'>;
+}
 const CANNED_SAMPLES = [
   { sampleCode: 'ONB-1042', sampleName: 'Pre-harvest screen', iso: '2026-06-15', commodity: 'Fruit', laboratory: 'Bureau Veritas Switzerland' },
   { sampleCode: 'ONB-1043', sampleName: 'Soil residue check', iso: '2026-06-18', commodity: 'Soil', laboratory: 'SGS' },
@@ -97,7 +105,7 @@ export function OnboardingFlow() {
   const [input, setInput] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [plots, setPlots] = useState<typeof CANNED_PLOTS | null>(null);
+  const [plots, setPlots] = useState<OnbPlot[] | null>(null);
   const [plotsAdded, setPlotsAdded] = useState(0);
   const [pending, setPending] = useState<ChatEntry | null>(null);
   const [txAdded, setTxAdded] = useState(0);
@@ -120,7 +128,11 @@ export function OnboardingFlow() {
     setInput('');
     setLoading(true);
     setTimeout(() => {
-      if (step === 1) setPlots(CANNED_PLOTS);
+      if (step === 1) setPlots(CANNED_PLOTS.map(p => ({
+        plotName: p.plotName, crop: p.crop, variety: p.variety, location: p.location,
+        owner: 'lyle.peterer@bayer.com', season: 'Spring 2024',
+        meta: { plotName: 'voice', crop: 'voice', variety: 'voice', location: 'voice', owner: 'assumed', season: 'assumed' },
+      })));
       else if (step === 2) setPending({
         id: ++oid, role: 'pending', content: '', commands: SAMPLE_CSV_COMMANDS,
         enriched: SAMPLE_CSV_COMMANDS.map(c => enrichCommand(c, true)), status: null, source: '📄 spray-journal.csv',
@@ -130,11 +142,13 @@ export function OnboardingFlow() {
     }, 600);
   };
 
+  const updatePlotField = (i: number, field: keyof OnbPlot, value: string) =>
+    setPlots(prev => prev ? prev.map((p, idx) => idx === i ? { ...p, [field]: value, meta: { ...p.meta, [field]: 'voice' } } : p) : prev);
   const acceptPlots = () => {
     if (!plots) return;
     plots.forEach(p => addPlot({
-      plotName: p.plotName, owner: 'lyle.peterer@bayer.com', variety: p.variety, location: p.location,
-      crop: p.crop, season: 'Spring 2024', lastTreatment: null, plantingDate: null,
+      plotName: p.plotName, owner: p.owner, variety: p.variety, location: p.location,
+      crop: p.crop, season: p.season, lastTreatment: null, plantingDate: null,
     } as Omit<PlotData, 'id'>));
     setPlotsAdded(plots.length);
     setPlots(null);
@@ -263,16 +277,7 @@ export function OnboardingFlow() {
             {/* Extracted preview / approval */}
             {step === 1 && plots && (
               <Box sx={{ mt: 3 }}>
-                <Typography sx={{ ...head, mb: 0.75 }}>{plots.length} plots found — review and add</Typography>
-                <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: '10px' }}>
-                  <Table size="small">
-                    <TableHead><TableRow><TableCell sx={head}>Plot</TableCell><TableCell sx={head}>Crop</TableCell><TableCell sx={head}>Variety</TableCell><TableCell sx={head}>Location</TableCell></TableRow></TableHead>
-                    <TableBody>{plots.map(p => (
-                      <TableRow key={p.plotName} hover><TableCell sx={cell}>{p.plotName}</TableCell><TableCell sx={cell}>{p.crop}</TableCell><TableCell sx={cell}>{p.variety}</TableCell><TableCell sx={cell}>{p.location}</TableCell></TableRow>
-                    ))}</TableBody>
-                  </Table>
-                </TableContainer>
-                <Button variant="contained" onClick={acceptPlots} sx={{ mt: 1.5, textTransform: 'none', borderRadius: '8px', bgcolor: 'grey.900', color: 'common.white', '&:hover': { bgcolor: '#000' } }}>Add {plots.length} plots</Button>
+                <PlotsCard plots={plots} onUpdate={updatePlotField} onAccept={acceptPlots} onReject={() => setPlots(null)} />
               </Box>
             )}
             {step === 1 && plotsAdded > 0 && !plots && <Done label={`${plotsAdded} plots added`} />}
@@ -327,6 +332,52 @@ export function OnboardingFlow() {
         </Box>
       </Box>
     </Box>
+  );
+}
+
+// Editable "Add plots" card — mirrors the treatment approval card (assumptions in blue).
+function PlotsCard({ plots, onUpdate, onAccept, onReject }: {
+  plots: OnbPlot[];
+  onUpdate: (i: number, field: keyof OnbPlot, value: string) => void;
+  onAccept: () => void; onReject: () => void;
+}) {
+  const cols = 'minmax(120px,1.4fr) minmax(120px,1.2fr) minmax(100px,1fr) minmax(110px,1.1fr) minmax(150px,1.4fr) minmax(110px,1fr)';
+  const headSx = { fontSize: '0.625rem', fontWeight: 700, color: 'text.secondary', textTransform: 'uppercase', letterSpacing: '0.03em' } as const;
+  const hasAssumed = plots.some(p => Object.values(p.meta).some(m => m === 'assumed'));
+  return (
+    <Paper variant="outlined" sx={{ borderRadius: '10px', overflow: 'hidden', borderColor: 'grey.900' }}>
+      <Box sx={{ px: 1.5, pt: 1 }}>
+        <Chip size="small" label={`${plots.length} plots found`} variant="outlined" sx={{ fontSize: '0.7rem', height: 20 }} />
+      </Box>
+      <Box sx={{ px: 1.5, pt: 1, pb: 0.5, overflowX: 'auto' }}>
+        <Box sx={{ minWidth: 720 }}>
+          <Box sx={{ display: 'grid', gridTemplateColumns: cols, gap: 0.75, alignItems: 'end', pb: 0.5, borderBottom: 1, borderColor: 'divider' }}>
+            {['Plot name', 'Crop', 'Variety', 'Location', 'Owner', 'Season'].map(h => <Typography key={h} sx={headSx}>{h}</Typography>)}
+          </Box>
+          {plots.map((p, i) => (
+            <Box key={i} sx={{ display: 'grid', gridTemplateColumns: cols, gap: 0.75, alignItems: 'center', py: 0.5, borderBottom: i < plots.length - 1 ? 1 : 0, borderColor: 'divider' }}>
+              <EditableTextField value={p.plotName} disabled={false} assumed={p.meta.plotName === 'assumed'} onChange={v => onUpdate(i, 'plotName', v)} />
+              <EditableSelect value={p.crop} options={CROP_OPTIONS} disabled={false} assumed={p.meta.crop === 'assumed'} onChange={v => onUpdate(i, 'crop', v)} />
+              <EditableTextField value={p.variety} disabled={false} assumed={p.meta.variety === 'assumed'} onChange={v => onUpdate(i, 'variety', v)} />
+              <EditableTextField value={p.location} disabled={false} assumed={p.meta.location === 'assumed'} onChange={v => onUpdate(i, 'location', v)} />
+              <EditableTextField value={p.owner} disabled={false} assumed={p.meta.owner === 'assumed'} onChange={v => onUpdate(i, 'owner', v)} />
+              <EditableSelect value={p.season} options={SEASON_OPTIONS} disabled={false} assumed={p.meta.season === 'assumed'} onChange={v => onUpdate(i, 'season', v)} />
+            </Box>
+          ))}
+        </Box>
+      </Box>
+      {hasAssumed && (
+        <Box sx={{ px: 1.5, pt: 0.5 }}>
+          <Typography sx={{ fontSize: '0.68rem', color: 'text.secondary' }}>Blue = assumed values — edit before accepting.</Typography>
+        </Box>
+      )}
+      <Stack direction="row" spacing={1} sx={{ px: 1.5, py: 1 }}>
+        <Button size="small" variant="contained" startIcon={<Check sx={{ fontSize: 16 }} />} onClick={onAccept}
+          sx={{ fontSize: '0.75rem', textTransform: 'none', borderRadius: '8px', py: 0.25, bgcolor: 'grey.900', color: 'common.white', '&:hover': { bgcolor: '#000' } }}>Add plots</Button>
+        <Button size="small" variant="outlined" color="inherit" startIcon={<Clear sx={{ fontSize: 16 }} />} onClick={onReject}
+          sx={{ fontSize: '0.75rem', textTransform: 'none', borderRadius: '8px', py: 0.25, color: 'text.secondary' }}>Discard</Button>
+      </Stack>
+    </Paper>
   );
 }
 
