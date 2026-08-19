@@ -46,10 +46,10 @@ interface Block { kind: 'treatments' | 'plots' | 'samples' | 'open-ui'; title: s
 function SamplesBlock({ plotId }: { plotId?: string }) {
   const samples = useLabSamples().filter(s => (plotId ? s.plotId === plotId : true));
   const showPlot = !plotId;
-  const head = { fontWeight: 700, fontSize: '0.72rem', color: 'text.secondary' };
+  const head = { fontWeight: 700, fontSize: '0.72rem', color: 'text.secondary', bgcolor: 'grey.50' };
   const cell = { fontSize: '0.8rem' };
   return (
-    <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: '10px', maxHeight: 360 }}>
+    <TableContainer sx={{ maxHeight: 340 }}>
       <Table size="small" stickyHeader>
         <TableHead>
           <TableRow>
@@ -89,10 +89,10 @@ function TreatmentsBlock({ plotId, date, owner }: { plotId?: string; date?: stri
   if (date) rows = rows.filter(t => t.date.toISOString().slice(0, 10) === date);
   if (owner) rows = rows.filter(t => matchOwner(ownerOf(t.plotId), owner));
   const showPlot = !plotId;
-  const head = { fontWeight: 700, fontSize: '0.72rem', color: 'text.secondary' };
+  const head = { fontWeight: 700, fontSize: '0.72rem', color: 'text.secondary', bgcolor: 'grey.50' };
   const cell = { fontSize: '0.8rem' };
   return (
-    <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: '10px', maxHeight: 360 }}>
+    <TableContainer sx={{ maxHeight: 340 }}>
       <Table size="small" stickyHeader>
         <TableHead>
           <TableRow>
@@ -125,10 +125,10 @@ function TreatmentsBlock({ plotId, date, owner }: { plotId?: string; date?: stri
 
 function PlotsBlock() {
   const plots = usePlots();
-  const head = { fontWeight: 700, fontSize: '0.72rem', color: 'text.secondary' };
+  const head = { fontWeight: 700, fontSize: '0.72rem', color: 'text.secondary', bgcolor: 'grey.50' };
   const cell = { fontSize: '0.8rem' };
   return (
-    <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: '10px', maxHeight: 360 }}>
+    <TableContainer sx={{ maxHeight: 340 }}>
       <Table size="small" stickyHeader>
         <TableHead>
           <TableRow>
@@ -165,6 +165,18 @@ function OpenInUi({ to, tab }: { to: string; tab?: number }) {
         Open in ResiYou
       </Button>
     </Box>
+  );
+}
+
+/** A titled card for an inline result — gray header bar + framed, padded body. */
+function ResultCard({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <Paper variant="outlined" sx={{ borderRadius: '12px', overflow: 'hidden', borderColor: 'grey.400' }}>
+      <Box sx={{ px: 2, py: 1.25, bgcolor: 'grey.100', borderBottom: 1, borderColor: 'grey.300' }}>
+        <Typography sx={{ fontWeight: 700, fontSize: '0.85rem' }}>{title}</Typography>
+      </Box>
+      <Box sx={{ p: 1.5 }}>{children}</Box>
+    </Paper>
   );
 }
 
@@ -416,26 +428,26 @@ export function ChatFirstWorkspace() {
             if (entry.role === 'block' && entry.block) {
               const b = entry.block;
               return (
-                <Box key={entry.id} sx={{ alignSelf: 'flex-start', width: '100%' }}>
-                  <Typography sx={{ fontSize: '0.75rem', fontWeight: 700, color: 'text.secondary', mb: 0.75 }}>{b.title}</Typography>
+                <Box key={entry.id} sx={{ alignSelf: 'flex-start', width: '100%', mb: 1 }}>
                   {b.kind === 'treatments' && (<>
-                    <TreatmentsBlock plotId={b.plotId} date={b.date} owner={b.owner} />
+                    <ResultCard title={b.title}><TreatmentsBlock plotId={b.plotId} date={b.date} owner={b.owner} /></ResultCard>
                     <OpenInUi to={b.plotId ? `/plot/${b.plotId}` : '/'} tab={b.plotId ? 0 : undefined} />
                   </>)}
                   {b.kind === 'plots' && (<>
-                    <PlotsBlock />
+                    <ResultCard title={b.title}><PlotsBlock /></ResultCard>
                     <OpenInUi to="/" />
                   </>)}
                   {b.kind === 'samples' && (<>
-                    <SamplesBlock plotId={b.plotId} />
+                    <ResultCard title={b.title}><SamplesBlock plotId={b.plotId} /></ResultCard>
                     <OpenInUi to={b.plotId ? `/plot/${b.plotId}` : '/'} tab={b.plotId ? 2 : undefined} />
                   </>)}
-                  {b.kind === 'open-ui' && (
+                  {b.kind === 'open-ui' && (<>
+                    <Typography sx={{ fontSize: '0.85rem', fontWeight: 700, mb: 0.75 }}>{b.title}</Typography>
                     <Button variant="outlined" startIcon={<OpenInNew />} sx={{ textTransform: 'none', borderRadius: '8px' }}
                       onClick={() => { setChatFirstMode('ui'); router.navigate(`/plot/${b.plotId}`, { state: { activeTab: b.tab } }); }}>
                       Open in ResiYou
                     </Button>
-                  )}
+                  </>)}
                 </Box>
               );
             }
