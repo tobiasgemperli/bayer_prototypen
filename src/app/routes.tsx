@@ -15,6 +15,7 @@ import { VariantPicker } from './main/VariantPicker';
 import { VariantProvider } from './variants/variant-context';
 import { resolveComponent, OverridableKey, getVariant } from './variants/registry';
 import { SampleSheetPage } from './main/SampleSheetPage';
+import { PrototypeGallery } from './main/PrototypeGallery';
 import { TableActionsDemoPage } from './variants/table-actions-v1/TableActionsDemoPage';
 import { TableActionsErrorDemoPage } from './variants/table-actions-v1/TableActionsErrorDemoPage';
 import { TableActionsTagsDemoPage } from './variants/table-actions-v1/TableActionsTagsDemoPage';
@@ -109,6 +110,7 @@ export const router = createBrowserRouter([
       { path: "plot/:id/lab-results/:sampleId", Component: LabSamplePage },
       { path: "plot/:id/samples/:sampleId", Component: SampleReportPage },
       { path: "add-plot", Component: AddPlotPage },
+      { path: "prototypes", Component: PrototypeGallery },
 
       // Variant routes — same paths under /v/:variantId/
       {

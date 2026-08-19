@@ -11,6 +11,7 @@ import { useNavigate, useLocation } from 'react-router';
 import ResiYouLogo from '../../imports/ResiYouLogo1';
 import { useDemoMode } from '../data/auth-state';
 import { demoUser } from '../data/demo-content';
+import { PrototypeSwitcher } from './PrototypeSwitcher';
 
 export function Header() {
   const demoMode = useDemoMode();
@@ -47,6 +48,9 @@ export function Header() {
         <Box sx={{ flexGrow: 1 }} />
 
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+          {/* Demo prototype switcher */}
+          {!isOnboarding && <PrototypeSwitcher />}
+
           {/* Notifications + Help — hidden in onboarding */}
           {!isOnboarding && (
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
