@@ -197,7 +197,7 @@ export function OnboardingFlow() {
     return (
       <Box sx={{ position: 'fixed', top: HEADER_H, left: 0, right: 0, bottom: 0, zIndex: 1100, bgcolor: 'background.default', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <Box sx={{ textAlign: 'center', maxWidth: 520, px: 3 }}>
-          <CheckCircle sx={{ fontSize: 56, color: 'success.main' }} />
+          <CheckCircle sx={{ fontSize: 56, color: 'success.light' }} />
           <Typography sx={{ fontWeight: 700, fontSize: '1.5rem', mt: 2 }}>You're all set</Typography>
           <Typography sx={{ color: 'text.secondary', mt: 1 }}>
             Imported <b>{plotsAdded}</b> plot{plotsAdded !== 1 ? 's' : ''}, <b>{txAdded}</b> treatment{txAdded !== 1 ? 's' : ''} and <b>{samplesAdded}</b> sample{samplesAdded !== 1 ? 's' : ''}.
