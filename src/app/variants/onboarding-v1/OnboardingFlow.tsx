@@ -238,7 +238,7 @@ export function OnboardingFlow() {
                   <Box sx={{
                     width: 24, height: 24, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
                     fontSize: '0.72rem', fontWeight: 700, flexShrink: 0,
-                    bgcolor: i + 1 < step ? 'success.main' : i + 1 === step ? 'grey.900' : 'grey.200',
+                    bgcolor: i + 1 < step ? 'success.light' : i + 1 === step ? 'grey.900' : 'grey.200',
                     color: i + 1 <= step ? 'common.white' : 'text.secondary',
                   }}>{i + 1 < step ? '✓' : i + 1}</Box>
                   <Typography sx={{ fontSize: '0.78rem', fontWeight: i + 1 === step ? 700 : 500, color: i + 1 === step ? 'text.primary' : 'text.secondary' }}>{tl}</Typography>
