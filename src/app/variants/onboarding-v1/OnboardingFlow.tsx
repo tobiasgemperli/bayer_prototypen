@@ -53,6 +53,18 @@ const STEP_COPY = [
 const head = { fontWeight: 700, fontSize: '0.7rem', color: 'text.secondary' } as const;
 const cell = { fontSize: '0.8rem' } as const;
 
+/** Framed card with a gray header bar (matches the chat-first result cards). */
+function SectionCard({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <Paper variant="outlined" sx={{ borderRadius: '12px', overflow: 'hidden', borderColor: 'grey.400' }}>
+      <Box sx={{ px: 2, py: 1.25, bgcolor: 'grey.100', borderBottom: 1, borderColor: 'grey.300' }}>
+        <Typography sx={{ fontWeight: 700, fontSize: '0.85rem' }}>{title}</Typography>
+      </Box>
+      <Box sx={{ p: 1.5 }}>{children}</Box>
+    </Paper>
+  );
+}
+
 // ── Left pane: the data that exists in the system, per step ───────────────────
 function DataPane({ step }: { step: number }) {
   const plots = usePlots();
@@ -66,10 +78,10 @@ function DataPane({ step }: { step: number }) {
 
   return (
     <Box>
-      <Typography sx={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'text.secondary' }}>In your account</Typography>
-      <Typography sx={{ fontWeight: 700, fontSize: '1.05rem', mt: 0.25, mb: 1.5 }}>{title}</Typography>
-      <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: '10px' }}>
-        <Table size="small" stickyHeader>
+      <Typography sx={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'text.secondary', mb: 1 }}>In your account</Typography>
+      <SectionCard title={title}>
+      <TableContainer>
+        <Table size="small">
           {step === 1 && (<>
             <TableHead><TableRow><TableCell sx={head}>Plot</TableCell><TableCell sx={head}>Crop</TableCell><TableCell sx={head}>Variety</TableCell><TableCell sx={head}>Location</TableCell></TableRow></TableHead>
             <TableBody>{plots.map(p => (
@@ -94,6 +106,7 @@ function DataPane({ step }: { step: number }) {
           </>)}
         </Table>
       </TableContainer>
+      </SectionCard>
     </Box>
   );
 }
@@ -291,15 +304,16 @@ export function OnboardingFlow() {
 
             {step === 3 && samples && (
               <Box sx={{ mt: 3 }}>
-                <Typography sx={{ ...head, mb: 0.75 }}>{samples.length} samples found — review and import</Typography>
-                <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: '10px' }}>
-                  <Table size="small">
-                    <TableHead><TableRow><TableCell sx={head}>Code</TableCell><TableCell sx={head}>Name</TableCell><TableCell sx={head}>Commodity</TableCell><TableCell sx={head}>Laboratory</TableCell></TableRow></TableHead>
-                    <TableBody>{samples.map(s => (
-                      <TableRow key={s.sampleCode} hover><TableCell sx={cell}>{s.sampleCode}</TableCell><TableCell sx={cell}>{s.sampleName}</TableCell><TableCell sx={cell}>{s.commodity}</TableCell><TableCell sx={cell}>{s.laboratory}</TableCell></TableRow>
-                    ))}</TableBody>
-                  </Table>
-                </TableContainer>
+                <SectionCard title={`${samples.length} samples found`}>
+                  <TableContainer>
+                    <Table size="small">
+                      <TableHead><TableRow><TableCell sx={head}>Code</TableCell><TableCell sx={head}>Name</TableCell><TableCell sx={head}>Commodity</TableCell><TableCell sx={head}>Laboratory</TableCell></TableRow></TableHead>
+                      <TableBody>{samples.map(s => (
+                        <TableRow key={s.sampleCode} hover><TableCell sx={cell}>{s.sampleCode}</TableCell><TableCell sx={cell}>{s.sampleName}</TableCell><TableCell sx={cell}>{s.commodity}</TableCell><TableCell sx={cell}>{s.laboratory}</TableCell></TableRow>
+                      ))}</TableBody>
+                    </Table>
+                  </TableContainer>
+                </SectionCard>
                 <Button variant="contained" onClick={acceptSamples} sx={{ mt: 1.5, textTransform: 'none', borderRadius: '8px', bgcolor: 'grey.900', color: 'common.white', '&:hover': { bgcolor: '#000' } }}>Import {samples.length} samples</Button>
               </Box>
             )}
@@ -345,12 +359,9 @@ function PlotsCard({ plots, onUpdate, onAccept, onReject }: {
   const headSx = { fontSize: '0.625rem', fontWeight: 700, color: 'text.secondary', textTransform: 'uppercase', letterSpacing: '0.03em' } as const;
   const hasAssumed = plots.some(p => Object.values(p.meta).some(m => m === 'assumed'));
   return (
-    <Paper variant="outlined" sx={{ borderRadius: '10px', overflow: 'hidden', borderColor: 'grey.900' }}>
-      <Box sx={{ px: 1.5, pt: 1 }}>
-        <Chip size="small" label={`${plots.length} plots found`} variant="outlined" sx={{ fontSize: '0.7rem', height: 20 }} />
-      </Box>
-      <Box sx={{ px: 1.5, pt: 1, pb: 0.5, overflowX: 'auto' }}>
-        <Box sx={{ minWidth: 720 }}>
+    <SectionCard title={`${plots.length} plots found`}>
+      <Box sx={{ overflowX: 'auto' }}>
+        <Box sx={{ minWidth: 700 }}>
           <Box sx={{ display: 'grid', gridTemplateColumns: cols, gap: 0.75, alignItems: 'end', pb: 0.5, borderBottom: 1, borderColor: 'divider' }}>
             {['Plot name', 'Crop', 'Variety', 'Location', 'Owner', 'Season'].map(h => <Typography key={h} sx={headSx}>{h}</Typography>)}
           </Box>
@@ -367,17 +378,15 @@ function PlotsCard({ plots, onUpdate, onAccept, onReject }: {
         </Box>
       </Box>
       {hasAssumed && (
-        <Box sx={{ px: 1.5, pt: 0.5 }}>
-          <Typography sx={{ fontSize: '0.68rem', color: 'text.secondary' }}>Blue = assumed values — edit before accepting.</Typography>
-        </Box>
+        <Typography sx={{ fontSize: '0.68rem', color: 'text.secondary', mt: 1 }}>Blue = assumed values — edit before accepting.</Typography>
       )}
-      <Stack direction="row" spacing={1} sx={{ px: 1.5, py: 1 }}>
+      <Stack direction="row" spacing={1} sx={{ mt: 1.25 }}>
         <Button size="small" variant="contained" startIcon={<Check sx={{ fontSize: 16 }} />} onClick={onAccept}
           sx={{ fontSize: '0.75rem', textTransform: 'none', borderRadius: '8px', py: 0.25, bgcolor: 'grey.900', color: 'common.white', '&:hover': { bgcolor: '#000' } }}>Add plots</Button>
         <Button size="small" variant="outlined" color="inherit" startIcon={<Clear sx={{ fontSize: 16 }} />} onClick={onReject}
           sx={{ fontSize: '0.75rem', textTransform: 'none', borderRadius: '8px', py: 0.25, color: 'text.secondary' }}>Discard</Button>
       </Stack>
-    </Paper>
+    </SectionCard>
   );
 }
 
