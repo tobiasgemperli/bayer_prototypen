@@ -22,13 +22,24 @@ let wid = 0;
 const plotName = (id?: string) => getPlots().find(p => p.id === id)?.plotName ?? 'plot';
 const fmtDate = (d: Date | null) =>
   d ? new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).format(d) : '—';
+const prettyDate = (iso: string) => { const [y, m, d] = iso.split('-').map(Number); return fmtDate(new Date(y, m - 1, d)); };
+/** Does a plot owner (e.g. "john.smith@bayer.com") match a person query (e.g. "John Smith")? */
+const matchOwner = (owner: string, query: string) => {
+  const o = owner.toLowerCase();
+  return query.toLowerCase().split(/\s+/).filter(Boolean).every(tok => o.includes(tok));
+};
 
 // ── Inline result blocks ─────────────────────────────────────────────────────
-interface Block { kind: 'treatments' | 'plots' | 'open-ui'; title: string; plotId?: string; tab?: number }
+interface Block { kind: 'treatments' | 'plots' | 'open-ui'; title: string; plotId?: string; date?: string; owner?: string; tab?: number }
 
-function TreatmentsBlock({ plotId }: { plotId?: string }) {
+function TreatmentsBlock({ plotId, date, owner }: { plotId?: string; date?: string; owner?: string }) {
   useTreatmentsVersion(); // re-render when treatments change (e.g. after an accept)
-  const rows = treatmentsData.filter(t => (plotId ? t.plotId === plotId : true) && t.product);
+  const plots = getPlots();
+  const ownerOf = (pid: string) => plots.find(p => p.id === pid)?.owner ?? '';
+  let rows = treatmentsData.filter(t => t.product);
+  if (plotId) rows = rows.filter(t => t.plotId === plotId);
+  if (date) rows = rows.filter(t => t.date.toISOString().slice(0, 10) === date);
+  if (owner) rows = rows.filter(t => matchOwner(ownerOf(t.plotId), owner));
   const showPlot = !plotId;
   const head = { fontWeight: 700, fontSize: '0.72rem', color: 'text.secondary' };
   const cell = { fontSize: '0.8rem' };
@@ -137,8 +148,13 @@ export function ChatFirstWorkspace() {
   const add = (e: Omit<WEntry, 'id'>) => { setEntries(prev => [...prev, { id: ++wid, ...e }]); scrollToBottom(); };
 
   // ── Result actions ─────────────────────────────────────────────────────────
-  const showTreatments = (plotId?: string) =>
-    add({ role: 'block', content: '', block: { kind: 'treatments', plotId, title: plotId ? `Treatments — ${plotName(plotId)}` : 'All treatments' } });
+  const showTreatments = (opts: { plotId?: string; date?: string; owner?: string } = {}) => {
+    const title = opts.date ? `Treatments on ${prettyDate(opts.date)}`
+      : opts.owner ? `Treatments by ${opts.owner}`
+      : opts.plotId ? `Treatments — ${plotName(opts.plotId)}`
+      : 'All treatments';
+    add({ role: 'block', content: '', block: { kind: 'treatments', plotId: opts.plotId, date: opts.date, owner: opts.owner, title } });
+  };
   const showPlots = () => add({ role: 'block', content: '', block: { kind: 'plots', title: 'All plots' } });
 
   const enrichAll = (cmds: AddTreatmentCommand[]) => cmds.map(c => enrichCommand(c, true));
@@ -160,7 +176,7 @@ export function ChatFirstWorkspace() {
     if (tab === 1 || tab === 2) {
       add({ role: 'block', content: '', block: { kind: 'open-ui', plotId: pid, tab, title: tab === 1 ? `Residue forecast — ${plotName(pid)}` : `Samples & reports — ${plotName(pid)}` } });
     } else {
-      showTreatments(pid);
+      showTreatments({ plotId: pid });
     }
   };
 
@@ -249,7 +265,7 @@ export function ChatFirstWorkspace() {
     }));
     updateTreatments(toAdd);
     add({ role: 'assistant', content: `Added ${toAdd.length} treatment${toAdd.length !== 1 ? 's' : ''} to ${plotName(plotId)}.` });
-    showTreatments(plotId);
+    showTreatments({ plotId });
   }, []);
   const reject = useCallback((entryId: number) => {
     setEntries(prev => prev.map(e => e.id === entryId ? { ...e, status: 'rejected' } : e));
@@ -265,6 +281,8 @@ export function ChatFirstWorkspace() {
   const samples: { label: string; run: () => void }[] = [
     { label: 'Show me all treatments', run: () => showTreatments() },
     { label: 'Show me all plots', run: () => showPlots() },
+    { label: 'Find treatments on 20 Mar 2024', run: () => showTreatments({ date: '2024-03-20' }) },
+    { label: 'Find treatments by John Smith', run: () => showTreatments({ owner: 'John Smith' }) },
     { label: 'Add Roundup 2 L/ha', run: () => runSample('Add Roundup 2 L/ha', [{ action: 'addTreatment', product: 'Roundup', productDoseValue: '2', productDoseUnit: 'L/ha' }] as AddTreatmentCommand[]) },
     { label: 'Add Confidor, soil drench', run: () => runSample('Add Confidor, soil drench', [{ action: 'addTreatment', product: 'Confidor', method: 'Soil drench' }] as AddTreatmentCommand[]) },
     { label: 'Import CSV example', run: () => runSample('📄 treatments.csv', SAMPLE_CSV_COMMANDS) },
@@ -322,7 +340,7 @@ export function ChatFirstWorkspace() {
                 <Box key={entry.id} sx={{ alignSelf: 'flex-start', width: '100%' }}>
                   <Typography sx={{ fontSize: '0.75rem', fontWeight: 700, color: 'text.secondary', mb: 0.75 }}>{b.title}</Typography>
                   {b.kind === 'treatments' && (<>
-                    <TreatmentsBlock plotId={b.plotId} />
+                    <TreatmentsBlock plotId={b.plotId} date={b.date} owner={b.owner} />
                     <OpenInUi to={b.plotId ? `/plot/${b.plotId}` : '/'} tab={b.plotId ? 0 : undefined} />
                   </>)}
                   {b.kind === 'plots' && (<>
