@@ -1,9 +1,9 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   Box, IconButton, Paper, Typography, TextField, Fade, CircularProgress,
-  Button, Chip, Stack, MenuItem, Select, SelectChangeEvent,
+  Button, Chip, Stack, MenuItem, Select, SelectChangeEvent, Dialog, DialogContent,
 } from '@mui/material';
-import { Close, Mic, MicOff, Send, Check, Clear, ImageOutlined, AttachFile, AutoAwesome, RestartAlt } from '@mui/icons-material';
+import { Close, Mic, MicOff, Send, Check, Clear, ImageOutlined, AttachFile, AutoAwesome, RestartAlt, HelpOutline, CloudUploadOutlined } from '@mui/icons-material';
 import { useAssistantLayout } from '../data/assistant-layout';
 import { useAudioMode } from '../data/audio-mode';
 import { pushCommand, VoiceCommand, AddTreatmentCommand } from '../data/voice-commands';
@@ -615,6 +615,7 @@ export function FieldRow({ label, assumed, children }: { label: string; assumed:
 // ── Main component ───────────────────────────────────────────────────────────
 export function ChatAssistant() {
   const [open, setOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
   const [entries, setEntries] = useState<ChatEntry[]>([]);
   const [input, setInput] = useState('');
   const [interimText, setInterimText] = useState('');
@@ -1024,6 +1025,7 @@ export function ChatAssistant() {
           {/* Header */}
           <Box sx={{ px: 2, py: 1.5, display: 'flex', alignItems: 'center', gap: 0.5, borderBottom: 1, borderColor: 'divider' }}>
             <Typography sx={{ flex: 1, fontSize: '0.875rem', fontWeight: 700 }}>Assistant</Typography>
+            <IconButton size="small" onClick={() => setHelpOpen(true)} title="Examples"><HelpOutline fontSize="small" /></IconButton>
             {entries.length > 0 && (
               <IconButton size="small" onClick={handleReset} title="Reset conversation">
                 <RestartAlt fontSize="small" />
@@ -1031,6 +1033,32 @@ export function ChatAssistant() {
             )}
             <IconButton size="small" onClick={() => setOpen(false)}><Close fontSize="small" /></IconButton>
           </Box>
+
+          {/* Examples — sample prompts, on demand */}
+          <Dialog open={helpOpen} onClose={() => setHelpOpen(false)} maxWidth="xs" fullWidth PaperProps={{ sx: { borderRadius: '14px' } }}>
+            <DialogContent sx={{ pb: 3 }}>
+              <Typography sx={{ fontWeight: 700, fontSize: '0.95rem' }}>Examples</Typography>
+              <Typography sx={{ fontSize: '0.7rem', color: 'text.secondary', mt: 2, mb: 1 }}>Try one:</Typography>
+              <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 1 }}>
+                {['Add Roundup 2 L/ha', 'Add Confidor, soil drench', 'Add DECIS FLUX®'].map(ex => (
+                  <Chip key={ex} label={ex} size="small" variant="outlined" clickable onClick={() => { doSend(ex); setHelpOpen(false); }} sx={{ fontSize: '0.72rem', height: 26, borderRadius: '8px' }} />
+                ))}
+                {[
+                  { label: 'Show me all plots', to: '/', tab: undefined as number | undefined, confirm: 'Here are all your plots.' },
+                  { label: 'Treatments for North Field A', to: '/plot/1', tab: 0, confirm: 'Opening North Field A — Treatments.' },
+                  { label: 'Residue forecast for North Field A', to: '/plot/1', tab: 1, confirm: 'Opening North Field A — Residue forecast.' },
+                  { label: 'Samples & reports for North Field A', to: '/plot/1', tab: 2, confirm: 'Opening North Field A — Samples & Reports.' },
+                ].map(q => (
+                  <Chip key={q.label} label={q.label} size="small" variant="outlined" clickable onClick={() => { runQuerySample(q.label, q.to, q.tab, q.confirm); setHelpOpen(false); }} sx={{ fontSize: '0.72rem', height: 26, borderRadius: '8px' }} />
+                ))}
+              </Stack>
+              <Typography sx={{ fontSize: '0.7rem', color: 'text.secondary', mt: 2, mb: 1 }}>More:</Typography>
+              <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 1 }}>
+                <Chip icon={<AttachFile sx={{ fontSize: 15 }} />} label="CSV example" size="small" variant="outlined" clickable onClick={() => { runSample('📄 treatments.csv', SAMPLE_CSV_COMMANDS); setHelpOpen(false); }} sx={{ fontSize: '0.72rem', height: 26, borderRadius: '8px' }} />
+                <Chip icon={<ImageOutlined sx={{ fontSize: 15 }} />} label="Screenshot example" size="small" variant="outlined" clickable onClick={() => { runSample('📷 farm-ui-screenshot.png', SAMPLE_SCREENSHOT_COMMANDS); setHelpOpen(false); }} sx={{ fontSize: '0.72rem', height: 26, borderRadius: '8px' }} />
+              </Stack>
+            </DialogContent>
+          </Dialog>
 
           {/* Drop overlay */}
           {dragging && (
@@ -1065,46 +1093,20 @@ export function ChatAssistant() {
                   </Typography>
                 </Box>
 
-                <Typography sx={{ fontSize: '0.7rem', color: 'text.secondary', mt: 3, mb: 1 }}>Try one:</Typography>
-                <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 1 }}>
-                  {/* Text commands */}
-                  {['Add Roundup 2 L/ha', 'Add Confidor, soil drench', 'Add DECIS FLUX®'].map(ex => (
-                    <Chip
-                      key={ex} label={ex} size="small" variant="outlined" clickable
-                      onClick={() => doSend(ex)}
-                      sx={{ fontSize: '0.72rem', height: 26, borderRadius: '8px' }}
-                    />
-                  ))}
-                  {/* Navigation / query samples */}
-                  {[
-                    { label: 'Show me all plots', to: '/', tab: undefined as number | undefined, confirm: 'Here are all your plots.' },
-                    { label: 'Treatments for North Field A', to: '/plot/1', tab: 0, confirm: 'Opening North Field A — Treatments.' },
-                    { label: 'Residue forecast for North Field A', to: '/plot/1', tab: 1, confirm: 'Opening North Field A — Residue forecast.' },
-                    { label: 'Samples & reports for North Field A', to: '/plot/1', tab: 2, confirm: 'Opening North Field A — Samples & Reports.' },
-                  ].map(q => (
-                    <Chip
-                      key={q.label} label={q.label} size="small" variant="outlined" clickable
-                      onClick={() => runQuerySample(q.label, q.to, q.tab, q.confirm)}
-                      sx={{ fontSize: '0.72rem', height: 26, borderRadius: '8px' }}
-                    />
-                  ))}
-                </Stack>
-
-                <Typography sx={{ fontSize: '0.7rem', color: 'text.secondary', mt: 2, mb: 1 }}>More:</Typography>
-                <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 1 }}>
-                  <Chip
-                    icon={<AttachFile sx={{ fontSize: 15 }} />} label="CSV example" size="small"
-                    variant="outlined" clickable
-                    onClick={() => runSample('📄 treatments.csv', SAMPLE_CSV_COMMANDS)}
-                    sx={{ fontSize: '0.72rem', height: 26, borderRadius: '8px' }}
-                  />
-                  <Chip
-                    icon={<ImageOutlined sx={{ fontSize: 15 }} />} label="Screenshot example" size="small"
-                    variant="outlined" clickable
-                    onClick={() => runSample('📷 farm-ui-screenshot.png', SAMPLE_SCREENSHOT_COMMANDS)}
-                    sx={{ fontSize: '0.72rem', height: 26, borderRadius: '8px' }}
-                  />
-                </Stack>
+                {/* Drop box — samples now live behind the Examples (?) button */}
+                <Paper
+                  variant="outlined"
+                  onClick={() => fileInputRef.current?.click()}
+                  sx={{
+                    mt: 3, py: 3.5, borderRadius: '14px', borderStyle: 'dashed', borderWidth: 2,
+                    borderColor: dragging ? 'grey.900' : 'divider', textAlign: 'center', cursor: 'pointer',
+                    transition: 'border-color .12s', '&:hover': { borderColor: 'text.disabled' },
+                  }}
+                >
+                  <CloudUploadOutlined sx={{ fontSize: 38, color: 'text.secondary' }} />
+                  <Typography sx={{ fontWeight: 600, fontSize: '0.875rem', mt: 1 }}>Drop a screenshot or CSV</Typography>
+                  <Typography sx={{ fontSize: '0.75rem', color: 'text.secondary' }}>or click to browse</Typography>
+                </Paper>
               </Box>
             )}
             {entries.map((entry) => {

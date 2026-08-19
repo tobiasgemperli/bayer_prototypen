@@ -59,7 +59,11 @@ export function Header() {
           <ToggleButtonGroup
             exclusive size="small" value={chatFirstMode}
             onChange={(_, v) => { if (v) setChatFirstMode(v); }}
-            sx={{ mr: 3, '& .MuiToggleButton-root': { textTransform: 'none', px: 2, py: 0.5, borderRadius: '8px' } }}
+            sx={{
+              mr: 3,
+              '& .MuiToggleButton-root': { textTransform: 'none', px: 2, py: 0.5, borderRadius: '8px' },
+              '& .MuiToggleButton-root.Mui-selected': { bgcolor: 'grey.900', color: 'common.white', '&:hover': { bgcolor: '#000' } },
+            }}
           >
             <ToggleButton value="ui"><GridViewOutlined sx={{ fontSize: 18, mr: 0.75 }} />UI</ToggleButton>
             <ToggleButton value="chat"><ChatBubbleOutline sx={{ fontSize: 18, mr: 0.75 }} />Chat</ToggleButton>
