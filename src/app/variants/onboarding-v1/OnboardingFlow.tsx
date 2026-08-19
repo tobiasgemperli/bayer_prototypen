@@ -130,17 +130,16 @@ export function OnboardingFlow() {
   return (
     <Shell>
       {/* Progress */}
-      <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center', mb: 3 }}>
+      <Box sx={{ display: 'flex', gap: 3, justifyContent: 'center', mb: 3, flexWrap: 'wrap' }}>
         {ONB_TITLES.map((tl, i) => (
           <Box key={tl} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <Box sx={{
               width: 24, height: 24, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: '0.72rem', fontWeight: 700,
+              fontSize: '0.72rem', fontWeight: 700, flexShrink: 0,
               bgcolor: i + 1 < step ? 'success.main' : i + 1 === step ? 'grey.900' : 'grey.200',
               color: i + 1 <= step ? 'common.white' : 'text.secondary',
             }}>{i + 1 < step ? '✓' : i + 1}</Box>
             <Typography sx={{ fontSize: '0.78rem', fontWeight: i + 1 === step ? 700 : 500, color: i + 1 === step ? 'text.primary' : 'text.secondary' }}>{tl}</Typography>
-            {i < ONB_TITLES.length - 1 && <Box sx={{ width: 28, height: 1, bgcolor: 'divider', mx: 0.5 }} />}
           </Box>
         ))}
       </Box>
@@ -155,31 +154,19 @@ export function OnboardingFlow() {
         onDragLeave={() => setDragging(false)}
         onDrop={e => { e.preventDefault(); setDragging(false); triggerExtract(); }}
         sx={{
-          borderRadius: '14px', p: 3, borderStyle: 'dashed', borderWidth: 2,
+          borderRadius: '16px', py: 8, px: 3, minHeight: 260, borderStyle: 'dashed', borderWidth: 2,
           borderColor: dragging ? 'grey.900' : 'divider',
           bgcolor: dragging ? 'action.hover' : 'background.paper',
           textAlign: 'center', transition: 'border-color .12s, background-color .12s',
+          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
         }}
       >
         <input ref={fileInputRef} type="file" accept="image/*,.csv,text/csv,application/pdf" hidden
           onChange={e => { if (e.target.files?.length) triggerExtract(); e.target.value = ''; }} />
-        <CloudUploadOutlined sx={{ fontSize: 40, color: 'text.secondary' }} />
-        <Typography sx={{ fontWeight: 600, mt: 1 }}>Drop files here</Typography>
-        <Typography sx={{ fontSize: '0.8rem', color: 'text.secondary' }}>CSV, screenshot or PDF — or use the options below</Typography>
-
-        {/* Always: drop / speak / write */}
-        <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-end', mt: 2, maxWidth: 560, mx: 'auto' }}>
-          <IconButton size="small" onClick={() => fileInputRef.current?.click()} title="Attach a file" sx={{ color: 'text.secondary' }}><AttachFile /></IconButton>
-          <IconButton size="small" onClick={triggerExtract} title="Speak" sx={{ color: 'text.secondary' }}><Mic /></IconButton>
-          <TextField fullWidth size="small" placeholder="…or type what you have"
-            value={input} onChange={e => setInput(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); triggerExtract(); } }}
-            sx={{ '& .MuiOutlinedInput-root': { borderRadius: '10px', fontSize: '0.85rem' } }} />
-          <IconButton size="small" onClick={triggerExtract} disabled={loading} sx={{ color: 'text.primary' }}>
-            {loading ? <CircularProgress size={20} /> : <Send />}
-          </IconButton>
-        </Box>
-        <Box sx={{ mt: 1.5 }}>
+        <CloudUploadOutlined sx={{ fontSize: 64, color: 'text.secondary' }} />
+        <Typography sx={{ fontWeight: 600, fontSize: '1.15rem', mt: 1.5 }}>Drop files here</Typography>
+        <Typography sx={{ fontSize: '0.85rem', color: 'text.secondary', mt: 0.5 }}>CSV, screenshot or PDF</Typography>
+        <Box sx={{ mt: 2.5 }}>
           <Chip icon={<AutoAwesome sx={{ fontSize: 15 }} />} label={`Use example ${['plots', 'spray journal', 'lab reports'][step - 1]}`}
             size="small" variant="outlined" clickable onClick={triggerExtract} sx={{ borderRadius: '8px' }} />
         </Box>
@@ -241,6 +228,21 @@ export function OnboardingFlow() {
           {step === 3 ? 'Finish' : 'Continue'}
         </Button>
       </Box>
+
+      {/* Bottom composer — speak / type / send, pinned below the box */}
+      <Box sx={{ position: 'fixed', left: 0, right: 0, bottom: 0, borderTop: 1, borderColor: 'divider', bgcolor: 'background.paper', px: 3, py: 1.5, zIndex: 1101 }}>
+        <Box sx={{ maxWidth: 720, mx: 'auto', display: 'flex', gap: 1, alignItems: 'flex-end' }}>
+          <IconButton size="small" onClick={() => fileInputRef.current?.click()} title="Attach a file" sx={{ color: 'text.secondary' }}><AttachFile /></IconButton>
+          <IconButton size="small" onClick={triggerExtract} title="Speak" sx={{ color: 'text.secondary' }}><Mic /></IconButton>
+          <TextField fullWidth size="small" placeholder="Speak or type what you have…"
+            value={input} onChange={e => setInput(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); triggerExtract(); } }}
+            sx={{ '& .MuiOutlinedInput-root': { borderRadius: '10px', fontSize: '0.85rem' } }} />
+          <IconButton size="small" onClick={triggerExtract} disabled={loading} sx={{ color: 'text.primary' }}>
+            {loading ? <CircularProgress size={20} /> : <Send />}
+          </IconButton>
+        </Box>
+      </Box>
     </Shell>
   );
 }
@@ -248,7 +250,7 @@ export function OnboardingFlow() {
 function Shell({ children }: { children: React.ReactNode }) {
   return (
     <Box sx={{ position: 'fixed', top: HEADER_H, left: 0, right: 0, bottom: 0, zIndex: 1100, bgcolor: 'background.default', overflowY: 'auto' }}>
-      <Box sx={{ maxWidth: 720, mx: 'auto', px: 3, py: 5 }}>{children}</Box>
+      <Box sx={{ maxWidth: 720, mx: 'auto', px: 3, pt: 5, pb: 14 }}>{children}</Box>
     </Box>
   );
 }
