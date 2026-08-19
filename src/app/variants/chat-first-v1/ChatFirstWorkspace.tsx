@@ -105,7 +105,7 @@ function PlotsBlock() {
   );
 }
 
-/** "Open in UI mode" link shown under every read-only table. */
+/** "Open in ResiYou" link shown under every read-only table. */
 function OpenInUi({ to, tab }: { to: string; tab?: number }) {
   return (
     <Box sx={{ mt: 0.75 }}>
@@ -114,7 +114,7 @@ function OpenInUi({ to, tab }: { to: string; tab?: number }) {
         onClick={() => { setChatFirstMode('ui'); router.navigate(to, tab != null ? { state: { activeTab: tab } } : undefined); }}
         sx={{ textTransform: 'none', color: 'text.secondary', fontSize: '0.75rem', borderRadius: '8px' }}
       >
-        Open in UI mode
+        Open in ResiYou
       </Button>
     </Box>
   );
@@ -204,10 +204,30 @@ export function ChatFirstWorkspace() {
     setLoading(false); loadingRef.current = false;
   };
 
+  // Handle "show/find" queries client-side (instant, no API): plots, all
+  // treatments, treatments on a date, or treatments by a person.
+  const handleLocalQuery = (text: string): boolean => {
+    const lower = text.toLowerCase();
+    const isQuery = /^(show|find|list|display|which|what)\b/i.test(text.trim()) || lower.includes('show me') || lower.includes('find ');
+    if (!isQuery) return false;
+    if (lower.includes('plot') && !lower.includes('treatment')) { add({ role: 'user', content: text }); showPlots(); return true; }
+    const by = text.match(/\bby\s+([A-Za-z][A-Za-z .'-]+)/);
+    if (by) { add({ role: 'user', content: text }); showTreatments({ owner: by[1].trim().replace(/[?.!]+$/, '') }); return true; }
+    const dmy = text.match(/(\d{1,2})[.\/-](\d{1,2})[.\/-](\d{2,4})/);
+    if (dmy) {
+      const y = dmy[3].length === 2 ? `20${dmy[3]}` : dmy[3];
+      const iso = `${y}-${String(+dmy[2]).padStart(2, '0')}-${String(+dmy[1]).padStart(2, '0')}`;
+      add({ role: 'user', content: text }); showTreatments({ date: iso }); return true;
+    }
+    if (lower.includes('treatment')) { add({ role: 'user', content: text }); showTreatments(); return true; }
+    return false;
+  };
+
   const doSend = (text: string) => {
     const t = text.trim();
     if (!t || loadingRef.current) return;
     setInput('');
+    if (handleLocalQuery(t)) return;
     runLLM(t, t);
   };
 
@@ -278,13 +298,17 @@ export function ChatFirstWorkspace() {
   // Sample prompts — shared by the empty state and the "Examples" dialog.
   // All are canned (deterministic, no API cost); only free-form typing calls the LLM.
   const [helpOpen, setHelpOpen] = useState(false);
-  const samples: { label: string; run: () => void }[] = [
-    { label: 'Show me all treatments', run: () => showTreatments() },
-    { label: 'Show me all plots', run: () => showPlots() },
-    { label: 'Find treatments on 20 Mar 2024', run: () => showTreatments({ date: '2024-03-20' }) },
-    { label: 'Find treatments by John Smith', run: () => showTreatments({ owner: 'John Smith' }) },
+  // Echo the request as a user bubble, then run the (read-only) action.
+  const echo = (label: string, action: () => void) => { add({ role: 'user', content: label }); action(); };
+  const primarySamples: { label: string; run: () => void }[] = [
+    { label: 'Show me all treatments', run: () => echo('Show me all treatments', () => showTreatments()) },
+    { label: 'Show me all plots', run: () => echo('Show me all plots', () => showPlots()) },
+    { label: 'Find treatments on 20 Mar 2024', run: () => echo('Find treatments on 20 Mar 2024', () => showTreatments({ date: '2024-03-20' })) },
+    { label: 'Find treatments by John Smith', run: () => echo('Find treatments by John Smith', () => showTreatments({ owner: 'John Smith' })) },
     { label: 'Add Roundup 2 L/ha', run: () => runSample('Add Roundup 2 L/ha', [{ action: 'addTreatment', product: 'Roundup', productDoseValue: '2', productDoseUnit: 'L/ha' }] as AddTreatmentCommand[]) },
     { label: 'Add Confidor, soil drench', run: () => runSample('Add Confidor, soil drench', [{ action: 'addTreatment', product: 'Confidor', method: 'Soil drench' }] as AddTreatmentCommand[]) },
+  ];
+  const importSamples: { label: string; run: () => void }[] = [
     { label: 'Import CSV example', run: () => runSample('📄 treatments.csv', SAMPLE_CSV_COMMANDS) },
     { label: 'Import screenshot example', run: () => runSample('📷 farm-ui-screenshot.png', SAMPLE_SCREENSHOT_COMMANDS) },
   ];
@@ -310,7 +334,10 @@ export function ChatFirstWorkspace() {
           <Dialog open={helpOpen} onClose={() => setHelpOpen(false)} maxWidth="sm" fullWidth
             PaperProps={{ sx: { borderRadius: '14px' } }}>
             <DialogContent sx={{ pb: 4 }}>
-              <EmptyState samples={samples.map(s => ({ label: s.label, run: () => { s.run(); setHelpOpen(false); } }))} />
+              <EmptyState
+                samples={primarySamples.map(s => ({ label: s.label, run: () => { s.run(); setHelpOpen(false); } }))}
+                moreOptions={importSamples.map(s => ({ label: s.label, run: () => { s.run(); setHelpOpen(false); } }))}
+              />
             </DialogContent>
           </Dialog>
         </Box>
@@ -319,7 +346,7 @@ export function ChatFirstWorkspace() {
       {/* Thread */}
       <Box ref={scrollRef} sx={{ flex: 1, overflowY: 'auto', px: 2, pb: 3 }}>
         <Box sx={{ maxWidth: 860, mx: 'auto', display: 'flex', flexDirection: 'column', gap: 2 }}>
-          {entries.length === 0 && <EmptyState samples={samples} />}
+          {entries.length === 0 && <EmptyState samples={primarySamples} moreOptions={importSamples} />}
           {entries.map(entry => {
             if (entry.role === 'pending') {
               return (
@@ -350,7 +377,7 @@ export function ChatFirstWorkspace() {
                   {b.kind === 'open-ui' && (
                     <Button variant="outlined" startIcon={<OpenInNew />} sx={{ textTransform: 'none', borderRadius: '8px' }}
                       onClick={() => { setChatFirstMode('ui'); router.navigate(`/plot/${b.plotId}`, { state: { activeTab: b.tab } }); }}>
-                      Open in UI mode
+                      Open in ResiYou
                     </Button>
                   )}
                 </Box>
@@ -360,9 +387,9 @@ export function ChatFirstWorkspace() {
               <Box key={entry.id} sx={{ alignSelf: entry.role === 'user' ? 'flex-end' : 'flex-start', maxWidth: '80%' }}>
                 <Paper variant="outlined" sx={{
                   px: 1.5, py: 1, borderRadius: '12px',
-                  bgcolor: entry.role === 'user' ? 'primary.main' : 'grey.100',
-                  color: entry.role === 'user' ? 'white' : 'text.primary',
-                  borderColor: entry.role === 'user' ? 'primary.main' : 'divider',
+                  bgcolor: entry.role === 'user' ? 'grey.900' : 'grey.100',
+                  color: entry.role === 'user' ? 'common.white' : 'text.primary',
+                  borderColor: entry.role === 'user' ? 'grey.900' : 'divider',
                 }}>
                   <Typography sx={{ fontSize: '0.85rem', whiteSpace: 'pre-wrap' }}>{entry.content}</Typography>
                 </Paper>
@@ -383,7 +410,7 @@ export function ChatFirstWorkspace() {
             value={input} onChange={e => setInput(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); doSend(input); } }}
             sx={{ '& .MuiOutlinedInput-root': { borderRadius: '12px', fontSize: '0.85rem' } }} />
-          <IconButton size="small" color="primary" onClick={() => doSend(input)} disabled={!input.trim() || loading}>
+          <IconButton size="small" onClick={() => doSend(input)} disabled={!input.trim() || loading} sx={{ color: 'text.primary' }}>
             {loading ? <CircularProgress size={20} /> : <Send />}
           </IconButton>
         </Box>
@@ -392,12 +419,12 @@ export function ChatFirstWorkspace() {
   );
 }
 
-function EmptyState({ samples }: { samples: { label: string; run: () => void }[] }) {
+function EmptyState({ samples, moreOptions }: { samples: { label: string; run: () => void }[]; moreOptions: { label: string; run: () => void }[] }) {
   const chip = { fontSize: '0.75rem', height: 28, borderRadius: '8px' };
   return (
     <Box sx={{ textAlign: 'center', mt: 6 }}>
-      <Box sx={{ width: 60, height: 60, borderRadius: '50%', mx: 'auto', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', bgcolor: 'rgba(212,24,61,0.08)' }}>
-        <AutoAwesome sx={{ color: 'primary.main', fontSize: 30 }} />
+      <Box sx={{ width: 60, height: 60, borderRadius: '50%', mx: 'auto', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', bgcolor: 'grey.100' }}>
+        <AutoAwesome sx={{ color: 'text.primary', fontSize: 30 }} />
       </Box>
       <Typography sx={{ fontWeight: 700, fontSize: '1.1rem', mt: 1.5 }}>What would you like to do?</Typography>
       <Typography sx={{ color: 'text.secondary', fontSize: '0.9rem', mt: 0.5 }}>Ask to see data or make changes — everything happens right here in the chat.</Typography>
@@ -407,6 +434,16 @@ function EmptyState({ samples }: { samples: { label: string; run: () => void }[]
           <Chip key={s.label} label={s.label} clickable variant="outlined" size="small" sx={chip} onClick={s.run} />
         ))}
       </Stack>
+      {moreOptions.length > 0 && (
+        <>
+          <Typography sx={{ fontSize: '0.72rem', color: 'text.secondary', mt: 2.5, mb: 1 }}>More options</Typography>
+          <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 1, justifyContent: 'center' }}>
+            {moreOptions.map(s => (
+              <Chip key={s.label} label={s.label} clickable variant="outlined" size="small" sx={chip} onClick={s.run} />
+            ))}
+          </Stack>
+        </>
+      )}
     </Box>
   );
 }

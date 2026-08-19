@@ -81,9 +81,8 @@ function getCurrentPlotId(): string | null {
   return m ? m[1] : null;
 }
 
-/** Get the most recent treatment on the current plot to use as defaults */
-function getLastTreatment(): Record<string, string> | null {
-  const plotId = getCurrentPlotId();
+/** Get the most recent treatment on the given plot to use as defaults */
+function getLastTreatment(plotId: string | null): Record<string, string> | null {
   if (!plotId) return null;
   const plotTreatments = treatmentsData
     .filter(t => t.plotId === plotId && t.product)
@@ -102,7 +101,6 @@ function getLastTreatment(): Record<string, string> | null {
 /** Enrich a command with assumptions from previous data.
  *  If fromImage=true, all provided fields are treated as explicit (not assumed). */
 export function enrichCommand(cmd: AddTreatmentCommand, fromImage = false): EnrichedTreatment {
-  const last = getLastTreatment();
   const fieldMeta: Record<string, FieldMeta> = {};
   const enriched = { ...cmd, fieldMeta };
 
@@ -114,17 +112,17 @@ export function enrichCommand(cmd: AddTreatmentCommand, fromImage = false): Enri
     }
   }
 
-  // Plot: if the user didn't say which plot, assume the last-opened plot
-  // (or the first plot in the list) and flag it as an assumption (blue).
-  if (!enriched.plotId) {
-    const assumedPlot = getCurrentPlotId() ?? getLastOpenedPlot() ?? getPlots()[0]?.id;
-    if (assumedPlot) {
-      enriched.plotId = assumedPlot;
-      fieldMeta.plotId = { source: 'assumed' };
-    }
+  // Plot: explicit → current plot → last-opened → first in list. If not stated,
+  // flag it as an assumption (blue).
+  const targetPlot = cmd.plotId ?? getCurrentPlotId() ?? getLastOpenedPlot() ?? getPlots()[0]?.id ?? null;
+  if (!enriched.plotId && targetPlot) {
+    enriched.plotId = targetPlot;
+    fieldMeta.plotId = { source: 'assumed' };
   }
 
-  // Fill missing fields from last treatment
+  // Fill missing fields from the most recent treatment ON THE TARGET plot,
+  // so the assumptions match the assumed plot (not just the URL).
+  const last = getLastTreatment(targetPlot);
   if (last) {
     if (!enriched.method && last.method) {
       enriched.method = last.method;
@@ -446,7 +444,7 @@ export function PendingCard({ entry, onAccept, onReject, onUpdate, onPlotChange 
       borderRadius: '10px', overflow: 'hidden',
       borderColor: resolved
         ? (entry.status === 'accepted' ? 'success.main' : 'text.disabled')
-        : 'warning.main',
+        : 'grey.900',
       opacity: resolved ? 0.7 : 1,
     }}>
       {/* Provenance — where this proposal came from */}
@@ -552,12 +550,10 @@ export function PendingCard({ entry, onAccept, onReject, onUpdate, onPlotChange 
 
       {/* Legend + buttons */}
       {!resolved && hasAssumptions && (
-        <Box sx={{ px: 1.5, pt: 0.25 }}>
-          <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, px: 0.75, py: 0.25, borderRadius: '4px', bgcolor: ASSUMED_BG, border: `1px solid ${ASSUMED_BORDER}` }}>
-            <Typography sx={{ fontSize: '0.625rem', color: 'info.main' }}>
-              Blue = assumed (plot & fields auto-filled) — edit before accepting
-            </Typography>
-          </Box>
+        <Box sx={{ px: 1.5, pt: 0.5 }}>
+          <Typography sx={{ fontSize: '0.68rem', color: 'text.secondary' }}>
+            Blue = assumed values — edit before accepting.
+          </Typography>
         </Box>
       )}
 
@@ -575,17 +571,17 @@ export function PendingCard({ entry, onAccept, onReject, onUpdate, onPlotChange 
         <>
         {willNavigate && (
           <Box sx={{ px: 1.5, pt: 0.75 }}>
-            <Typography sx={{ fontSize: '0.7rem', color: 'info.main', display: 'flex', alignItems: 'center', gap: 0.5 }}>
-              ↪ On accept, I'll open <strong>{plotName || 'the plot'}</strong> and add {enrichedList.length > 1 ? `these ${enrichedList.length} treatments` : 'this treatment'}.
+            <Typography sx={{ fontSize: '0.7rem', color: 'text.secondary' }}>
+              On accept, I'll open {plotName || 'the plot'} and add {enrichedList.length > 1 ? `these ${enrichedList.length} treatments` : 'this treatment'}.
             </Typography>
           </Box>
         )}
         <Stack direction="row" spacing={1} sx={{ px: 1.5, py: 1 }}>
           <Button
-            size="small" variant="contained" color="success"
+            size="small" variant="contained"
             startIcon={<Check sx={{ fontSize: 16 }} />}
             onClick={onAccept}
-            sx={{ fontSize: '0.75rem', textTransform: 'none', borderRadius: '8px', py: 0.25 }}
+            sx={{ fontSize: '0.75rem', textTransform: 'none', borderRadius: '8px', py: 0.25, bgcolor: 'grey.900', color: 'common.white', '&:hover': { bgcolor: '#000' } }}
           >
             Accept
           </Button>
@@ -1120,9 +1116,9 @@ export function ChatAssistant() {
                 }}>
                   <Paper variant="outlined" sx={{
                     px: 1.5, py: 1, borderRadius: '10px',
-                    bgcolor: entry.role === 'user' ? 'primary.main' : 'grey.100',
-                    color: entry.role === 'user' ? 'white' : 'text.primary',
-                    borderColor: entry.role === 'user' ? 'primary.main' : 'divider',
+                    bgcolor: entry.role === 'user' ? 'grey.900' : 'grey.100',
+                    color: entry.role === 'user' ? 'common.white' : 'text.primary',
+                    borderColor: entry.role === 'user' ? 'grey.900' : 'divider',
                   }}>
                     <Typography sx={{ fontSize: '0.8125rem', whiteSpace: 'pre-wrap' }}>
                       {entry.content}
@@ -1181,7 +1177,7 @@ export function ChatAssistant() {
               value={input} onChange={e => setInput(e.target.value)} onKeyDown={handleKeyDown}
               sx={{ '& .MuiOutlinedInput-root': { borderRadius: '10px', fontSize: '0.8125rem' } }}
             />
-            <IconButton size="small" onClick={sendMessage} disabled={!input.trim() || loading} color="primary">
+            <IconButton size="small" onClick={sendMessage} disabled={!input.trim() || loading} sx={{ color: 'text.primary' }}>
               {loading ? <CircularProgress size={20} /> : <Send />}
             </IconButton>
           </Box>

@@ -21,7 +21,7 @@ segmented control flips fullscreen between **Chat** and **UI**.
   `enrichCommand`, `PendingCard`, the canned samples) exported from
   `main/ChatAssistant.tsx`, plus the real data stores.
 - Read-only "show me" navigate commands are translated into inline table blocks
-  instead of route changes; forecast/samples offer an "Open in UI mode" jump.
+  instead of route changes; forecast/samples offer an "Open in ResiYou" jump.
 
 **Scope (v1):** show + edit; hybrid routing (canned sample chips + live LLM for
 free-form). Forecast/samples render as an "open in UI" hand-off rather than a
