@@ -1,10 +1,10 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   Box, IconButton, Paper, Typography, TextField, Fade, CircularProgress,
-  Button, Chip, Stack, MenuItem, Select, SelectChangeEvent, Menu, ListItemText, ListItemIcon,
+  Button, Chip, Stack, MenuItem, Select, SelectChangeEvent,
 } from '@mui/material';
-import { Close, Mic, MicOff, Send, Check, Clear, ImageOutlined, AttachFile, AutoAwesome, Tune, RestartAlt } from '@mui/icons-material';
-import { useAssistantLayout, setAssistantLayout, ASSISTANT_LAYOUTS } from '../data/assistant-layout';
+import { Close, Mic, MicOff, Send, Check, Clear, ImageOutlined, AttachFile, AutoAwesome, RestartAlt } from '@mui/icons-material';
+import { useAssistantLayout } from '../data/assistant-layout';
 import { pushCommand, VoiceCommand, AddTreatmentCommand } from '../data/voice-commands';
 import { treatmentsData, usePlots, getPlots } from '../data/plots-data';
 import { getLastOpenedPlot, focusPlotRow, useAssistantOpenSignal } from '../data/plot-focus';
@@ -974,9 +974,8 @@ export function ChatAssistant() {
   // Widen the panel once an extracted list (>1 treatment) is on screen
   const wide = entries.some(e => (e.enriched?.length ?? 0) > 1);
 
-  // Switchable layout: floating (bubble) / sidebar (right rail) / inline (bottom console)
+  // Layout (floating / sidebar / inline) is chosen from the navbar Prototype switcher.
   const layout = useAssistantLayout();
-  const [layoutAnchor, setLayoutAnchor] = useState<null | HTMLElement>(null);
   const sidebarWidth = wide ? 820 : 400;
 
   // Sidebar pushes the page content left so the assistant doesn't overlap it.
@@ -1025,20 +1024,6 @@ export function ChatAssistant() {
                 <RestartAlt fontSize="small" />
               </IconButton>
             )}
-            <IconButton size="small" onClick={e => setLayoutAnchor(e.currentTarget)} title="Layout">
-              <Tune fontSize="small" />
-            </IconButton>
-            <Menu anchorEl={layoutAnchor} open={Boolean(layoutAnchor)} onClose={() => setLayoutAnchor(null)}>
-              {ASSISTANT_LAYOUTS.map(opt => (
-                <MenuItem
-                  key={opt.id} selected={layout === opt.id}
-                  onClick={() => { setAssistantLayout(opt.id); setLayoutAnchor(null); }}
-                >
-                  <ListItemIcon>{layout === opt.id ? <Check fontSize="small" /> : null}</ListItemIcon>
-                  <ListItemText primary={opt.label} secondary={opt.hint} />
-                </MenuItem>
-              ))}
-            </Menu>
             <IconButton size="small" onClick={() => setOpen(false)}><Close fontSize="small" /></IconButton>
           </Box>
 
