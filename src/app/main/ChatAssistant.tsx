@@ -613,25 +613,6 @@ function FieldRow({ label, assumed, children }: { label: string; assumed: boolea
   );
 }
 
-// ── Empty-state capability row ────────────────────────────────────────────────
-function CapabilityRow({ icon, title, desc }: { icon: React.ReactNode; title: string; desc: string }) {
-  return (
-    <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.25 }}>
-      <Box sx={{
-        width: 32, height: 32, flexShrink: 0, borderRadius: '8px',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        bgcolor: 'grey.100', color: 'text.primary',
-      }}>
-        {icon}
-      </Box>
-      <Box>
-        <Typography sx={{ fontSize: '0.8125rem', fontWeight: 600, lineHeight: 1.3 }}>{title}</Typography>
-        <Typography sx={{ fontSize: '0.75rem', color: 'text.secondary', lineHeight: 1.3 }}>{desc}</Typography>
-      </Box>
-    </Box>
-  );
-}
-
 // ── Main component ───────────────────────────────────────────────────────────
 export function ChatAssistant() {
   const [open, setOpen] = useState(false);
@@ -1094,14 +1075,9 @@ export function ChatAssistant() {
                   </Typography>
                 </Box>
 
-                <Stack spacing={1.5} sx={{ mt: 3 }}>
-                  <CapabilityRow icon={<Mic sx={{ fontSize: 18 }} />} title="Speak or type a command" desc="“Add Roundup, 2 litres per hectare”" />
-                  <CapabilityRow icon={<AttachFile sx={{ fontSize: 18 }} />} title="Drop a screenshot or CSV" desc="Extract a whole spray journal at once" />
-                  <CapabilityRow icon={<Check sx={{ fontSize: 18 }} />} title="Review, then accept" desc="Anything I guessed is shown in blue" />
-                </Stack>
-
                 <Typography sx={{ fontSize: '0.7rem', color: 'text.secondary', mt: 3, mb: 1 }}>Try one:</Typography>
                 <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 1 }}>
+                  {/* Text commands */}
                   {['Add Roundup 2 L/ha', 'Add Confidor, soil drench', 'Add DECIS FLUX®'].map(ex => (
                     <Chip
                       key={ex} label={ex} size="small" variant="outlined" clickable
@@ -1109,10 +1085,7 @@ export function ChatAssistant() {
                       sx={{ fontSize: '0.72rem', height: 26, borderRadius: '8px' }}
                     />
                   ))}
-                </Stack>
-
-                <Typography sx={{ fontSize: '0.7rem', color: 'text.secondary', mt: 2, mb: 1 }}>Or import a sample:</Typography>
-                <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 1 }}>
+                  {/* File imports (canned) */}
                   <Chip
                     icon={<AttachFile sx={{ fontSize: 15 }} />} label="CSV example" size="small"
                     variant="outlined" color="primary" clickable
@@ -1125,10 +1098,7 @@ export function ChatAssistant() {
                     onClick={() => runSample('📷 farm-ui-screenshot.png', SAMPLE_SCREENSHOT_COMMANDS)}
                     sx={{ fontSize: '0.72rem', height: 26, borderRadius: '8px' }}
                   />
-                </Stack>
-
-                <Typography sx={{ fontSize: '0.7rem', color: 'text.secondary', mt: 2, mb: 1 }}>Or ask to see something:</Typography>
-                <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 1 }}>
+                  {/* Navigation / query samples */}
                   {[
                     { label: 'Show me all plots', to: '/', tab: undefined as number | undefined, confirm: 'Here are all your plots.' },
                     { label: 'Treatments for North Field A', to: '/plot/1', tab: 0, confirm: 'Opening North Field A — Treatments.' },
