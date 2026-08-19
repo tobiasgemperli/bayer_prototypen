@@ -1151,7 +1151,7 @@ export function ChatAssistant() {
           )}
 
           {/* Input bar */}
-          <Box sx={{ p: 1.5, borderTop: 1, borderColor: 'divider', display: 'flex', gap: 1, alignItems: 'flex-end' }}>
+          <Box sx={{ borderTop: 1, borderColor: 'divider' }}>
             <input
               ref={fileInputRef}
               type="file"
@@ -1159,58 +1159,77 @@ export function ChatAssistant() {
               hidden
               onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); e.target.value = ''; }}
             />
-            <IconButton
-              size="small"
-              onClick={() => fileInputRef.current?.click()}
-              sx={{ color: 'text.secondary' }}
-              title="Attach screenshot or CSV"
-            >
-              <AttachFile />
-            </IconButton>
             {audioMode === 'push' ? (
-              <IconButton
-                size="small"
-                onPointerDown={(e) => { e.preventDefault(); holdStart(); }}
-                onPointerUp={holdEnd}
-                onPointerLeave={holdEnd}
-                onContextMenu={(e) => e.preventDefault()}
-                title="Hold to speak"
-                sx={{
-                  color: holding ? 'common.white' : 'text.secondary',
-                  bgcolor: holding ? 'error.main' : 'transparent',
-                  border: 1, borderColor: holding ? 'error.main' : 'divider',
-                  transform: holding ? 'scale(1.12)' : 'none',
-                  transition: 'transform 0.1s, background-color 0.1s',
-                  touchAction: 'none', cursor: 'pointer',
-                  '&:hover': { bgcolor: holding ? 'error.main' : 'action.hover' },
-                }}
-              >
-                <Mic />
-              </IconButton>
+              // Hold to speak — prominent push-to-talk with a taller bar.
+              <Box sx={{ px: 2, pt: 2, pb: 2.5, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1.25 }}>
+                <IconButton
+                  onPointerDown={(e) => { e.preventDefault(); holdStart(); }}
+                  onPointerUp={holdEnd}
+                  onPointerLeave={holdEnd}
+                  onContextMenu={(e) => e.preventDefault()}
+                  title="Hold to speak"
+                  sx={{
+                    width: 76, height: 76, borderRadius: '50%',
+                    bgcolor: 'grey.900', color: 'common.white', boxShadow: 3,
+                    transform: holding ? 'scale(1.06)' : 'none',
+                    transition: 'transform 0.12s',
+                    touchAction: 'none', cursor: 'pointer',
+                    '&:hover': { bgcolor: '#000' },
+                    animation: holding ? 'ptt-pulse 1.2s ease-out infinite' : 'none',
+                    '@keyframes ptt-pulse': {
+                      '0%': { boxShadow: '0 0 0 0 rgba(0,0,0,0.35)' },
+                      '70%': { boxShadow: '0 0 0 18px rgba(0,0,0,0)' },
+                      '100%': { boxShadow: '0 0 0 0 rgba(0,0,0,0)' },
+                    },
+                  }}
+                >
+                  <Mic sx={{ fontSize: 34 }} />
+                </IconButton>
+                <Typography sx={{ fontWeight: 700, fontSize: '0.9rem', color: 'text.primary' }}>
+                  {holding ? 'Listening… release to send' : 'Hold to Speak'}
+                </Typography>
+                <Box sx={{ display: 'flex', gap: 1, width: '100%', alignItems: 'flex-end', mt: 0.5 }}>
+                  <IconButton size="small" onClick={() => fileInputRef.current?.click()} sx={{ color: 'text.secondary' }} title="Attach screenshot or CSV">
+                    <AttachFile />
+                  </IconButton>
+                  <TextField
+                    fullWidth size="small" multiline maxRows={3}
+                    placeholder="or type a command…"
+                    value={input} onChange={e => setInput(e.target.value)} onKeyDown={handleKeyDown}
+                    sx={{ '& .MuiOutlinedInput-root': { borderRadius: '10px', fontSize: '0.8125rem' } }}
+                  />
+                  <IconButton size="small" onClick={sendMessage} disabled={!input.trim() || loading} sx={{ color: 'text.primary' }}>
+                    {loading ? <CircularProgress size={20} /> : <Send />}
+                  </IconButton>
+                </Box>
+              </Box>
             ) : (
-              <IconButton
-                size="small"
-                onClick={listening ? stopListening : startListening}
-                sx={{
-                  color: listening ? 'error.main' : 'text.secondary',
-                  animation: listening ? 'pulse 1.5s ease-in-out infinite' : 'none',
-                  '@keyframes pulse': { '0%, 100%': { transform: 'scale(1)' }, '50%': { transform: 'scale(1.15)' } },
-                }}
-              >
-                {listening ? <Mic /> : <MicOff />}
-              </IconButton>
+              <Box sx={{ p: 1.5, display: 'flex', gap: 1, alignItems: 'flex-end' }}>
+                <IconButton size="small" onClick={() => fileInputRef.current?.click()} sx={{ color: 'text.secondary' }} title="Attach screenshot or CSV">
+                  <AttachFile />
+                </IconButton>
+                <IconButton
+                  size="small"
+                  onClick={listening ? stopListening : startListening}
+                  sx={{
+                    color: listening ? 'error.main' : 'text.secondary',
+                    animation: listening ? 'pulse 1.5s ease-in-out infinite' : 'none',
+                    '@keyframes pulse': { '0%, 100%': { transform: 'scale(1)' }, '50%': { transform: 'scale(1.15)' } },
+                  }}
+                >
+                  {listening ? <Mic /> : <MicOff />}
+                </IconButton>
+                <TextField
+                  fullWidth size="small" multiline maxRows={3}
+                  placeholder={listening ? 'Listening…' : 'Type a command…'}
+                  value={input} onChange={e => setInput(e.target.value)} onKeyDown={handleKeyDown}
+                  sx={{ '& .MuiOutlinedInput-root': { borderRadius: '10px', fontSize: '0.8125rem' } }}
+                />
+                <IconButton size="small" onClick={sendMessage} disabled={!input.trim() || loading} sx={{ color: 'text.primary' }}>
+                  {loading ? <CircularProgress size={20} /> : <Send />}
+                </IconButton>
+              </Box>
             )}
-            <TextField
-              fullWidth size="small" multiline maxRows={3}
-              placeholder={audioMode === 'push'
-                ? (holding ? 'Listening… release to send' : 'Hold the mic to speak, or type…')
-                : (listening ? 'Listening…' : 'Type a command…')}
-              value={input} onChange={e => setInput(e.target.value)} onKeyDown={handleKeyDown}
-              sx={{ '& .MuiOutlinedInput-root': { borderRadius: '10px', fontSize: '0.8125rem' } }}
-            />
-            <IconButton size="small" onClick={sendMessage} disabled={!input.trim() || loading} sx={{ color: 'text.primary' }}>
-              {loading ? <CircularProgress size={20} /> : <Send />}
-            </IconButton>
           </Box>
         </Paper>
       </Fade>
