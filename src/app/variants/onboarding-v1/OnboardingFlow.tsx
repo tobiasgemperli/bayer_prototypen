@@ -45,7 +45,7 @@ const CANNED_SAMPLES = [
 ];
 
 const STEP_COPY = [
-  { q: 'What plots do you have?', hint: 'Drop a farm export or a screenshot and I’ll pull out your plots. You can also speak or type them.' },
+  { q: 'What plots would you like to import?', hint: 'Drop a farm export or a screenshot and I’ll pull out your plots. You can also speak or type them.' },
   { q: 'What treatments have you applied?', hint: 'Drop a spray journal (CSV or screenshot) and I’ll extract every application for you to review.' },
   { q: 'Do you have sample data to share?', hint: 'Drop your lab reports and I’ll list the samples. Speak or type works too.' },
 ];
