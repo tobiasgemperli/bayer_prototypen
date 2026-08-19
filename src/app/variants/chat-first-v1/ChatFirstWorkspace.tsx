@@ -3,7 +3,7 @@ import {
   Box, Paper, Typography, TextField, IconButton, CircularProgress, Chip, Stack, Button,
   Table, TableHead, TableBody, TableRow, TableCell, TableContainer, Dialog, DialogContent,
 } from '@mui/material';
-import { Send, AttachFile, RestartAlt, AutoAwesome, OpenInNew, HelpOutline } from '@mui/icons-material';
+import { Send, AttachFile, RestartAlt, AutoAwesome, OpenInNew, HelpOutline, CloudUploadOutlined } from '@mui/icons-material';
 import {
   callLLM, parseResponse, enrichCommand, PendingCard,
   SAMPLE_CSV_COMMANDS, SAMPLE_SCREENSHOT_COMMANDS,
@@ -203,6 +203,7 @@ export function ChatFirstWorkspace() {
   const llmHistoryRef = useRef<{ role: 'user' | 'assistant'; content: any }[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [dragging, setDragging] = useState(false);
 
   const scrollToBottom = () => setTimeout(() => scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' }), 50);
   const add = (e: Omit<WEntry, 'id'>) => { setEntries(prev => [...prev, { id: ++wid, ...e }]); scrollToBottom(); };
@@ -410,7 +411,31 @@ export function ChatFirstWorkspace() {
       {/* Thread */}
       <Box ref={scrollRef} sx={{ flex: 1, overflowY: 'auto', px: 2, pb: 3 }}>
         <Box sx={{ maxWidth: 860, mx: 'auto', display: 'flex', flexDirection: 'column', gap: 2 }}>
-          {entries.length === 0 && <EmptyState samples={primarySamples} moreOptions={importSamples} />}
+          {entries.length === 0 && (
+            <Box sx={{ textAlign: 'center', minHeight: 'calc(100vh - 210px)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+              <Box sx={{ width: 60, height: 60, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: 'grey.100' }}>
+                <AutoAwesome sx={{ color: 'text.primary', fontSize: 30 }} />
+              </Box>
+              <Typography sx={{ fontWeight: 700, fontSize: '1.1rem', mt: 1.5 }}>What would you like to do?</Typography>
+              <Typography sx={{ color: 'text.secondary', fontSize: '0.9rem', mt: 0.5 }}>Ask to see data or make changes — everything happens right here in the chat.</Typography>
+              <Paper
+                variant="outlined"
+                onClick={() => fileInputRef.current?.click()}
+                onDragOver={e => { e.preventDefault(); setDragging(true); }}
+                onDragLeave={() => setDragging(false)}
+                onDrop={e => { e.preventDefault(); setDragging(false); const f = e.dataTransfer.files?.[0]; if (f) handleFile(f); }}
+                sx={{
+                  mt: 3, width: '100%', maxWidth: 460, py: 4, borderRadius: '14px', borderStyle: 'dashed', borderWidth: 2,
+                  borderColor: dragging ? 'grey.900' : 'divider', textAlign: 'center', cursor: 'pointer',
+                  transition: 'border-color .12s', '&:hover': { borderColor: 'text.disabled' },
+                }}
+              >
+                <CloudUploadOutlined sx={{ fontSize: 40, color: 'text.secondary' }} />
+                <Typography sx={{ fontWeight: 600, fontSize: '0.9rem', mt: 1 }}>Drop a screenshot or CSV</Typography>
+                <Typography sx={{ fontSize: '0.8rem', color: 'text.secondary' }}>or click to browse — see Examples for more</Typography>
+              </Paper>
+            </Box>
+          )}
           {entries.map(entry => {
             if (entry.role === 'pending') {
               return (
