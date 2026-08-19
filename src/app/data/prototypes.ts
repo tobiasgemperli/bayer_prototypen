@@ -2,6 +2,7 @@ import { useSyncExternalStore } from 'react';
 import { setAssistantLayout, AssistantLayout } from './assistant-layout';
 import { requestAssistantOpen } from './plot-focus';
 import { setChatFirstMode } from './chat-first';
+import { setAudioMode, AudioMode } from './audio-mode';
 import { router } from '../routes';
 
 // Demo spine: a single registry of switchable prototype experiences, grouped
@@ -22,10 +23,10 @@ export interface PrototypeSection {
   prototypes: Prototype[];
 }
 
-function assistant(id: string, name: string, blurb: string, layout: AssistantLayout): Prototype {
+function assistant(id: string, name: string, blurb: string, layout: AssistantLayout, audio: AudioMode = 'toggle'): Prototype {
   return {
     id, name, blurb,
-    launch: () => { setAssistantLayout(layout); requestAssistantOpen(); },
+    launch: () => { setAssistantLayout(layout); setAudioMode(audio); requestAssistantOpen(); },
   };
 }
 
@@ -40,8 +41,10 @@ export const PROTOTYPE_SECTIONS: PrototypeSection[] = [
   },
   {
     title: 'Audio Interaction',
-    comingSoon: true,
-    prototypes: [],
+    prototypes: [
+      assistant('just-speak', 'Just Speak', 'Tap the mic, speak freely, and it transcribes and sends automatically.', 'floating', 'toggle'),
+      assistant('hold-to-speak', 'Hold to speak', 'Press and hold the mic while speaking; release to send (push-to-talk).', 'floating', 'push'),
+    ],
   },
   {
     title: 'Fullscreen',

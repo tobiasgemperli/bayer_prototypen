@@ -5,6 +5,7 @@ import {
 } from '@mui/material';
 import { Close, Mic, MicOff, Send, Check, Clear, ImageOutlined, AttachFile, AutoAwesome, RestartAlt } from '@mui/icons-material';
 import { useAssistantLayout } from '../data/assistant-layout';
+import { useAudioMode } from '../data/audio-mode';
 import { pushCommand, VoiceCommand, AddTreatmentCommand } from '../data/voice-commands';
 import { treatmentsData, usePlots, getPlots } from '../data/plots-data';
 import { getLastOpenedPlot, focusPlotRow, useAssistantOpenSignal } from '../data/plot-focus';
@@ -949,6 +950,12 @@ export function ChatAssistant() {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
   };
 
+  // Push-to-talk ("Hold to speak"): listen only while the mic is held.
+  const audioMode = useAudioMode();
+  const [holding, setHolding] = useState(false);
+  const holdStart = () => { if (!holding) { setHolding(true); startListening(); } };
+  const holdEnd = () => { if (holding) { setHolding(false); stopListening(); } };
+
   /** Reset the conversation back to the initial empty state. */
   const handleReset = useCallback(() => {
     abortRef.current?.abort();
@@ -1160,20 +1167,44 @@ export function ChatAssistant() {
             >
               <AttachFile />
             </IconButton>
-            <IconButton
-              size="small"
-              onClick={listening ? stopListening : startListening}
-              sx={{
-                color: listening ? 'error.main' : 'text.secondary',
-                animation: listening ? 'pulse 1.5s ease-in-out infinite' : 'none',
-                '@keyframes pulse': { '0%, 100%': { transform: 'scale(1)' }, '50%': { transform: 'scale(1.15)' } },
-              }}
-            >
-              {listening ? <Mic /> : <MicOff />}
-            </IconButton>
+            {audioMode === 'push' ? (
+              <IconButton
+                size="small"
+                onPointerDown={(e) => { e.preventDefault(); holdStart(); }}
+                onPointerUp={holdEnd}
+                onPointerLeave={holdEnd}
+                onContextMenu={(e) => e.preventDefault()}
+                title="Hold to speak"
+                sx={{
+                  color: holding ? 'common.white' : 'text.secondary',
+                  bgcolor: holding ? 'error.main' : 'transparent',
+                  border: 1, borderColor: holding ? 'error.main' : 'divider',
+                  transform: holding ? 'scale(1.12)' : 'none',
+                  transition: 'transform 0.1s, background-color 0.1s',
+                  touchAction: 'none', cursor: 'pointer',
+                  '&:hover': { bgcolor: holding ? 'error.main' : 'action.hover' },
+                }}
+              >
+                <Mic />
+              </IconButton>
+            ) : (
+              <IconButton
+                size="small"
+                onClick={listening ? stopListening : startListening}
+                sx={{
+                  color: listening ? 'error.main' : 'text.secondary',
+                  animation: listening ? 'pulse 1.5s ease-in-out infinite' : 'none',
+                  '@keyframes pulse': { '0%, 100%': { transform: 'scale(1)' }, '50%': { transform: 'scale(1.15)' } },
+                }}
+              >
+                {listening ? <Mic /> : <MicOff />}
+              </IconButton>
+            )}
             <TextField
               fullWidth size="small" multiline maxRows={3}
-              placeholder={listening ? 'Listening…' : 'Type a command…'}
+              placeholder={audioMode === 'push'
+                ? (holding ? 'Listening… release to send' : 'Hold the mic to speak, or type…')
+                : (listening ? 'Listening…' : 'Type a command…')}
               value={input} onChange={e => setInput(e.target.value)} onKeyDown={handleKeyDown}
               sx={{ '& .MuiOutlinedInput-root': { borderRadius: '10px', fontSize: '0.8125rem' } }}
             />
