@@ -31,7 +31,7 @@ function Root() {
       </Box>
       <AccountCompletionModal open={authPhase === 'needs-completion'} />
       <OnboardingCoach />
-      <VariantPicker />
+      {/* VariantPicker (bottom-left "Baseline" navigator) hidden — replaced by the header Prototype switcher */}
     </Box>
   );
 }

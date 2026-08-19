@@ -8,12 +8,15 @@ import { router } from './routes';
 import { Toaster } from 'sonner';
 import { ChatAssistant } from './main/ChatAssistant';
 import { ChatFirstWorkspace } from './variants/chat-first-v1/ChatFirstWorkspace';
+import { OnboardingFlow } from './variants/onboarding-v1/OnboardingFlow';
 import { useCurrentPrototype } from './data/prototypes';
 
 /** Renders the assistant experience for the active prototype. */
 function AssistantHost() {
   const proto = useCurrentPrototype();
-  return proto.id === 'chat-first' ? <ChatFirstWorkspace /> : <ChatAssistant />;
+  if (proto.id === 'chat-first') return <ChatFirstWorkspace />;
+  if (proto.id === 'onboarding') return <OnboardingFlow />;
+  return <ChatAssistant />;
 }
 
 export default function App(props: any) {

@@ -3,6 +3,7 @@ import { setAssistantLayout, AssistantLayout } from './assistant-layout';
 import { requestAssistantOpen } from './plot-focus';
 import { setChatFirstMode } from './chat-first';
 import { setAudioMode, AudioMode } from './audio-mode';
+import { setOnboardingStep } from './onboarding-flow';
 import { router } from '../routes';
 
 // Demo spine: a single registry of switchable prototype experiences, grouped
@@ -54,6 +55,17 @@ export const PROTOTYPE_SECTIONS: PrototypeSection[] = [
         name: 'Chat-first · Segmented',
         blurb: 'A top segmented control flips fullscreen between a chat and the UI; results render inside the chat.',
         launch: () => { setChatFirstMode('chat'); router.navigate('/'); },
+      },
+    ],
+  },
+  {
+    title: 'Onboarding',
+    prototypes: [
+      {
+        id: 'onboarding',
+        name: 'Onboarding · Guided setup',
+        blurb: 'A fullscreen 3-step wizard to import plots, treatments and samples by dropping files, speaking or typing.',
+        launch: () => { setOnboardingStep(1); router.navigate('/'); },
       },
     ],
   },
