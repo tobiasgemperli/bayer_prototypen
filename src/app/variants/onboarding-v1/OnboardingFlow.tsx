@@ -317,7 +317,7 @@ export function OnboardingFlow() {
         </Box>
 
         {/* Composer — speak / type / send, below the box */}
-        <Box sx={{ borderTop: 1, borderColor: 'divider', bgcolor: 'background.paper', px: 3, py: 1.5 }}>
+        <Box sx={{ borderTop: 1, borderColor: 'divider', bgcolor: 'grey.100', px: 3, py: 1.5 }}>
           <Box sx={{ maxWidth: 620, mx: 'auto', display: 'flex', gap: 1, alignItems: 'flex-end' }}>
             <IconButton size="small" onClick={() => fileInputRef.current?.click()} title="Attach a file" sx={{ color: 'text.secondary' }}><AttachFile /></IconButton>
             <IconButton size="small" onClick={triggerExtract} title="Speak" sx={{ color: 'text.secondary' }}><Mic /></IconButton>

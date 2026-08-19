@@ -982,14 +982,33 @@ export function ChatAssistant() {
 
   // Layout (floating / sidebar / inline) is chosen from the navbar Prototype switcher.
   const layout = useAssistantLayout();
-  const sidebarWidth = wide ? 820 : 400;
+  // Sidebar width / inline height — user-resizable via drag handles.
+  const [sidebarPx, setSidebarPx] = useState<number | null>(null);
+  const [inlinePx, setInlinePx] = useState<number | null>(null);
+  const dragRef = useRef<null | 'sidebar' | 'inline'>(null);
+  const sidebarWidth = sidebarPx ?? (wide ? 820 : 400);
+  const inlineHeight = inlinePx ?? Math.round((typeof window !== 'undefined' ? window.innerHeight : 800) * 0.48);
+
+  useEffect(() => {
+    const move = (e: MouseEvent) => {
+      if (dragRef.current === 'sidebar') setSidebarPx(Math.min(Math.max(window.innerWidth - e.clientX, 320), window.innerWidth - 360));
+      else if (dragRef.current === 'inline') setInlinePx(Math.min(Math.max(window.innerHeight - e.clientY, 220), window.innerHeight - 120));
+    };
+    const up = () => { if (dragRef.current) { dragRef.current = null; document.body.style.cursor = ''; document.body.style.userSelect = ''; } };
+    window.addEventListener('mousemove', move);
+    window.addEventListener('mouseup', up);
+    return () => { window.removeEventListener('mousemove', move); window.removeEventListener('mouseup', up); };
+  }, []);
+  const startDrag = (which: 'sidebar' | 'inline', cursor: string) => (e: React.MouseEvent) => {
+    e.preventDefault(); dragRef.current = which; document.body.style.cursor = cursor; document.body.style.userSelect = 'none';
+  };
 
   // Sidebar pushes the page content left so the assistant doesn't overlap it.
   // (Inline overlays the bottom as a sheet — the app shell is a fixed 100vh
   // column, so padding-bottom there would spawn a page scrollbar.)
   useEffect(() => {
     const b = document.body;
-    b.style.transition = 'padding 0.25s ease';
+    b.style.transition = dragRef.current ? 'none' : 'padding 0.25s ease';
     b.style.paddingRight = open && layout === 'sidebar' ? `${sidebarWidth}px` : '';
     return () => { b.style.paddingRight = ''; };
   }, [open, layout, sidebarWidth]);
@@ -997,7 +1016,7 @@ export function ChatAssistant() {
   const shellSx = layout === 'sidebar'
     ? { top: 0, right: 0, bottom: 0, width: sidebarWidth, maxWidth: '100vw', borderRadius: 0, borderLeft: 1, borderColor: 'divider' as const }
     : layout === 'inline'
-    ? { left: 0, right: 0, bottom: 0, height: '48vh', borderRadius: 0, borderTop: 1, borderColor: 'divider' as const }
+    ? { left: 0, right: 0, bottom: 0, height: inlineHeight, borderRadius: 0, borderTop: 1, borderColor: 'divider' as const }
     : { right: 16, bottom: 80, width: wide ? 880 : 420, maxWidth: 'calc(100vw - 32px)', height: 600, borderRadius: '12px' };
 
   return (
@@ -1017,13 +1036,23 @@ export function ChatAssistant() {
           sx={{
             position: 'fixed', zIndex: 1300,
             display: 'flex', flexDirection: 'column', overflow: 'hidden',
-            transition: 'width 0.25s ease, height 0.25s ease',
+            transition: dragRef.current ? 'none' : 'width 0.25s ease, height 0.25s ease',
             ...shellSx,
             ...(dragging && { outline: '2px dashed', outlineColor: 'primary.main', outlineOffset: '-2px' }),
           }}
         >
+          {/* Resize handles — sidebar (left edge) / inline (top edge) */}
+          {layout === 'sidebar' && (
+            <Box onMouseDown={startDrag('sidebar', 'col-resize')}
+              sx={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 6, cursor: 'col-resize', zIndex: 20, '&:hover': { bgcolor: 'divider' } }} />
+          )}
+          {layout === 'inline' && (
+            <Box onMouseDown={startDrag('inline', 'row-resize')}
+              sx={{ position: 'absolute', left: 0, right: 0, top: 0, height: 6, cursor: 'row-resize', zIndex: 20, '&:hover': { bgcolor: 'divider' } }} />
+          )}
+
           {/* Header */}
-          <Box sx={{ px: 2, py: 1.5, display: 'flex', alignItems: 'center', gap: 0.5, borderBottom: 1, borderColor: 'divider' }}>
+          <Box sx={{ px: 2, py: 1.5, display: 'flex', alignItems: 'center', gap: 0.5, borderBottom: 1, borderColor: 'divider', bgcolor: 'grey.100' }}>
             <Typography sx={{ flex: 1, fontSize: '0.875rem', fontWeight: 700 }}>Assistant</Typography>
             <IconButton size="small" onClick={() => setHelpOpen(true)} title="Examples"><HelpOutline fontSize="small" /></IconButton>
             {entries.length > 0 && (
@@ -1078,14 +1107,14 @@ export function ChatAssistant() {
           {/* Entries */}
           <Box ref={scrollRef} sx={{ flex: 1, overflowY: 'auto', p: 2, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
             {entries.length === 0 && (
-              <Box sx={{ mt: 2, px: 0.5 }}>
+              <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', px: 0.5 }}>
                 <Box sx={{ textAlign: 'center' }}>
                   <Box sx={{
                     width: 52, height: 52, borderRadius: '50%', mx: 'auto',
                     display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                    bgcolor: 'rgba(212, 24, 61, 0.08)',
+                    bgcolor: 'grey.100',
                   }}>
-                    <AutoAwesome sx={{ color: 'primary.main', fontSize: 26 }} />
+                    <AutoAwesome sx={{ color: 'text.primary', fontSize: 26 }} />
                   </Box>
                   <Typography sx={{ fontWeight: 700, fontSize: '0.95rem', mt: 1.25 }}>How can I help?</Typography>
                   <Typography sx={{ color: 'text.secondary', fontSize: '0.8rem', mt: 0.5 }}>
@@ -1158,7 +1187,7 @@ export function ChatAssistant() {
           )}
 
           {/* Input bar */}
-          <Box sx={{ borderTop: 1, borderColor: 'divider' }}>
+          <Box sx={{ borderTop: 1, borderColor: 'divider', bgcolor: 'grey.100' }}>
             <input
               ref={fileInputRef}
               type="file"

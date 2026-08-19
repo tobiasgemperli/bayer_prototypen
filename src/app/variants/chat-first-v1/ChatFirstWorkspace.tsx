@@ -469,7 +469,7 @@ export function ChatFirstWorkspace() {
       </Box>
 
       {/* Input bar */}
-      <Box sx={{ borderTop: 1, borderColor: 'divider', bgcolor: 'background.paper', px: 2, py: 1.5 }}>
+      <Box sx={{ borderTop: 1, borderColor: 'divider', bgcolor: 'grey.100', px: 2, py: 1.5 }}>
         <Box sx={{ maxWidth: 860, mx: 'auto', display: 'flex', gap: 1, alignItems: 'flex-end' }}>
           <input ref={fileInputRef} type="file" accept="image/*,.csv,text/csv" hidden
             onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); e.target.value = ''; }} />
