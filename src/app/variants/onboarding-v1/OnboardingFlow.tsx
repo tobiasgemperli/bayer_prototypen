@@ -229,8 +229,8 @@ export function OnboardingFlow() {
 
       {/* Right — the AI */}
       <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
-        <Box sx={{ flex: 1, overflowY: 'auto', px: 4, py: 4 }}>
-          <Box sx={{ maxWidth: 620, mx: 'auto' }}>
+        <Box sx={{ flex: 1, overflowY: 'auto', px: 2, py: 4 }}>
+          <Box sx={{ maxWidth: 780, mx: 'auto' }}>
             {/* Progress */}
             <Box sx={{ display: 'flex', gap: 3, justifyContent: 'center', mb: 3, flexWrap: 'wrap' }}>
               {ONB_TITLES.map((tl, i) => (
@@ -318,7 +318,7 @@ export function OnboardingFlow() {
 
         {/* Composer — speak / type / send, below the box */}
         <Box sx={{ borderTop: 1, borderColor: 'divider', bgcolor: 'grey.100', px: 3, py: 1.5 }}>
-          <Box sx={{ maxWidth: 620, mx: 'auto', display: 'flex', gap: 1, alignItems: 'flex-end' }}>
+          <Box sx={{ maxWidth: 780, mx: 'auto', display: 'flex', gap: 1, alignItems: 'flex-end' }}>
             <IconButton size="small" onClick={() => fileInputRef.current?.click()} title="Attach a file" sx={{ color: 'text.secondary' }}><AttachFile /></IconButton>
             <IconButton size="small" onClick={triggerExtract} title="Speak" sx={{ color: 'text.secondary' }}><Mic /></IconButton>
             <TextField fullWidth size="small" placeholder="Speak or type what you have…"
