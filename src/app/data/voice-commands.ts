@@ -17,6 +17,8 @@ export interface AddTreatmentCommand {
 export interface NavigateCommand {
   action: 'navigate';
   to: string;  // e.g. '/plot/1', '/'
+  /** Optional plot tab to open: 0 Treatments, 1 Residue forecast, 2 Samples & Reports. */
+  tab?: number;
 }
 
 export interface SaveCommand {

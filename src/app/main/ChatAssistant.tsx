@@ -177,8 +177,15 @@ Available commands:
    Methods: Foliar spray, Broadcast, Soil drench, Seed treatment, Drip irrigation.
    Dose units: L/ha, kg/ha, ml/ha, g/ha. Water units: L/ha, ml/ha, gal/ac.
 
-2. navigate — go to a page
-   {"action":"navigate", "to":"/plot/1"}  or  {"action":"navigate", "to":"/"}
+2. navigate — go to a page (use for "show me…" / "open…" queries; these are read-only so they run immediately)
+   {"action":"navigate", "to":"/plot/1", "tab":0}  or  {"action":"navigate", "to":"/"}
+   "to":"/" shows all plots. "to":"/plot/<id>" opens one plot; "tab" picks 0 = Treatments, 1 = Residue forecast, 2 = Samples & Reports.
+   Resolve plot names/numbers to an id using the plot list below.
+   Examples:
+   - "Show me all plots" → {"action":"navigate","to":"/"}
+   - "Show treatments for North Field A" → {"action":"navigate","to":"/plot/1","tab":0}
+   - "Residue forecast for plot 2" → {"action":"navigate","to":"/plot/2","tab":1}
+   - "Samples and reports for North Field A" → {"action":"navigate","to":"/plot/1","tab":2}
 
 3. save — save current changes
    {"action":"save"}
@@ -223,10 +230,11 @@ const ANTHROPIC_KEY = import.meta.env.VITE_ANTHROPIC_API_KEY as string | undefin
 
 async function callLLM(messages: LLMMessage[], signal: AbortSignal): Promise<string> {
   if (ANTHROPIC_KEY) {
+    const plotList = getPlots().map(p => `  ${p.id}: ${p.plotName}`).join('\n');
     const body = {
       model: 'claude-sonnet-4-6',
       max_tokens: 4096,
-      system: SYSTEM_PROMPT,
+      system: `${SYSTEM_PROMPT}\n\nPlots (id: name) on the current account:\n${plotList}`,
       messages: messages.map(m => ({ role: m.role, content: m.content })),
     };
     const res = await fetch('https://api.anthropic.com/v1/messages', {
@@ -694,7 +702,7 @@ export function ChatAssistant() {
     const otherCmds = cmdsToExecute.filter(c => c.action !== 'addTreatment');
 
     for (const cmd of otherCmds) {
-      if (cmd.action === 'navigate') router.navigate((cmd as any).to);
+      if (cmd.action === 'navigate') runNavigate((cmd as any).to, (cmd as any).tab);
       else pushCommand(cmd);
     }
 
@@ -727,6 +735,18 @@ export function ChatAssistant() {
     target.status = 'rejected';
     setEntries([...entriesRef.current]);
   }, [findPendingEntry]);
+
+  /** Read-only navigation (optionally to a specific plot tab). */
+  const runNavigate = useCallback((to: string, tab?: number) => {
+    router.navigate(to, tab != null ? { state: { activeTab: tab } } : undefined);
+  }, []);
+
+  /** Empty-state "ask" chips: echo the query, navigate, and confirm — no API. */
+  const runQuerySample = useCallback((label: string, to: string, tab: number | undefined, confirm: string) => {
+    setEntries(prev => [...prev, { id: ++entryId, role: 'user', content: label }]);
+    runNavigate(to, tab);
+    setEntries(prev => [...prev, { id: ++entryId, role: 'assistant', content: confirm }]);
+  }, [runNavigate]);
 
   const doSend = useCallback(async (text: string) => {
     if (!text.trim() || loadingRef.current) return;
@@ -761,9 +781,14 @@ export function ChatAssistant() {
         const actionCommands = commands.filter(c => c.action !== 'message');
         const messageCommands = commands.filter(c => c.action === 'message');
 
-        if (actionCommands.length > 0) {
+        // Navigation / "show me…" queries are read-only — run them immediately, no approval.
+        const navCommands = actionCommands.filter(c => c.action === 'navigate');
+        const pendable = actionCommands.filter(c => c.action !== 'navigate');
+        for (const nav of navCommands) runNavigate((nav as any).to, (nav as any).tab);
+
+        if (pendable.length > 0) {
           // Enrich addTreatment commands with assumptions
-          const enriched = actionCommands
+          const enriched = pendable
             .filter(c => c.action === 'addTreatment')
             .map(c => enrichCommand(c as AddTreatmentCommand));
 
@@ -771,14 +796,14 @@ export function ChatAssistant() {
             id: ++entryId,
             role: 'pending',
             content: display || '',
-            commands: actionCommands,
+            commands: pendable,
             enriched: enriched.length > 0 ? enriched : undefined,
             status: null,
           };
           setEntries(prev => [...prev, pendingEntry]);
         }
 
-        if (display && actionCommands.length === 0) {
+        if (display && pendable.length === 0) {
           setEntries(prev => [...prev, { id: ++entryId, role: 'assistant', content: display }]);
         } else if (messageCommands.length > 0) {
           const msgText = messageCommands.map(c => (c as any).text).join('\n');
@@ -1083,6 +1108,22 @@ export function ChatAssistant() {
                     onClick={() => runSample('📷 farm-ui-screenshot.png', SAMPLE_SCREENSHOT_COMMANDS)}
                     sx={{ fontSize: '0.72rem', height: 26, borderRadius: '8px' }}
                   />
+                </Stack>
+
+                <Typography sx={{ fontSize: '0.7rem', color: 'text.secondary', mt: 2, mb: 1 }}>Or ask to see something:</Typography>
+                <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 1 }}>
+                  {[
+                    { label: 'Show me all plots', to: '/', tab: undefined as number | undefined, confirm: 'Here are all your plots.' },
+                    { label: 'Treatments for North Field A', to: '/plot/1', tab: 0, confirm: 'Opening North Field A — Treatments.' },
+                    { label: 'Residue forecast for North Field A', to: '/plot/1', tab: 1, confirm: 'Opening North Field A — Residue forecast.' },
+                    { label: 'Samples & reports for North Field A', to: '/plot/1', tab: 2, confirm: 'Opening North Field A — Samples & Reports.' },
+                  ].map(q => (
+                    <Chip
+                      key={q.label} label={q.label} size="small" variant="outlined" clickable
+                      onClick={() => runQuerySample(q.label, q.to, q.tab, q.confirm)}
+                      sx={{ fontSize: '0.72rem', height: 26, borderRadius: '8px' }}
+                    />
+                  ))}
                 </Stack>
               </Box>
             )}
