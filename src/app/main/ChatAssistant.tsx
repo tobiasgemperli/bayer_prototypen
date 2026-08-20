@@ -225,33 +225,44 @@ When the user sends CSV TEXT (a spray-journal export):
 - After the JSON array, add a summary like "Extracted 7 treatments from CSV."`;
 
 // ── LLM call ─────────────────────────────────────────────────────────────────
-const ANTHROPIC_KEY = import.meta.env.VITE_ANTHROPIC_API_KEY as string | undefined;
+// Bayer internal AI gateway (OpenAI-compatible chat/completions).
+const BAYER_TOKEN = import.meta.env.VITE_BAYER_TOKEN as string | undefined;
+const BAYER_URL = (import.meta.env.VITE_BAYER_URL as string | undefined) || 'https://chat.int.bayer.com/api/v2/chat/completions';
+const BAYER_MODEL = (import.meta.env.VITE_BAYER_MODEL as string | undefined) || 'gpt-4o';
+
+/** Convert our Anthropic-style content (text / base64 image) to OpenAI format. */
+function toOpenAIContent(content: string | LLMContentBlock[]) {
+  if (typeof content === 'string') return content;
+  return content.map(b =>
+    b.type === 'image'
+      ? { type: 'image_url', image_url: { url: `data:${b.source.media_type};base64,${b.source.data}` } }
+      : { type: 'text', text: b.text }
+  );
+}
 
 export async function callLLM(messages: LLMMessage[], signal: AbortSignal): Promise<string> {
-  if (ANTHROPIC_KEY) {
+  if (BAYER_TOKEN) {
     const plotList = getPlots().map(p => `  ${p.id}: ${p.plotName}`).join('\n');
+    const system = `${SYSTEM_PROMPT}\n\nPlots (id: name) on the current account:\n${plotList}`;
     const body = {
-      model: 'claude-sonnet-4-6',
+      model: BAYER_MODEL,
       max_tokens: 4096,
-      system: `${SYSTEM_PROMPT}\n\nPlots (id: name) on the current account:\n${plotList}`,
-      messages: messages.map(m => ({ role: m.role, content: m.content })),
+      messages: [
+        { role: 'system', content: system },
+        ...messages.map(m => ({ role: m.role, content: toOpenAIContent(m.content) })),
+      ],
     };
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
+    const res = await fetch(BAYER_URL, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': ANTHROPIC_KEY,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true',
-      },
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${BAYER_TOKEN}` },
       body: JSON.stringify(body),
       signal,
     });
     if (!res.ok) throw new Error(`API error ${res.status}: ${await res.text()}`);
     const data = await res.json();
-    return data.content?.[0]?.text ?? '';
+    return data.choices?.[0]?.message?.content ?? '';
   }
-  return '{"action":"message","text":"Add VITE_ANTHROPIC_API_KEY to .env to enable voice commands."}';
+  return '{"action":"message","text":"Add VITE_BAYER_TOKEN to .env to enable the assistant."}';
 }
 
 export function parseResponse(text: string): { commands: VoiceCommand[]; display: string } {
