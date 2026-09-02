@@ -19,6 +19,7 @@ import { PrototypeGallery } from './main/PrototypeGallery';
 import { TableActionsDemoPage } from './variants/table-actions-v1/TableActionsDemoPage';
 import { TableActionsErrorDemoPage } from './variants/table-actions-v1/TableActionsErrorDemoPage';
 import { TableActionsTagsDemoPage } from './variants/table-actions-v1/TableActionsTagsDemoPage';
+import { LabParserDemoPage } from './lab-shared/LabParserDemoPage';
 
 function Root() {
   const authPhase = useAuthPhase();
@@ -93,6 +94,11 @@ export const router = createBrowserRouter([
   {
     path: "/explore/table-actions-tags",
     Component: TableActionsTagsDemoPage,
+  },
+  {
+    // Client-side lab-report PDF parser demo (drag-and-drop, in-browser).
+    path: "/explore/lab-parser",
+    Component: LabParserDemoPage,
   },
   {
     // A4 sample-sheet page — "Open PDF" opens this in a new tab.

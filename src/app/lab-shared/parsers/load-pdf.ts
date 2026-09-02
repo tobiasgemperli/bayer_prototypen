@@ -2,10 +2,12 @@
 // Kept separate from the parsers so the parsing logic stays environment-agnostic
 // (the Node verification path builds a Doc with pdfjs-dist/legacy instead).
 import * as pdfjs from 'pdfjs-dist';
-import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
+// Vite compiles the worker for both dev and prod via the ?worker import,
+// avoiding the module-worker/MIME pitfalls of a raw ?url worker script.
+import PdfWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?worker';
 import { Doc, Page, itemsToWords } from './core';
 
-pdfjs.GlobalWorkerOptions.workerSrc = workerUrl;
+pdfjs.GlobalWorkerOptions.workerPort = new PdfWorker();
 
 export async function loadDoc(data: ArrayBuffer): Promise<Doc> {
   const pdf = await pdfjs.getDocument({ data }).promise;
