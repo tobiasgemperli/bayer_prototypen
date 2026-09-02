@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ResiYou · Lab Report Parser (deterministic)</title>
+<style>
+  :root{
+    --brand:#d4183d; --ink:#1a1a1a; --muted:#6b7280; --line:#e5e7eb;
+    --bg:#f6f7f9; --card:#fff; --ok:#15803d; --warn:#b45309; --bad:#b91c1c;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+       color:var(--ink);background:var(--bg);line-height:1.45}
+  .wrap{max-width:960px;margin:0 auto;padding:32px 20px 64px}
+  header h1{font-size:22px;margin:0 0 2px;font-weight:650}
+  header p{margin:0;color:var(--muted);font-size:13.5px}
+  .badge{display:inline-block;font-size:11px;font-weight:600;letter-spacing:.02em;
+         padding:3px 8px;border-radius:20px;vertical-align:middle}
+  .badge.det{background:#fef2f4;color:var(--brand)}
+  /* drop zone */
+  #drop{margin-top:24px;border:2px dashed #cfd4dc;border-radius:14px;background:var(--card);
+        padding:44px 20px;text-align:center;cursor:pointer;transition:.15s}
+  #drop:hover,#drop.over{border-color:var(--brand);background:#fffafb}
+  #drop .big{font-size:15px;font-weight:600}
+  #drop .sub{color:var(--muted);font-size:13px;margin-top:4px}
+  #drop svg{width:34px;height:34px;color:var(--brand);opacity:.9}
+  input[type=file]{display:none}
+  /* results */
+  .hidden{display:none}
+  .status{display:flex;align-items:center;gap:10px;margin:26px 0 14px;flex-wrap:wrap}
+  .pill{font-size:12px;font-weight:600;padding:4px 10px;border-radius:20px}
+  .pill.ok{background:#e8f6ec;color:var(--ok)}
+  .pill.fail{background:#fdeaea;color:var(--bad)}
+  .pill.tmpl{background:#eef1f5;color:#475569}
+  .fname{font-size:13px;color:var(--muted)}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;
+        padding:18px 20px;margin-bottom:18px}
+  .card h2{font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);
+           margin:0 0 14px;font-weight:600}
+  .kv{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px 24px}
+  .kv .lbl{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.03em}
+  .kv .val{font-size:14px;font-weight:500;margin-top:1px;word-break:break-word}
+  .tablewrap{overflow-x:auto}
+  table{width:100%;border-collapse:collapse;font-size:13.5px;min-width:560px}
+  th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.03em;
+     color:var(--muted);font-weight:600;padding:0 12px 8px;border-bottom:1px solid var(--line)}
+  td{padding:11px 12px;border-bottom:1px solid #f1f3f5;white-space:nowrap}
+  td.analyte{font-weight:600;white-space:normal}
+  .num{font-variant-numeric:tabular-nums}
+  .mrlcell{display:flex;align-items:center;gap:9px;min-width:150px}
+  .bar{flex:1;height:7px;border-radius:5px;background:#eef1f5;overflow:hidden;min-width:60px}
+  .bar > span{display:block;height:100%;border-radius:5px}
+  .pct{font-variant-numeric:tabular-nums;font-size:12px;font-weight:600;min-width:42px;text-align:right}
+  .empty{color:var(--muted);font-size:14px;padding:8px 2px}
+  .errbox{background:#fdeaea;border:1px solid #f4c5c5;color:#7f1d1d;border-radius:10px;
+          padding:14px 16px;font-size:13px}
+  footer{margin-top:30px;color:var(--muted);font-size:12px;text-align:center}
+  code{background:#eef1f5;padding:1px 5px;border-radius:4px;font-size:12px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Lab Report Parser <span class="badge det">deterministic · no LLM</span></h1>
+    <p>Drop an Aqua / Tentamus residue report (PDF). Parsed on the Python backend with pdfplumber.</p>
+  </header>
+
+  <div id="drop">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+         stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 16v3a1 1 0 001 1h14a1 1 0 001-1v-3"/>
+    </svg>
+    <div class="big" style="margin-top:10px">Drop a PDF here</div>
+    <div class="sub">or click to browse · results appear below</div>
+    <input type="file" id="file" accept="application/pdf,.pdf">
+  </div>
+
+  <div id="results" class="hidden"></div>
+
+  <footer>Reuses the same parser module as the batch tool ·
+    <code>parse(pdf) → {header, detected_residues, _validation}</code></footer>
+</div>
+
+<script>
+const drop = document.getElementById('drop');
+const fileInput = document.getElementById('file');
+const results = document.getElementById('results');
+
+drop.addEventListener('click', () => fileInput.click());
+fileInput.addEventListener('change', e => { if (e.target.files[0]) send(e.target.files[0]); });
+['dragenter','dragover'].forEach(ev => drop.addEventListener(ev, e => {
+  e.preventDefault(); drop.classList.add('over'); }));
+['dragleave','drop'].forEach(ev => drop.addEventListener(ev, e => {
+  e.preventDefault(); drop.classList.remove('over'); }));
+drop.addEventListener('drop', e => { const f = e.dataTransfer.files[0]; if (f) send(f); });
+
+async function send(file){
+  results.className = '';
+  results.innerHTML = `<div class="status"><span class="fname">Parsing ${esc(file.name)}…</span></div>`;
+  try{
+    const buf = await file.arrayBuffer();
+    const res = await fetch('/parse', {method:'POST', body: buf});
+    const data = await res.json();
+    render(file.name, data);
+  }catch(err){
+    results.innerHTML = `<div class="errbox">Request failed: ${esc(String(err))}</div>`;
+  }
+}
+
+async function sendBytes(name, buf){
+  results.className = '';
+  try{
+    const res = await fetch('/parse', {method:'POST', body: buf});
+    render(name, await res.json());
+  }catch(err){
+    results.innerHTML = `<div class="errbox">Request failed: ${esc(String(err))}</div>`;
+  }
+}
+
+// ?demo=<sample.pdf> auto-loads a bundled sample (self-test / screenshot)
+(async () => {
+  const demo = new URLSearchParams(location.search).get('demo');
+  if(!demo) return;
+  try{
+    const r = await fetch('/samples/' + encodeURIComponent(demo));
+    if(r.ok) sendBytes(demo, await r.arrayBuffer());
+  }catch(e){}
+})();
+
+function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+function fmt(n){return n==null?'—':n.toLocaleString('en-US',{maximumFractionDigits:4});}
+
+// colour ramp for % of MRL
+function pctColor(p){
+  if(p==null) return '#94a3b8';
+  if(p < 33)  return '#15803d';
+  if(p < 66)  return '#ca8a04';
+  if(p <= 100)return '#ea580c';
+  return '#b91c1c';
+}
+
+const FIELD_LABELS = {
+  sample_id:'Sample ID', client_name:'Client', client_code:'Client code',
+  client_reference:'Client reference', sample_type:'Sample type',
+  lab_description:'Lab description', weight_kg:'Weight (kg)', pieces:'Pieces',
+  sample_condition:'Condition', sampling_point:'Sampling point',
+  sampling_datetime:'Sampling date', reception_datetime:'Reception',
+  analysis_start:'Analysis start', analysis_end:'Analysis end', report_date:'Report date'
+};
+const FIELD_ORDER = ['sample_id','sample_type','lab_description','client_name','client_code',
+  'client_reference','weight_kg','pieces','sample_condition','sampling_point',
+  'sampling_datetime','reception_datetime','analysis_start','analysis_end','report_date'];
+
+function render(fname, d){
+  if(d.error){
+    results.innerHTML = `<div class="errbox"><strong>Could not parse.</strong><br>${esc(d.error)}</div>`;
+    return;
+  }
+  const v = d._validation || {};
+  const ok = v.ok;
+  const rows = d.detected_residues || [];
+
+  // header fields
+  const kv = FIELD_ORDER
+    .filter(k => d.header && d.header[k] != null && d.header[k] !== '')
+    .map(k => `<div><div class="lbl">${esc(FIELD_LABELS[k]||k)}</div>
+               <div class="val">${esc(d.header[k])}</div></div>`).join('');
+
+  // residues table
+  let table;
+  if(!rows.length){
+    table = `<div class="empty">No residues detected above LOQ — clean sample.</div>`;
+  }else{
+    const body = rows.map(r=>{
+      const pct = (r.result_mgkg!=null && r.mrl_eu_mgkg) ? (r.result_mgkg/r.mrl_eu_mgkg*100) : null;
+      const col = pctColor(pct);
+      const w = pct==null?0:Math.min(pct,100);
+      const mrl = (val,note) => val!=null ? fmt(val)
+        : (note ? `<span style="color:var(--muted);font-size:12px">${esc(note)}</span>` : '—');
+      const unc = r.uncertainty_mgkg!=null ? `± ${fmt(r.uncertainty_mgkg)}` : '';
+      return `<tr>
+        <td class="analyte">${esc(r.analyte)}${r.technique?`<div style="font-size:11px;color:var(--muted);font-weight:400">${esc(r.technique)}</div>`:''}</td>
+        <td class="num">${r.result_qualifier?esc(r.result_qualifier):''}${fmt(r.result_mgkg)}</td>
+        <td class="num" style="color:var(--muted)">${unc}</td>
+        <td class="num">${mrl(r.mrl_eu_mgkg, r.mrl_eu_note)}</td>
+        <td><div class="mrlcell">
+              <div class="bar"><span style="width:${w}%;background:${col}"></span></div>
+              <span class="pct" style="color:${col}">${pct==null?'—':pct.toFixed(0)+'%'}</span>
+            </div></td>
+        <td class="num">${mrl(r.mrl_uk_mgkg, r.mrl_uk_note)}</td>
+        <td class="num" style="color:var(--muted)">${fmt(r.loq_mgkg)}</td>
+      </tr>`;
+    }).join('');
+    table = `<div class="tablewrap"><table>
+      <thead><tr>
+        <th>Analyte</th><th>Result mg/kg</th><th>Uncert.</th>
+        <th>EU MRL</th><th>% EU MRL</th><th>UK MRL</th><th>LOQ</th>
+      </tr></thead><tbody>${body}</tbody></table></div>`;
+  }
+
+  results.innerHTML = `
+    <div class="status">
+      <span class="pill ${ok?'ok':'fail'}">${ok?'✓ Validation passed':'✕ Validation failed'}</span>
+      <span class="pill tmpl">${esc(d.template||'?')}</span>
+      <span class="pill det" style="background:#fef2f4;color:var(--brand)">${rows.length} detected</span>
+      <span class="fname">${esc(fname)}</span>
+    </div>
+    ${!ok && v.errors && v.errors.length ? `<div class="errbox" style="margin-bottom:18px">
+        <strong>Validation notes:</strong> ${esc(v.errors.join(' · '))}</div>`:''}
+    <div class="card"><h2>Sample details</h2><div class="kv">${kv}</div></div>
+    <div class="card"><h2>Detected residues</h2>${table}</div>`;
+}
+</script>
+</body>
+</html>
