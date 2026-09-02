@@ -26,3 +26,20 @@ export async function loadDoc(data: ArrayBuffer): Promise<Doc> {
   }
   return { producer, pages };
 }
+
+/** Render the first page of a PDF into a canvas, scaled to `targetWidth` (CSS px). */
+export async function renderFirstPage(data: ArrayBuffer, canvas: HTMLCanvasElement, targetWidth: number): Promise<void> {
+  const pdf = await pdfjs.getDocument({ data }).promise;
+  const page = await pdf.getPage(1);
+  const base = page.getViewport({ scale: 1 });
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const scale = (targetWidth / base.width) * dpr;
+  const viewport = page.getViewport({ scale });
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+  canvas.width = viewport.width;
+  canvas.height = viewport.height;
+  canvas.style.width = `${targetWidth}px`;
+  canvas.style.height = `${viewport.height / dpr}px`;
+  await page.render({ canvasContext: ctx, viewport }).promise;
+}

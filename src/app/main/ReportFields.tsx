@@ -66,6 +66,9 @@ export interface ReportFieldsProps {
    *  fields stay hidden until at least one file is uploaded (they are then
    *  typically prefilled from the parsed report). */
   revealDetailsAfterUpload?: boolean;
+  /** Render only the Lab + Lab report ID row (no upload zone). Used when the
+   *  file preview lives elsewhere, e.g. the two-pane report view. */
+  hideUpload?: boolean;
 }
 
 /** Shared report-fields layout — Lab + Lab report ID on one row, then
@@ -77,7 +80,7 @@ export function ReportFields({
   laboratory, onLaboratoryChange, allLabs, onAddLab,
   labReportId, onLabReportIdChange,
   attachments, onAddFiles, onRemoveAttachment,
-  showErrors, revealDetailsAfterUpload,
+  showErrors, revealDetailsAfterUpload, hideUpload,
 }: ReportFieldsProps) {
   const labMissing = !laboratory.trim();
   const idMissing = !labReportId.trim();
@@ -140,6 +143,9 @@ export function ReportFields({
     </Box>
   );
 
+  if (hideUpload) {
+    return <Stack spacing={2}>{detailsRow}</Stack>;
+  }
   // Reveal mode: upload first, details appear after a file is added.
   return (
     <Stack spacing={2}>
