@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   Button, Dialog, DialogActions, DialogContent, DialogTitle, IconButton, Typography,
-  Alert,
+  Alert, Box,
 } from '@mui/material';
 import { Close as CloseIcon, AutoAwesome } from '@mui/icons-material';
 import { toast } from 'sonner';
@@ -12,7 +12,7 @@ import {
 import { AddLaboratoryDialog } from './AddLaboratoryDialog';
 import { ReportFields } from './ReportFields';
 import { loadDoc } from '../lab-shared/parsers/load-pdf';
-import { route } from '../lab-shared/parsers';
+import { route, ParseResult, Residue } from '../lab-shared/parsers';
 
 // Friendly lab name per detected template, used to prefill the Lab field.
 const TEMPLATE_LAB: Record<string, string> = {
@@ -49,6 +49,7 @@ export function AddReportDialog({ sample, editingReport, onClose }: AddReportDia
   const [reportInternalId] = useState(() => editingReport?.id ?? newReportId());
   const [touched, setTouched] = useState(false);
   const [parseInfo, setParseInfo] = useState<{ lab: string; id: string; count: number; file: string } | null>(null);
+  const [parsed, setParsed] = useState<ParseResult | null>(null);
 
   const open = !!sample;
   const fieldsValid = !!laboratory.trim() && labReportId.trim() !== '' && attachments.length > 0;
@@ -85,14 +86,20 @@ export function AddReportDialog({ sample, editingReport, onClose }: AddReportDia
       }
       if (id && !labReportId.trim()) setLabReportId(id);
       setParseInfo({ lab, id, count, file: file.name });
+      setParsed(res);
       toast.success(`Read ${file.name}: ${lab || 'report'} ${id} · ${count} residue${count === 1 ? '' : 's'} detected`);
     } catch {
       // Unrecognized template — leave the fields for manual entry.
+      setParsed(null);
       toast(`Couldn't auto-read ${file.name}; please enter the details manually.`);
     }
   };
   const handleRemoveAttachment = (id: string) => {
-    setAttachments((prev) => prev.filter((a) => a.id !== id));
+    setAttachments((prev) => {
+      const next = prev.filter((a) => a.id !== id);
+      if (next.length === 0) { setParsed(null); setParseInfo(null); }
+      return next;
+    });
   };
 
   const handleSave = () => {
@@ -160,6 +167,9 @@ export function AddReportDialog({ sample, editingReport, onClose }: AddReportDia
             {parseInfo.count === 1 ? '' : 's'} in {parseInfo.file}. Empty fields prefilled — parsed in your browser, no upload.
           </Alert>
         )}
+        {parsed && parsed.detected_residues.length > 0 && (
+          <ResiduePreview residues={parsed.detected_residues} />
+        )}
       </DialogContent>
       <DialogActions sx={{ px: 3, pb: 3, pt: 2, gap: 1, justifyContent: 'flex-end' }}>
         <Button onClick={onClose} variant="text" color="inherit"
@@ -179,5 +189,52 @@ export function AddReportDialog({ sample, editingReport, onClose }: AddReportDia
       onConfirm={handleConfirmNewLab}
     />
     </>
+  );
+}
+
+const fmt = (n: number | null | undefined) =>
+  n == null ? '—' : n.toLocaleString('en-US', { maximumFractionDigits: 4 });
+function pctColor(p: number | null): string {
+  if (p == null) return '#94a3b8';
+  if (p < 33) return '#15803d';
+  if (p < 66) return '#ca8a04';
+  if (p <= 100) return '#ea580c';
+  return '#b91c1c';
+}
+
+/** Read-only preview of the residues detected in the uploaded report. */
+function ResiduePreview({ residues }: { residues: Residue[] }) {
+  return (
+    <Box sx={{ mt: 2 }}>
+      <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary', textTransform: 'uppercase', letterSpacing: '.03em' }}>
+        Results in this report ({residues.length})
+      </Typography>
+      <Box sx={{ mt: 0.5, maxHeight: 220, overflowY: 'auto', border: '1px solid', borderColor: 'divider', borderRadius: '8px' }}>
+        <Box component="table" sx={{
+          width: '100%', borderCollapse: 'collapse', fontSize: '0.8125rem',
+          '& th': { position: 'sticky', top: 0, bgcolor: 'grey.50', textAlign: 'left', fontSize: '0.6875rem', textTransform: 'uppercase', letterSpacing: '.03em', color: 'text.secondary', fontWeight: 600, py: 0.75, px: 1.5, borderBottom: '1px solid', borderColor: 'divider' },
+          '& td': { py: 0.75, px: 1.5, borderBottom: '1px solid', borderColor: 'grey.100', whiteSpace: 'nowrap' },
+          '& tr:last-of-type td': { borderBottom: 'none' },
+        }}>
+          <thead>
+            <tr><th>Analyte</th><th>Result mg/kg</th><th>EU MRL</th><th>% EU MRL</th></tr>
+          </thead>
+          <tbody>
+            {residues.map((r, i) => {
+              const pct = r.result_mgkg != null && r.mrl_eu_mgkg ? (r.result_mgkg / r.mrl_eu_mgkg) * 100 : null;
+              const col = pctColor(pct);
+              return (
+                <tr key={i}>
+                  <td style={{ fontWeight: 600, whiteSpace: 'normal' }}>{r.analyte}</td>
+                  <td>{r.result_qualifier || ''}{fmt(r.result_mgkg)}</td>
+                  <td>{r.mrl_eu_mgkg != null ? fmt(r.mrl_eu_mgkg) : (r.mrl_eu_note ?? '—')}</td>
+                  <td style={{ color: col, fontWeight: 600 }}>{pct == null ? '—' : `${pct.toFixed(0)}%`}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </Box>
+      </Box>
+    </Box>
   );
 }
