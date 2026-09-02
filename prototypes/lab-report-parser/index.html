@@ -63,7 +63,7 @@
 <div class="wrap">
   <header>
     <h1>Lab Report Parser <span class="badge det">deterministic · no LLM</span></h1>
-    <p>Drop an Aqua / Tentamus residue report (PDF). Parsed on the Python backend with pdfplumber.</p>
+    <p>Drop a residue report PDF from a supported lab (Aqua/Tentamus, Eurofins, orange-data). Parsed on the Python backend with pdfplumber — no LLM.</p>
   </header>
 
   <div id="drop">
@@ -141,16 +141,21 @@ function pctColor(p){
 }
 
 const FIELD_LABELS = {
-  sample_id:'Sample ID', client_name:'Client', client_code:'Client code',
-  client_reference:'Client reference', sample_type:'Sample type',
+  sample_id:'Sample ID', report_number:'Report no.', client_name:'Client',
+  client_code:'Client code', client_reference:'Client reference',
+  customer_reference:'Customer reference', sample_type:'Sample type',
   lab_description:'Lab description', weight_kg:'Weight (kg)', pieces:'Pieces',
   sample_condition:'Condition', sampling_point:'Sampling point',
-  sampling_datetime:'Sampling date', reception_datetime:'Reception',
+  sampling_datetime:'Sampling date', sampling_date:'Sampling date',
+  reception_datetime:'Reception', reception_date:'Reception',
   analysis_start:'Analysis start', analysis_end:'Analysis end', report_date:'Report date'
 };
-const FIELD_ORDER = ['sample_id','sample_type','lab_description','client_name','client_code',
-  'client_reference','weight_kg','pieces','sample_condition','sampling_point',
-  'sampling_datetime','reception_datetime','analysis_start','analysis_end','report_date'];
+// preferred display order; any other header keys are appended after these
+const FIELD_ORDER = ['sample_id','report_number','sample_type','lab_description',
+  'client_name','client_code','client_reference','customer_reference','weight_kg',
+  'pieces','sample_condition','sampling_point','sampling_date','sampling_datetime',
+  'reception_date','reception_datetime','analysis_start','analysis_end','report_date'];
+const humanize = k => k.replace(/_/g,' ').replace(/\b\w/g, c=>c.toUpperCase());
 
 function render(fname, d){
   if(d.error){
@@ -161,10 +166,12 @@ function render(fname, d){
   const ok = v.ok;
   const rows = d.detected_residues || [];
 
-  // header fields
-  const kv = FIELD_ORDER
-    .filter(k => d.header && d.header[k] != null && d.header[k] !== '')
-    .map(k => `<div><div class="lbl">${esc(FIELD_LABELS[k]||k)}</div>
+  // header fields: preferred order first, then any remaining keys
+  const hk = d.header ? Object.keys(d.header) : [];
+  const ordered = FIELD_ORDER.filter(k => hk.includes(k)).concat(hk.filter(k => !FIELD_ORDER.includes(k)));
+  const kv = ordered
+    .filter(k => d.header[k] != null && d.header[k] !== '')
+    .map(k => `<div><div class="lbl">${esc(FIELD_LABELS[k]||humanize(k))}</div>
                <div class="val">${esc(d.header[k])}</div></div>`).join('');
 
   // residues table

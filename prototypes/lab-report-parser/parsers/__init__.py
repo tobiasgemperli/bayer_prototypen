@@ -10,9 +10,9 @@ on the PDF generator metadata + a header anchor, so a report from an unknown
 lab is rejected rather than parsed into confident garbage.
 """
 import pdfplumber
-from . import aqua
+from . import aqua, eurofins, orangedata
 
-PARSERS = [aqua]
+PARSERS = [aqua, eurofins, orangedata]
 
 def route(path):
     pdf = pdfplumber.open(path)

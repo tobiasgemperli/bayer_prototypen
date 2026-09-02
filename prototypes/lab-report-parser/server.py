@@ -7,6 +7,7 @@ Run:  ./venv/bin/python server.py   (then open the printed URL)
 """
 import json, tempfile, os, traceback
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from urllib.parse import unquote
 import parsers
 
 PORT = 8770
@@ -28,7 +29,7 @@ class Handler(BaseHTTPRequestHandler):
             with open(os.path.join(HERE, "index.html"), "rb") as f:
                 self._send(200, f.read(), "text/html; charset=utf-8")
         elif self.path.startswith("/samples/"):
-            name = os.path.basename(self.path[len("/samples/"):])
+            name = os.path.basename(unquote(self.path[len("/samples/"):]))
             p = os.path.join(SAMPLES, name)
             if os.path.isfile(p):
                 with open(p, "rb") as f:

@@ -46,6 +46,12 @@ python -m venv venv && ./venv/bin/pip install -r requirements.txt
 Drop a report PDF, or append `?demo=<filename>` to auto-load a bundled sample.
 
 ## Status
-- **Aqua / Tentamus** — 7/7 sample reports parse and validate.
-- **Eurofins Lisboa** (PT "Relatório de ensaio") — TODO
-- **Orange-data lab** (EN "Analytical Report") — TODO
+All 10 sample reports route to the correct parser and validate:
+- **Aqua / Tentamus** (`aqua.py`) — 7 reports (ES + EN, fruit + soil).
+- **Eurofins Lisboa** (`eurofins.py`) — 2 reports (PT "Relatório de ensaio").
+- **Orange-data lab** (`orangedata.py`) — 1 report (EN "Analytical Report").
+
+Known rough edges (prototype): a couple of header fields that wrap across a
+line are captured only up to the break (Eurofins `client_name`, one
+`client_reference`); Eurofins/orange-data don't expose a per-row LOQ in their
+detected tables. None affect the residue values, which are the point.
