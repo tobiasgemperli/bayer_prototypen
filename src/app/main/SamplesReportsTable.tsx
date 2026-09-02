@@ -92,9 +92,9 @@ export function SamplesReportsTable({
         <Table stickyHeader aria-label="samples table">
           <TableHead>
             <TableRow sx={readOnlyHeaderRowSx}>
-              <TableCell padding="checkbox" sx={checkboxCellSx}>
-                <Checkbox indeterminate={someChecked} checked={allChecked} onChange={toggleAll} />
-              </TableCell>
+              {/* No select-all — deleting every sample at once is intentionally
+                  not offered; rows are deleted individually. */}
+              <TableCell padding="checkbox" sx={checkboxCellSx} />
               <Th sortable active={orderBy === 'sampleName'} dir={order} onClick={() => handleSort('sampleName')}>
                 Sample name
               </Th>
@@ -171,18 +171,6 @@ export function SamplesReportsTable({
                       <RowIconButton label="Delete" onClick={() => onDelete(s)}>
                         <DeleteOutline fontSize="small" />
                       </RowIconButton>
-                      <RowActionButton
-                        startIcon={<Add sx={{ fontSize: 16 }} />}
-                        onClick={() => onAddReportAndResults(s)}
-                        sx={{
-                          ml: 0.5,
-                          bgcolor: 'primary.softBg',
-                          color: 'primary.main',
-                          '&:hover': { bgcolor: alpha('#d4183d', 0.16) },
-                        }}
-                      >
-                        Add report &amp; results
-                      </RowActionButton>
                     </Stack>
                   </TableCell>
                 </TableRow>
@@ -207,7 +195,9 @@ export function Th({
   onClick?: () => void;
   trailingInfoTip?: string;
 }) {
-  const labelSx = { fontSize: '0.75rem', fontWeight: 700, color: 'text.secondary', lineHeight: 1.5 } as const;
+  // De-emphasised header — the bold category label above the table leads, so the
+  // column labels are lighter (regular weight, disabled tone) with no fill.
+  const labelSx = { fontSize: '0.75rem', fontWeight: 500, color: 'text.disabled', lineHeight: 1.5 } as const;
 
   const infoIcon = trailingInfoTip ? (
     <Tooltip arrow placement="top" enterDelay={150} title={trailingInfoTip}>

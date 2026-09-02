@@ -197,16 +197,9 @@ const handleDuplicate = (s: LabSampleData) => {
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
-      {/* Toolbar */}
+      {/* Toolbar — search on the left, Add sample on the right. */}
       <Box sx={{ px: 2, py: 1.5, borderBottom: '1px solid', borderColor: 'divider' }}>
-        <Stack direction="row" justifyContent="flex-end" alignItems="center" spacing={1.5}>
-          <Button
-            variant="soft" color="primary" startIcon={<Add />}
-            onClick={openCreate}
-            sx={{ px: 2, height: 36, fontWeight: 600, borderRadius: '8px', textTransform: 'none' }}
-          >
-            Create sample
-          </Button>
+        <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={1.5}>
           <TextField
             size="small" placeholder="Search samples…" value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -216,15 +209,24 @@ const handleDuplicate = (s: LabSampleData) => {
             }}
             sx={{ width: 240, '& .MuiOutlinedInput-root': { height: 36, bgcolor: 'white' } }}
           />
-          <OptionsTrigger
-            onClick={(e) => setAnchorEl(e.currentTarget)}
-            disabled={selected.length === 0}
-            hasSelection={selected.length > 0}
-          />
-          <ActionMenu
-            anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={() => setAnchorEl(null)}
-            actions={menuActions}
-          />
+          <Stack direction="row" alignItems="center" spacing={1.5}>
+            <OptionsTrigger
+              onClick={(e) => setAnchorEl(e.currentTarget)}
+              disabled={selected.length === 0}
+              hasSelection={selected.length > 0}
+            />
+            <ActionMenu
+              anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={() => setAnchorEl(null)}
+              actions={menuActions}
+            />
+            <Button
+              variant="soft" color="primary" startIcon={<Add />}
+              onClick={openCreate}
+              sx={{ px: 2, height: 36, fontWeight: 600, borderRadius: '8px', textTransform: 'none' }}
+            >
+              Add sample
+            </Button>
+          </Stack>
         </Stack>
       </Box>
 
