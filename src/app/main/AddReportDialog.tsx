@@ -140,8 +140,10 @@ export function AddReportDialog({ sample, editingReport, onClose }: AddReportDia
   const handleSave = () => {
     setTouched(true);
     if (!sample || !fieldsValid) return;
-    const newReport: LabReport = { id: reportInternalId, laboratory, labReportId: labReportId.trim(), attachments };
-    const savedResidues = residues.map((r) => ({ ...r, labReportId: reportInternalId, isDraft: false }));
+    const trimmedId = labReportId.trim();
+    const newReport: LabReport = { id: reportInternalId, laboratory, labReportId: trimmedId, attachments };
+    // Residues link to a report by its (human) labReportId — see LabResiduesGrid.
+    const savedResidues = residues.map((r) => ({ ...r, labReportId: trimmedId, isDraft: false }));
 
     if (isEditing && editingReport) {
       const otherReports = (sample.reports ?? []).filter((r) => r.id !== editingReport.id);
@@ -240,11 +242,13 @@ export function AddReportDialog({ sample, editingReport, onClose }: AddReportDia
       </DialogTitle>
 
       <DialogContent sx={{ px: 3, pt: 1, pb: 1 }}>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          {isEditing
-            ? 'Update the report details or replace the files.'
-            : 'Enter the report details and upload the files you received from the lab.'}
-        </Typography>
+        {!twoPane && (
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            {isEditing
+              ? 'Update the report details or replace the files.'
+              : 'Enter the report details and upload the files you received from the lab.'}
+          </Typography>
+        )}
 
         {!twoPane ? (
           detailsFields
@@ -263,7 +267,7 @@ export function AddReportDialog({ sample, editingReport, onClose }: AddReportDia
                 <Alert icon={<AutoAwesome fontSize="small" />} severity="success"
                   sx={{ mt: 1.5, borderRadius: '8px', '& .MuiAlert-message': { fontSize: '0.75rem' } }}>
                   Detected <strong>{parseInfo.lab || 'report'}</strong>
-                  {parseInfo.id ? <> {parseInfo.id}</> : ''} · parsed in your browser, no upload.
+                  {parseInfo.id ? <> {parseInfo.id}</> : ''}
                 </Alert>
               )}
             </Box>

@@ -3,10 +3,10 @@ import { useParams } from 'react-router';
 import { useNavigate } from '../variants/variant-context';
 import {
   Accordion, AccordionDetails, AccordionSummary,
-  Box, Breadcrumbs, Button, Chip, Dialog, DialogActions, DialogContent, Link, Stack, Tooltip, Typography,
+  Box, Breadcrumbs, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, Link, Stack, Tooltip, Typography,
 } from '@mui/material';
 import {
-  Add, DeleteOutline, EditOutlined, ExpandMore, NavigateNext,
+  Add, Close as CloseIcon, DeleteOutline, EditOutlined, ExpandMore, NavigateNext,
 } from '@mui/icons-material';
 import { toast } from 'sonner';
 import { usePlots } from '../data/plots-data';
@@ -82,6 +82,67 @@ function SectionAccordion({
         {children}
       </AccordionDetails>
     </Accordion>
+  );
+}
+
+// ── Section — non-collapsible shell for the Reports/Results sections (same
+// bordered card as SectionAccordion but always open; the title is not a
+// collapse control). Toolbar renders at the top of the content, above
+// `children`, exactly like the accordion's did. ────────────────────────────
+function Section({ title, toolbar, children }: {
+  title: string;
+  toolbar?: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <Box sx={{ border: '1px solid', borderColor: 'divider', borderRadius: '12px', overflow: 'hidden' }}>
+      <Box sx={{ px: 2.5, minHeight: 64, display: 'flex', alignItems: 'center' }}>
+        <SectionTitle>{title}</SectionTitle>
+      </Box>
+      <Box sx={{ px: 2.5, pb: 2.5, pt: 0 }}>
+        {toolbar && <Box sx={{ mb: 2 }}>{toolbar}</Box>}
+        {children}
+      </Box>
+    </Box>
+  );
+}
+
+// ── Report thumbnail — a faux document "page" placeholder (stored reports keep
+// only attachment metadata, not the PDF bytes, so there's nothing to render a
+// real thumbnail from). Clicking opens the two-pane View report dialog. ──────
+function ReportThumbnailImage({ width = 132 }: { width?: number }) {
+  const line = (w: string) => (
+    <Box sx={{ height: 6, width: w, bgcolor: 'grey.200', borderRadius: 1, mb: 0.75 }} />
+  );
+  return (
+    <Box className="thumb" sx={{
+      width, height: Math.round(width * 1.3), bgcolor: '#fff', borderRadius: '6px',
+      border: '1px solid', borderColor: 'divider', p: 1.25, position: 'relative', overflow: 'hidden',
+      transition: 'border-color .15s, box-shadow .15s',
+    }}>
+      {line('55%')}{line('85%')}{line('80%')}{line('70%')}{line('82%')}{line('40%')}
+      <Chip label="PDF" size="small" sx={{
+        position: 'absolute', bottom: 6, right: 6, height: 18, fontSize: '0.625rem', fontWeight: 700,
+        bgcolor: 'error.main', color: '#fff', '& .MuiChip-label': { px: 0.75 },
+      }} />
+    </Box>
+  );
+}
+
+function ReportThumbnail({ report, onClick }: { report: LabReport; onClick: () => void }) {
+  const isApi = LABS_WITH_API_CONNECTION.has(report.laboratory);
+  return (
+    <Box onClick={onClick} sx={{
+      width: 132, cursor: 'pointer',
+      '&:hover .thumb': { borderColor: 'primary.main', boxShadow: '0 2px 10px rgba(0,0,0,0.08)' },
+    }}>
+      <ReportThumbnailImage />
+      <Typography variant="body2" sx={{ fontWeight: 600, mt: 1 }} noWrap>{report.laboratory || 'Lab report'}</Typography>
+      <Stack direction="row" alignItems="center" spacing={0.5} sx={{ minWidth: 0 }}>
+        <Typography variant="caption" color="text.secondary" noWrap>{report.labReportId || '—'}</Typography>
+        {isApi && <ApiConnectionChip condensed />}
+      </Stack>
+    </Box>
   );
 }
 
@@ -274,15 +335,12 @@ function ReportCardItem({ report, onEdit, onDelete }: ReportCardItemProps) {
 export interface ReportsCardProps {
   reports: LabReport[];
   onAddReport: () => void;
-  onEditReport: (report: LabReport) => void;
-  onDeleteReport: (report: LabReport) => void;
+  onViewReport: (report: LabReport) => void;
 }
 
-export function ReportsCard({ reports, onAddReport, onEditReport, onDeleteReport }: ReportsCardProps) {
-  // Before the first report exists, there's nothing to collapse/expand —
-  // show the section title plus a plain add-CTA in a dashed dropzone-style
-  // box instead of an accordion around empty content. The accordion only
-  // appears once there's real content for it to hold.
+export function ReportsCard({ reports, onAddReport, onViewReport }: ReportsCardProps) {
+  // Before the first report exists, show the section title plus a plain
+  // add-CTA in a dashed dropzone-style box.
   if (reports.length === 0) {
     return (
       <Box>
@@ -293,9 +351,8 @@ export function ReportsCard({ reports, onAddReport, onEditReport, onDeleteReport
   }
 
   return (
-    <SectionAccordion
+    <Section
       title="Reports"
-      defaultExpanded={false}
       toolbar={
         <Stack direction="row" justifyContent="flex-end">
           <Button variant="soft" color="primary"
@@ -307,16 +364,140 @@ export function ReportsCard({ reports, onAddReport, onEditReport, onDeleteReport
         </Stack>
       }
     >
-      <Stack spacing={1.5}>
+      <Stack direction="row" flexWrap="wrap" gap={2.5}>
         {reports.map((r) => (
-          <ReportCardItem
-            key={r.id} report={r}
-            onEdit={() => onEditReport(r)}
-            onDelete={() => onDeleteReport(r)}
-          />
+          <ReportThumbnail key={r.id} report={r} onClick={() => onViewReport(r)} />
         ))}
       </Stack>
-    </SectionAccordion>
+    </Section>
+  );
+}
+
+// ── ReportResidues — compact read-only table of the residues that belong to a
+// report, shown in the right pane of the View report dialog. ────────────────
+function ReportResidues({ residues }: { residues: LabResidue[] }) {
+  return (
+    <Box>
+      <Typography sx={{ fontWeight: 700, fontSize: '0.6875rem', textTransform: 'uppercase', letterSpacing: '.03em', color: 'text.secondary', mb: 1 }}>
+        Residues in this report ({residues.length})
+      </Typography>
+      {residues.length === 0 ? (
+        <Typography variant="body2" color="text.secondary">No residues linked to this report.</Typography>
+      ) : (
+        <Box sx={{ maxHeight: 340, overflowY: 'auto', border: '1px solid', borderColor: 'divider', borderRadius: '8px' }}>
+          <Box component="table" sx={{
+            width: '100%', borderCollapse: 'collapse', fontSize: '0.8125rem',
+            '& th': { position: 'sticky', top: 0, bgcolor: 'grey.50', textAlign: 'left', fontSize: '0.6875rem', textTransform: 'uppercase', letterSpacing: '.03em', color: 'text.secondary', fontWeight: 600, py: 0.75, px: 1.5, borderBottom: '1px solid', borderColor: 'divider' },
+            '& td': { py: 0.75, px: 1.5, borderBottom: '1px solid', borderColor: 'grey.100', whiteSpace: 'nowrap' },
+            '& tr:last-of-type td': { borderBottom: 'none' },
+          }}>
+            <thead>
+              <tr><th>Analyte</th><th>Level</th><th>Result mg/kg</th><th>LOQ</th></tr>
+            </thead>
+            <tbody>
+              {residues.map((r) => (
+                <tr key={r.id}>
+                  <td style={{ fontWeight: 600, whiteSpace: 'normal' }}>{r.analyte || <EmDash />}</td>
+                  <td>{r.residueLevel ?? <EmDash />}</td>
+                  <td>{r.residueValue?.trim() ? r.residueValue : <EmDash />}</td>
+                  <td style={{ color: '#6b7280' }}>{r.methodLoq?.trim() ? r.methodLoq : <EmDash />}</td>
+                </tr>
+              ))}
+            </tbody>
+          </Box>
+        </Box>
+      )}
+    </Box>
+  );
+}
+
+// ── View report dialog — the two-pane report view: the page thumbnail + report
+// identity on the left, and the residues that came from this report on the
+// right. Edit/Delete live here for a non-managed report. ────────────────────
+export interface ViewReportDialogProps {
+  report: LabReport | null;
+  /** All residues on the sample — filtered here to the ones from this report. */
+  residues: LabResidue[];
+  onClose: () => void;
+  onEdit: (report: LabReport) => void;
+  onDelete: (report: LabReport) => void;
+}
+
+export function ViewReportDialog({ report, residues, onClose, onEdit, onDelete }: ViewReportDialogProps) {
+  if (!report) return <Dialog open={false} onClose={onClose} />;
+  const locked = !!report.managedBy;
+  const isApi = LABS_WITH_API_CONNECTION.has(report.laboratory);
+  const attachments = withDemoAttachments(report);
+  // Residues link to a report by matching labReportId (see LabResiduesGrid).
+  const reportResidues = residues.filter((r) => r.labReportId && r.labReportId === report.labReportId);
+  const handleView = (name: string) => {
+    toast.info(`Open ${name}`);
+    window.open('about:blank', '_blank', 'noopener,noreferrer');
+  };
+
+  return (
+    <Dialog open onClose={onClose} fullWidth maxWidth="md"
+      PaperProps={{ sx: { borderRadius: '12px', boxShadow: '0px 8px 32px rgba(0, 0, 0, 0.12)' } }}>
+      <DialogTitle sx={{ m: 0, px: 3, pt: 3, pb: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <Typography variant="h6" sx={{ fontWeight: 700, fontSize: '1.125rem' }}>Report</Typography>
+        <RowIconButton label="Close" onClick={onClose}><CloseIcon fontSize="small" /></RowIconButton>
+      </DialogTitle>
+      <DialogContent sx={{ px: 3, pt: 2, pb: 1 }}>
+        <Box sx={{ display: 'flex', gap: 3, alignItems: 'flex-start' }}>
+          {/* Left: page thumbnail + report identity + attachments */}
+          <Box sx={{ width: 220, flexShrink: 0 }}>
+            <ReportThumbnailImage width={220} />
+            <Stack spacing={2} sx={{ mt: 2 }}>
+              <LabeledValue
+                label="Laboratory"
+                value={
+                  <Stack direction="row" alignItems="center" spacing={1}>
+                    <span>{report.laboratory || <EmDash />}</span>
+                    {isApi && <ApiConnectionChip condensed />}
+                  </Stack>
+                }
+              />
+              <LabeledValue label="Lab report ID" value={report.labReportId || <EmDash />} />
+              <Box>
+                <FieldLabel>Attachments</FieldLabel>
+                <Stack direction="column" gap={0.75} sx={{ alignItems: 'flex-start' }}>
+                  {attachments.map((a) => (
+                    <AttachmentChip key={a.id} name={a.name} onView={() => handleView(a.name)} />
+                  ))}
+                </Stack>
+              </Box>
+              {locked && (
+                <Typography variant="caption" color="text.secondary">{MANAGED_REPORT_TOOLTIP}</Typography>
+              )}
+            </Stack>
+          </Box>
+          {/* Right: residues from this report */}
+          <Box sx={{ flex: 1, minWidth: 0 }}>
+            <ReportResidues residues={reportResidues} />
+          </Box>
+        </Box>
+      </DialogContent>
+      <DialogActions sx={{ px: 3, pb: 3, pt: 2, gap: 1, justifyContent: 'flex-end' }}>
+        {!locked && (
+          <>
+            <Button onClick={() => { onDelete(report); onClose(); }} variant="text" color="error"
+              startIcon={<DeleteOutline fontSize="small" />}
+              sx={{ fontWeight: 600, textTransform: 'none', px: 2, height: 36, mr: 'auto' }}>
+              Delete
+            </Button>
+            <Button onClick={() => { onEdit(report); onClose(); }} variant="text" color="inherit"
+              startIcon={<EditOutlined fontSize="small" />}
+              sx={{ fontWeight: 600, color: 'text.secondary', textTransform: 'none', px: 2, height: 36 }}>
+              Edit
+            </Button>
+          </>
+        )}
+        <Button onClick={onClose} variant="contained" color="primary"
+          sx={{ fontWeight: 600, textTransform: 'none', px: 2, height: 36, borderRadius: '8px' }}>
+          Close
+        </Button>
+      </DialogActions>
+    </Dialog>
   );
 }
 
@@ -422,9 +603,8 @@ export function ResultsCard({
 
   return (
     <>
-    <SectionAccordion
+    <Section
       title="Results"
-      defaultExpanded
       toolbar={
         <Stack direction="row" justifyContent={hasMixedResults ? 'space-between' : 'flex-end'} alignItems="center" flexWrap="wrap" gap={1.5}>
           {hasMixedResults && (
@@ -490,7 +670,7 @@ export function ResultsCard({
           />
         </Box>
       </TableCard>
-    </SectionAccordion>
+    </Section>
 
     {/* "Have you added all results?" gate in front of the real save — every
         dismiss path (No, close icon, Escape, backdrop) resolves to
@@ -555,6 +735,8 @@ export function SampleReportPage() {
   const [addReportToken, setAddReportToken] = useState(0);
   const [addReportOpen, setAddReportOpen] = useState(false);
   const [editingReport, setEditingReport] = useState<LabReport | null>(null);
+  // "View report" two-pane popup — opened by clicking a report thumbnail.
+  const [viewingReport, setViewingReport] = useState<LabReport | null>(null);
 
   // "Add results" popup — the Results card's empty-state entry point only
   // (see ResultsCard's early-return). Once results exist, further additions
@@ -689,8 +871,7 @@ export function SampleReportPage() {
           <ReportsCard
             reports={reports}
             onAddReport={openAddReport}
-            onEditReport={openEditReport}
-            onDeleteReport={handleReportDelete}
+            onViewReport={setViewingReport}
           />
 
           {/* ── Results ──────────────────────────────────────────────── */}
@@ -715,6 +896,14 @@ export function SampleReportPage() {
         initial={toFormValues(sample)}
         onClose={() => setEditOpen(false)}
         onCreate={handleEditSave}
+      />
+
+      <ViewReportDialog
+        report={viewingReport}
+        residues={residues}
+        onClose={() => setViewingReport(null)}
+        onEdit={openEditReport}
+        onDelete={handleReportDelete}
       />
 
       <AddReportDialog
