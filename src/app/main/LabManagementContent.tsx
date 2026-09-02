@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import {
-  Box, Button, InputAdornment, Stack, TextField,
+  Box, Button, InputAdornment, Stack, TextField, Typography,
 } from '@mui/material';
 import { Add, DeleteOutline, Search } from '@mui/icons-material';
 import { toast } from 'sonner';
@@ -83,6 +83,13 @@ export function LabManagementContent({ plotId }: { plotId: string }) {
       (s.laboratory ?? '').toLowerCase().includes(q)
     );
   }, [samples, search]);
+
+  // A sample "has a report" when it has any attached report (new multi-report
+  // array or the legacy single labReportId).
+  const hasReport = (s: LabSampleData) =>
+    (s.reports?.length ?? 0) > 0 || !!s.labReportId?.trim();
+  const withoutReports = filteredSamples.filter((s) => !hasReport(s));
+  const withReports = filteredSamples.filter(hasReport);
 
   const persistSample = (values: SampleFormValues, isDraft: boolean): LabSampleData => {
     if (editingId) {
@@ -221,16 +228,38 @@ const handleDuplicate = (s: LabSampleData) => {
         </Stack>
       </Box>
 
-      {/* Table */}
+      {/* Table — split into "without reports" (top) and "with reports". Each
+          group table gets a scoped slice of the shared selection so its own
+          select-all stays correct while bulk delete still sees everything. */}
       <Box sx={{ flexGrow: 1, overflow: 'auto', p: 2 }}>
-        <SamplesReportsTable
-          rows={filteredSamples}
-          selected={selected}
-          onSelectChange={setSelected}
-          onRowClick={(s) => navigate(`/plot/${plotId}/samples/${s.id}`)}
-          onDelete={handleDelete}
-          onAddReportAndResults={handleAddReportAndResults}
-        />
+        <Stack spacing={3}>
+          {[
+            { key: 'without', title: 'Samples without reports', rows: withoutReports },
+            { key: 'with', title: 'Samples with reports', rows: withReports },
+          ].filter((g) => g.rows.length > 0).map((g) => {
+            const ids = new Set(g.rows.map((r) => r.id));
+            return (
+              <Box key={g.key}>
+                <Typography sx={{ fontWeight: 700, fontSize: '0.875rem', color: 'text.primary', mb: 1.5 }}>
+                  {g.title} ({g.rows.length})
+                </Typography>
+                <SamplesReportsTable
+                  rows={g.rows}
+                  selected={selected.filter((id) => ids.has(id))}
+                  onSelectChange={(next) => setSelected([...selected.filter((id) => !ids.has(id)), ...next])}
+                  onRowClick={(s) => navigate(`/plot/${plotId}/samples/${s.id}`)}
+                  onDelete={handleDelete}
+                  onAddReportAndResults={handleAddReportAndResults}
+                />
+              </Box>
+            );
+          })}
+          {filteredSamples.length === 0 && (
+            <Typography sx={{ color: 'text.secondary', px: 1, py: 4, textAlign: 'center' }}>
+              No samples match your search.
+            </Typography>
+          )}
+        </Stack>
       </Box>
 
       {/* Sample form popup */}
