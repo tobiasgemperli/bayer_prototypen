@@ -285,7 +285,7 @@ export function AddReportDialog({ sample, editingReport, onClose }: AddReportDia
         </Button>
         <Button onClick={handleSave} variant="contained" color="primary"
           sx={{ fontWeight: 600, textTransform: 'none', px: 2, height: 36, borderRadius: '8px' }}>
-          {isEditing ? 'Save' : 'Add report'}
+          {isEditing ? 'Save' : 'Analyse'}
         </Button>
       </DialogActions>
     </Dialog>
