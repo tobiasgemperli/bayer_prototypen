@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import {
   Box, Button, InputAdornment, Stack, TextField, Typography,
 } from '@mui/material';
-import { Add, DeleteOutline, Search } from '@mui/icons-material';
+import { Add, DeleteOutline, Search, ScheduleOutlined } from '@mui/icons-material';
 import { toast } from 'sonner';
 import { EmptyState } from '../design-system/EmptyState';
 import { OptionsTrigger } from '../design-system/OptionsTrigger';
@@ -17,6 +17,7 @@ import { SamplesReportsTable } from './SamplesReportsTable';
 import { SampleFormDialog, SampleFormValues, toFormValues } from './SampleFormDialog';
 import { SampleCreatedDialog } from './SampleCreatedDialog';
 import { AddReportAndResultsDialog } from './AddReportAndResultsDialog';
+import { AddReportDialog } from './AddReportDialog';
 import { ConfirmActionDialog } from './ConfirmActionDialog';
 
 // V14's story is exactly 3 sample states: no report/results yet (non-API
@@ -68,6 +69,12 @@ export function LabManagementContent({ plotId }: { plotId: string }) {
     setAddReportOpenToken((t) => t + 1);
   };
   const closeAddReport = () => setAddReportSampleId(null);
+
+  // "Upload report" from a to-do row — opens the two-pane report dialog.
+  const [uploadSampleId, setUploadSampleId] = useState<string | null>(null);
+  const [uploadToken, setUploadToken] = useState(0);
+  const uploadSample = uploadSampleId ? allSamples.find((s) => s.id === uploadSampleId) ?? null : null;
+  const openUploadReport = (s: LabSampleData) => { setUploadSampleId(s.id); setUploadToken((t) => t + 1); };
 
   const openCreate = () => { setEditingId(null); setFormOpen(true); };
   const openEdit = (s: LabSampleData) => { setEditingId(s.id); setFormOpen(true); };
@@ -198,7 +205,7 @@ const handleDuplicate = (s: LabSampleData) => {
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
       {/* Toolbar — search on the left, Add sample on the right. */}
-      <Box sx={{ px: 2, py: 1.5, borderBottom: '1px solid', borderColor: 'divider' }}>
+      <Box sx={{ px: 3, py: 2.5, borderBottom: '1px solid', borderColor: 'divider' }}>
         <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={1.5}>
           <TextField
             size="small" placeholder="Search samples…" value={search}
@@ -207,7 +214,7 @@ const handleDuplicate = (s: LabSampleData) => {
               startAdornment: <InputAdornment position="start"><Search sx={{ color: 'text.disabled', fontSize: 20 }} /></InputAdornment>,
               sx: { borderRadius: '8px' },
             }}
-            sx={{ width: 240, '& .MuiOutlinedInput-root': { height: 36, bgcolor: 'white' } }}
+            sx={{ width: 300, '& .MuiOutlinedInput-root': { height: 40, bgcolor: 'white' } }}
           />
           <Stack direction="row" alignItems="center" spacing={1.5}>
             <OptionsTrigger
@@ -222,7 +229,7 @@ const handleDuplicate = (s: LabSampleData) => {
             <Button
               variant="soft" color="primary" startIcon={<Add />}
               onClick={openCreate}
-              sx={{ px: 2, height: 36, fontWeight: 600, borderRadius: '8px', textTransform: 'none' }}
+              sx={{ px: 2, height: 40, fontWeight: 600, borderRadius: '8px', textTransform: 'none' }}
             >
               Add sample
             </Button>
@@ -236,22 +243,26 @@ const handleDuplicate = (s: LabSampleData) => {
       <Box sx={{ flexGrow: 1, overflow: 'auto', p: 2 }}>
         <Stack spacing={3}>
           {[
-            { key: 'without', title: 'Samples without reports', rows: withoutReports },
-            { key: 'with', title: 'Samples with reports', rows: withReports },
+            { key: 'without', title: 'Awaiting lab report', rows: withoutReports, todo: true },
+            { key: 'with', title: 'Samples with reports', rows: withReports, todo: false },
           ].filter((g) => g.rows.length > 0).map((g) => {
             const ids = new Set(g.rows.map((r) => r.id));
             return (
               <Box key={g.key}>
-                <Typography sx={{ fontWeight: 700, fontSize: '0.875rem', color: 'text.primary', mb: 1.5 }}>
-                  {g.title} ({g.rows.length})
-                </Typography>
+                <Stack direction="row" alignItems="center" spacing={0.75} sx={{ mb: 1.5 }}>
+                  {g.todo && <ScheduleOutlined sx={{ fontSize: 18, color: 'warning.main' }} />}
+                  <Typography sx={{ fontWeight: 700, fontSize: '0.875rem', color: g.todo ? 'warning.main' : 'text.primary' }}>
+                    {g.title} ({g.rows.length})
+                  </Typography>
+                </Stack>
                 <SamplesReportsTable
                   rows={g.rows}
                   selected={selected.filter((id) => ids.has(id))}
                   onSelectChange={(next) => setSelected([...selected.filter((id) => !ids.has(id)), ...next])}
                   onRowClick={(s) => navigate(`/plot/${plotId}/samples/${s.id}`)}
                   onDelete={handleDelete}
-                  onAddReportAndResults={handleAddReportAndResults}
+                  uploadCta={g.todo}
+                  onUploadReport={openUploadReport}
                 />
               </Box>
             );
@@ -291,6 +302,9 @@ const handleDuplicate = (s: LabSampleData) => {
 
       {/* "Add report & results" quick-add popup */}
       <AddReportAndResultsDialog key={addReportOpenToken} sample={addReportSample} onClose={closeAddReport} />
+
+      {/* Two-pane report upload — opened from a to-do row's "Upload report". */}
+      <AddReportDialog key={`upl-${uploadToken}`} sample={uploadSample} onClose={() => setUploadSampleId(null)} />
 
       {/* Delete confirmation */}
       <ConfirmActionDialog

@@ -18,7 +18,9 @@ interface SamplesReportsTableProps {
   /** Click anywhere on the row (outside actions) navigates to the sample page. */
   onRowClick: (s: LabSampleData) => void;
   onDelete: (s: LabSampleData) => void;
-  onAddReportAndResults: (s: LabSampleData) => void;
+  /** When set, each row shows an "Upload report" CTA (used for the to-do group). */
+  uploadCta?: boolean;
+  onUploadReport?: (s: LabSampleData) => void;
 }
 
 type SortField = 'sampleName' | 'dateOfSample' | 'commodity';
@@ -45,7 +47,7 @@ export const readOnlyHeaderRowSx = {
 export const checkboxCellSx = { width: 52 } as const;
 
 export function SamplesReportsTable({
-  rows, selected, onSelectChange, onRowClick, onDelete, onAddReportAndResults,
+  rows, selected, onSelectChange, onRowClick, onDelete, uploadCta, onUploadReport,
 }: SamplesReportsTableProps) {
   const [orderBy, setOrderBy] = useState<SortField | null>(null);
   const [order, setOrder] = useState<SortOrder>('asc');
@@ -168,6 +170,18 @@ export function SamplesReportsTable({
                   </TableCell>
                   <TableCell sx={{ whiteSpace: 'nowrap' }} onClick={(e) => e.stopPropagation()}>
                     <Stack direction="row" spacing={0.5} alignItems="center" justifyContent="flex-end">
+                      {uploadCta && onUploadReport && (
+                        <RowActionButton
+                          startIcon={<Add sx={{ fontSize: 16 }} />}
+                          onClick={() => onUploadReport(s)}
+                          sx={{
+                            mr: 0.5, bgcolor: 'primary.softBg', color: 'primary.main',
+                            '&:hover': { bgcolor: alpha('#d4183d', 0.16) },
+                          }}
+                        >
+                          Upload report
+                        </RowActionButton>
+                      )}
                       <RowIconButton label="Delete" onClick={() => onDelete(s)}>
                         <DeleteOutline fontSize="small" />
                       </RowIconButton>
