@@ -69,6 +69,9 @@ export interface ReportFieldsProps {
   /** Render only the Lab + Lab report ID row (no upload zone). Used when the
    *  file preview lives elsewhere, e.g. the two-pane report view. */
   hideUpload?: boolean;
+  /** Render only the upload zone (no Lab + Lab report ID fields). Used when
+   *  those details are derived from the report rather than entered by hand. */
+  uploadOnly?: boolean;
 }
 
 /** Shared report-fields layout — Lab + Lab report ID on one row, then
@@ -80,7 +83,7 @@ export function ReportFields({
   laboratory, onLaboratoryChange, allLabs, onAddLab,
   labReportId, onLabReportIdChange,
   attachments, onAddFiles, onRemoveAttachment,
-  showErrors, revealDetailsAfterUpload, hideUpload,
+  showErrors, revealDetailsAfterUpload, hideUpload, uploadOnly,
 }: ReportFieldsProps) {
   const labMissing = !laboratory.trim();
   const idMissing = !labReportId.trim();
@@ -143,6 +146,9 @@ export function ReportFields({
     </Box>
   );
 
+  if (uploadOnly) {
+    return <Stack spacing={2}>{filesBlock}</Stack>;
+  }
   if (hideUpload) {
     return <Stack spacing={2}>{detailsRow}</Stack>;
   }

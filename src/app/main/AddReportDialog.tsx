@@ -82,7 +82,8 @@ export function AddReportDialog({ sample, editingReport, onClose }: AddReportDia
   const gridRef = useRef<LabResiduesGridHandle>(null);
 
   const open = !!sample;
-  const fieldsValid = !!laboratory.trim() && labReportId.trim() !== '' && attachments.length > 0;
+  // Lab + Lab report ID are derived from the report, so a file is all that's required.
+  const fieldsValid = attachments.length > 0;
   const allLabs = [...LABORATORY_OPTIONS, ...customLabs];
   const plotAnalytes = sample ? getAnalytesForPlot(sample.plotId) : [];
 
@@ -140,7 +141,9 @@ export function AddReportDialog({ sample, editingReport, onClose }: AddReportDia
   const handleSave = () => {
     setTouched(true);
     if (!sample || !fieldsValid) return;
-    const trimmedId = labReportId.trim();
+    // Lab + Lab report ID are derived from the parsed report (no manual fields);
+    // fall back to the file name so residues still link to a report.
+    const trimmedId = labReportId.trim() || (pdfFile ? pdfFile.name.replace(/\.[^.]+$/, '') : reportInternalId);
     const newReport: LabReport = { id: reportInternalId, laboratory, labReportId: trimmedId, attachments };
     // Residues link to a report by its (human) labReportId — see LabResiduesGrid.
     const savedResidues = residues.map((r) => ({ ...r, labReportId: trimmedId, isDraft: false }));
@@ -164,20 +167,19 @@ export function AddReportDialog({ sample, editingReport, onClose }: AddReportDia
 
   if (!sample) return <Dialog open={false} onClose={onClose} />;
 
-  const detailsFields = (
+  const uploadZone = (
     <ReportFields
       laboratory={laboratory} onLaboratoryChange={setLaboratory}
       allLabs={allLabs} onAddLab={() => setAddLabOpen(true)}
       labReportId={labReportId} onLabReportIdChange={setLabReportId}
       attachments={attachments} onAddFiles={handleAddFiles} onRemoveAttachment={handleClearFile}
       showErrors={touched}
-      revealDetailsAfterUpload={!twoPane}
-      hideUpload={twoPane}
+      uploadOnly
     />
   );
 
   const resultsPane = (
-    <Box sx={{ mt: 2.5 }}>
+    <Box>
       {!parseDone ? (
         <Stack direction="row" spacing={1} alignItems="center" sx={{ color: 'text.secondary' }}>
           <CircularProgress size={16} /><Typography variant="body2">Reading residues from the report…</Typography>
@@ -244,14 +246,12 @@ export function AddReportDialog({ sample, editingReport, onClose }: AddReportDia
       <DialogContent sx={{ px: 3, pt: 1, pb: 1 }}>
         {!twoPane && (
           <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            {isEditing
-              ? 'Update the report details or replace the files.'
-              : 'Enter the report details and upload the files you received from the lab.'}
+            Upload the report you received from the lab — we’ll read the lab, report ID and residues from it.
           </Typography>
         )}
 
         {!twoPane ? (
-          detailsFields
+          uploadZone
         ) : (
           <Box sx={{ display: 'flex', gap: 3, alignItems: 'flex-start' }}>
             {/* Left: PDF thumbnail */}
@@ -271,9 +271,8 @@ export function AddReportDialog({ sample, editingReport, onClose }: AddReportDia
                 </Alert>
               )}
             </Box>
-            {/* Right: fields + residues found */}
+            {/* Right: residues found in the report */}
             <Box sx={{ flex: 1, minWidth: 0 }}>
-              {detailsFields}
               {resultsPane}
             </Box>
           </Box>

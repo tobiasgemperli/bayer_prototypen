@@ -96,11 +96,12 @@ function Section({ title, toolbar, children }: {
 }) {
   return (
     <Box sx={{ border: '1px solid', borderColor: 'divider', borderRadius: '12px', overflow: 'hidden' }}>
-      <Box sx={{ px: 2.5, minHeight: 64, display: 'flex', alignItems: 'center' }}>
+      {/* Title and section toolbar share one baseline row. */}
+      <Box sx={{ px: 2.5, pt: 2, pb: 0.5, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2, flexWrap: 'wrap' }}>
         <SectionTitle>{title}</SectionTitle>
+        {toolbar && <Box sx={{ flexShrink: 0 }}>{toolbar}</Box>}
       </Box>
       <Box sx={{ px: 2.5, pb: 2.5, pt: 0 }}>
-        {toolbar && <Box sx={{ mb: 2 }}>{toolbar}</Box>}
         {children}
       </Box>
     </Box>
@@ -882,7 +883,7 @@ export function SampleReportPage() {
             onAdd={handleResidueAdd}
             onUpdate={handleResidueUpdate}
             onDelete={handleResidueDelete}
-            onOpenAddResults={openAddResults}
+            onOpenAddResults={openAddReport}
             onPersist={handlePersistResults}
             onDiscard={handleDiscardResults}
           />
