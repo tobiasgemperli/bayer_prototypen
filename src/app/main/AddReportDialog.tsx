@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import {
   Button, Dialog, DialogActions, DialogContent, DialogTitle, IconButton, Typography,
+  Alert,
 } from '@mui/material';
-import { Close as CloseIcon } from '@mui/icons-material';
+import { Close as CloseIcon, AutoAwesome } from '@mui/icons-material';
 import { toast } from 'sonner';
 import {
   newReportId, updateLabSample, LABORATORY_OPTIONS,
@@ -10,6 +11,15 @@ import {
 } from '../data/lab-results-data';
 import { AddLaboratoryDialog } from './AddLaboratoryDialog';
 import { ReportFields } from './ReportFields';
+import { loadDoc } from '../lab-shared/parsers/load-pdf';
+import { route } from '../lab-shared/parsers';
+
+// Friendly lab name per detected template, used to prefill the Lab field.
+const TEMPLATE_LAB: Record<string, string> = {
+  'aqua-informe-de-ensayo': 'Tentamus',
+  'eurofins-relatorio-de-ensaio': 'Eurofins',
+  'orangedata-analytical-report': 'orange-data',
+};
 
 export interface AddReportDialogProps {
   /** The sample this report is being added to. Dialog is open whenever this
@@ -38,6 +48,7 @@ export function AddReportDialog({ sample, editingReport, onClose }: AddReportDia
   const [attachments, setAttachments] = useState<LabAttachment[]>(editingReport?.attachments ?? []);
   const [reportInternalId] = useState(() => editingReport?.id ?? newReportId());
   const [touched, setTouched] = useState(false);
+  const [parseInfo, setParseInfo] = useState<{ lab: string; id: string; count: number; file: string } | null>(null);
 
   const open = !!sample;
   const fieldsValid = !!laboratory.trim() && labReportId.trim() !== '' && attachments.length > 0;
@@ -51,10 +62,34 @@ export function AddReportDialog({ sample, editingReport, onClose }: AddReportDia
 
   const handleAddFiles = (files: FileList) => {
     const start = Date.now();
-    const added: LabAttachment[] = Array.from(files).map((f, i) => ({
+    const arr = Array.from(files);
+    const added: LabAttachment[] = arr.map((f, i) => ({
       id: `att-${start}-${i}`, name: f.name, size: f.size,
     }));
     setAttachments((prev) => [...prev, ...added]);
+
+    // If a PDF was uploaded, parse it in-browser and prefill the report fields.
+    const pdf = arr.find((f) => f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf'));
+    if (pdf) void parseAndPrefill(pdf);
+  };
+
+  const parseAndPrefill = async (file: File) => {
+    try {
+      const res = route(await loadDoc(await file.arrayBuffer()));
+      const lab = TEMPLATE_LAB[res.template] ?? '';
+      const id = String(res.header.sample_id ?? res.header.report_number ?? '');
+      const count = res._validation.detected_count;
+      if (lab && !laboratory.trim()) {
+        setCustomLabs((prev) => (allLabs.includes(lab) || prev.includes(lab) ? prev : [...prev, lab]));
+        setLaboratory(lab);
+      }
+      if (id && !labReportId.trim()) setLabReportId(id);
+      setParseInfo({ lab, id, count, file: file.name });
+      toast.success(`Read ${file.name}: ${lab || 'report'} ${id} · ${count} residue${count === 1 ? '' : 's'} detected`);
+    } catch {
+      // Unrecognized template — leave the fields for manual entry.
+      toast(`Couldn't auto-read ${file.name}; please enter the details manually.`);
+    }
   };
   const handleRemoveAttachment = (id: string) => {
     setAttachments((prev) => prev.filter((a) => a.id !== id));
@@ -114,6 +149,17 @@ export function AddReportDialog({ sample, editingReport, onClose }: AddReportDia
           onRemoveAttachment={handleRemoveAttachment}
           showErrors={touched}
         />
+        {parseInfo && (
+          <Alert
+            icon={<AutoAwesome fontSize="small" />}
+            severity="success"
+            sx={{ mt: 1.5, borderRadius: '8px', '& .MuiAlert-message': { fontSize: '0.8125rem' } }}
+          >
+            Detected <strong>{parseInfo.lab || 'report'}</strong>
+            {parseInfo.id ? <> report <strong>{parseInfo.id}</strong></> : ''} · {parseInfo.count} residue
+            {parseInfo.count === 1 ? '' : 's'} in {parseInfo.file}. Empty fields prefilled — parsed in your browser, no upload.
+          </Alert>
+        )}
       </DialogContent>
       <DialogActions sx={{ px: 3, pb: 3, pt: 2, gap: 1, justifyContent: 'flex-end' }}>
         <Button onClick={onClose} variant="text" color="inherit"
