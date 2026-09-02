@@ -1,10 +1,12 @@
 import {
   AppBar, Toolbar, IconButton, Avatar, Box, Menu, MenuItem,
   ListItemIcon, Typography, Divider,
+  Drawer, List, ListItemButton, ListItemText,
 } from '@mui/material';
 import {
   Notifications, HelpOutline, Menu as MenuIcon, Person,
   Settings, Logout, KeyboardArrowDown,
+  GrassOutlined, DescriptionOutlined,
 } from '@mui/icons-material';
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router';
@@ -33,9 +35,17 @@ export function Header() {
   };
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const open = Boolean(anchorEl);
+  const [navOpen, setNavOpen] = useState(false);
 
   const handleClick = (event: React.MouseEvent<HTMLElement>) => setAnchorEl(event.currentTarget);
   const handleClose = () => setAnchorEl(null);
+
+  const variantPrefix = (location.pathname.match(/^\/v\/([^/]+)/) || [])[0] || '';
+  const navItems = [
+    { label: 'Plots', icon: <GrassOutlined fontSize="small" />, path: `${variantPrefix}/` },
+    { label: 'Sample Reports', icon: <DescriptionOutlined fontSize="small" />, path: `${variantPrefix}/sample-reports` },
+  ];
+  const go = (path: string) => { navigate(path); setNavOpen(false); };
 
   return (
     <AppBar position="static" elevation={0}
@@ -44,9 +54,30 @@ export function Header() {
         {/* Hamburger — hidden during onboarding, visible in full product */}
         {!isOnboarding && (
           <Box sx={{ mr: 1 }}>
-            <IconButton size="small" sx={{ color: 'text.secondary' }}><MenuIcon /></IconButton>
+            <IconButton size="small" sx={{ color: 'text.secondary' }} onClick={() => setNavOpen(true)}>
+              <MenuIcon />
+            </IconButton>
           </Box>
         )}
+
+        <Drawer anchor="left" open={navOpen} onClose={() => setNavOpen(false)}>
+          <Box sx={{ width: 260, pt: 1 }} role="navigation">
+            <Typography variant="overline" sx={{ px: 2, color: 'text.secondary' }}>Navigate</Typography>
+            <List>
+              {navItems.map((item) => {
+                const selected = item.label === 'Plots'
+                  ? location.pathname === item.path || location.pathname === `${variantPrefix}` || location.pathname === '/'
+                  : location.pathname === item.path;
+                return (
+                  <ListItemButton key={item.label} selected={selected} onClick={() => go(item.path)}>
+                    <ListItemIcon sx={{ minWidth: 40 }}>{item.icon}</ListItemIcon>
+                    <ListItemText primary={item.label} />
+                  </ListItemButton>
+                );
+              })}
+            </List>
+          </Box>
+        </Drawer>
 
         <Box onClick={goToPlots} sx={{ height: 32, width: 128, cursor: 'pointer' }}>
           <ResiYouLogo />

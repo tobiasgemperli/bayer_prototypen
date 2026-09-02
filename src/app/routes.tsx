@@ -20,6 +20,7 @@ import { TableActionsDemoPage } from './variants/table-actions-v1/TableActionsDe
 import { TableActionsErrorDemoPage } from './variants/table-actions-v1/TableActionsErrorDemoPage';
 import { TableActionsTagsDemoPage } from './variants/table-actions-v1/TableActionsTagsDemoPage';
 import { LabParserDemoPage } from './lab-shared/LabParserDemoPage';
+import { SampleReportsPage } from './main/SampleReportsPage';
 
 function Root() {
   const authPhase = useAuthPhase();
@@ -116,6 +117,7 @@ export const router = createBrowserRouter([
       { path: "plot/:id/lab-results/:sampleId", Component: LabSamplePage },
       { path: "plot/:id/samples/:sampleId", Component: SampleReportPage },
       { path: "add-plot", Component: AddPlotPage },
+      { path: "sample-reports", Component: SampleReportsPage },
       { path: "prototypes", Component: PrototypeGallery },
 
       // Variant routes — same paths under /v/:variantId/
