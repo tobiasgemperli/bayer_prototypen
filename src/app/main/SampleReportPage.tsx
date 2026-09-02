@@ -380,7 +380,7 @@ function ReportResidues({ residues }: { residues: LabResidue[] }) {
   return (
     <Box>
       <Typography sx={{ fontWeight: 700, fontSize: '0.6875rem', textTransform: 'uppercase', letterSpacing: '.03em', color: 'text.secondary', mb: 1 }}>
-        Residues in this report ({residues.length})
+        Results in this report ({residues.length})
       </Typography>
       {residues.length === 0 ? (
         <Typography variant="body2" color="text.secondary">No residues linked to this report.</Typography>
