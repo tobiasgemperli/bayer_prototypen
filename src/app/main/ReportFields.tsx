@@ -62,6 +62,10 @@ export interface ReportFieldsProps {
   /** Reveal required-field errors — set once the user has tried to submit,
    *  same touched/showErrors convention as SampleFormDialog. */
   showErrors?: boolean;
+  /** When set, the upload zone is shown first and the Lab + Lab report ID
+   *  fields stay hidden until at least one file is uploaded (they are then
+   *  typically prefilled from the parsed report). */
+  revealDetailsAfterUpload?: boolean;
 }
 
 /** Shared report-fields layout — Lab + Lab report ID on one row, then
@@ -73,65 +77,75 @@ export function ReportFields({
   laboratory, onLaboratoryChange, allLabs, onAddLab,
   labReportId, onLabReportIdChange,
   attachments, onAddFiles, onRemoveAttachment,
-  showErrors,
+  showErrors, revealDetailsAfterUpload,
 }: ReportFieldsProps) {
   const labMissing = !laboratory.trim();
   const idMissing = !labReportId.trim();
   const filesMissing = attachments.length === 0;
+  const showDetails = !revealDetailsAfterUpload || attachments.length > 0;
 
-  return (
-    <Stack spacing={2}>
-      <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
-        <Box>
-          <FieldLabel required>Lab</FieldLabel>
-          <LabAutocomplete
-            value={laboratory}
-            options={allLabs}
-            onChange={onLaboratoryChange}
-            onAddLab={onAddLab}
-          />
-          {showErrors && labMissing && (
-            <Typography sx={{ mt: 0.5, color: 'error.main', fontSize: '0.75rem' }}>
-              Lab is required
-            </Typography>
-          )}
-        </Box>
-        <Box>
-          <Stack direction="row" alignItems="center" spacing={0.5} sx={{ mb: 0.5 }}>
-            <FieldLabel required sx={{ mb: 0 }}>Lab report ID</FieldLabel>
-            <Tooltip
-              arrow placement="top" enterDelay={150}
-              title="Find this near the top of the lab report. It may be labelled Report number, Reference number, or similar."
-            >
-              <InfoOutlined sx={{ fontSize: 14, color: 'text.disabled', cursor: 'help' }} />
-            </Tooltip>
-          </Stack>
-          <TextField
-            fullWidth size="small" placeholder="e.g. RPT-2024-001"
-            value={labReportId} onChange={(e) => onLabReportIdChange(e.target.value)}
-            error={showErrors && idMissing}
-            helperText={showErrors && idMissing ? 'Lab report ID is required' : undefined}
-            sx={fieldSx}
-          />
-        </Box>
-      </Box>
-
+  const detailsRow = (
+    <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
       <Box>
-        <FieldLabel required>Report files</FieldLabel>
-        <AttachmentDropzone onFiles={onAddFiles} />
-        {showErrors && filesMissing && (
+        <FieldLabel required>Lab</FieldLabel>
+        <LabAutocomplete
+          value={laboratory}
+          options={allLabs}
+          onChange={onLaboratoryChange}
+          onAddLab={onAddLab}
+        />
+        {showErrors && labMissing && (
           <Typography sx={{ mt: 0.5, color: 'error.main', fontSize: '0.75rem' }}>
-            At least one report file is required
+            Lab is required
           </Typography>
         )}
-        {attachments.length > 0 && (
-          <Stack direction="row" flexWrap="wrap" gap={1} sx={{ mt: 1.5 }}>
-            {attachments.map((a) => (
-              <AttachmentChip key={a.id} name={a.name} onRemove={() => onRemoveAttachment(a.id)} />
-            ))}
-          </Stack>
-        )}
       </Box>
+      <Box>
+        <Stack direction="row" alignItems="center" spacing={0.5} sx={{ mb: 0.5 }}>
+          <FieldLabel required sx={{ mb: 0 }}>Lab report ID</FieldLabel>
+          <Tooltip
+            arrow placement="top" enterDelay={150}
+            title="Find this near the top of the lab report. It may be labelled Report number, Reference number, or similar."
+          >
+            <InfoOutlined sx={{ fontSize: 14, color: 'text.disabled', cursor: 'help' }} />
+          </Tooltip>
+        </Stack>
+        <TextField
+          fullWidth size="small" placeholder="e.g. RPT-2024-001"
+          value={labReportId} onChange={(e) => onLabReportIdChange(e.target.value)}
+          error={showErrors && idMissing}
+          helperText={showErrors && idMissing ? 'Lab report ID is required' : undefined}
+          sx={fieldSx}
+        />
+      </Box>
+    </Box>
+  );
+
+  const filesBlock = (
+    <Box>
+      <FieldLabel required>Report files</FieldLabel>
+      <AttachmentDropzone onFiles={onAddFiles} />
+      {showErrors && filesMissing && (
+        <Typography sx={{ mt: 0.5, color: 'error.main', fontSize: '0.75rem' }}>
+          At least one report file is required
+        </Typography>
+      )}
+      {attachments.length > 0 && (
+        <Stack direction="row" flexWrap="wrap" gap={1} sx={{ mt: 1.5 }}>
+          {attachments.map((a) => (
+            <AttachmentChip key={a.id} name={a.name} onRemove={() => onRemoveAttachment(a.id)} />
+          ))}
+        </Stack>
+      )}
+    </Box>
+  );
+
+  // Reveal mode: upload first, details appear after a file is added.
+  return (
+    <Stack spacing={2}>
+      {revealDetailsAfterUpload
+        ? <>{filesBlock}{showDetails && detailsRow}</>
+        : <>{detailsRow}{filesBlock}</>}
     </Stack>
   );
 }

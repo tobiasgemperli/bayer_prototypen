@@ -155,6 +155,7 @@ export function AddReportDialog({ sample, editingReport, onClose }: AddReportDia
           onAddFiles={handleAddFiles}
           onRemoveAttachment={handleRemoveAttachment}
           showErrors={touched}
+          revealDetailsAfterUpload
         />
         {parseInfo && (
           <Alert
