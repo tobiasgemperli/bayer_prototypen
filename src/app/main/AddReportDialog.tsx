@@ -111,11 +111,13 @@ export function AddReportDialog({ sample, editingReport, onClose }: AddReportDia
       const lab = TEMPLATE_LAB[res.template] ?? '';
       const id = String(res.header.sample_id ?? res.header.report_number ?? '');
       const count = res._validation.detected_count;
-      if (lab && !laboratory.trim()) {
+      // Auto-fill Lab + Lab report ID from the parsed report (the user can
+      // still overwrite them in the fields).
+      if (lab) {
         setCustomLabs((prev) => (allLabs.includes(lab) || prev.includes(lab) ? prev : [...prev, lab]));
         setLaboratory(lab);
       }
-      if (id && !labReportId.trim()) setLabReportId(id);
+      if (id) setLabReportId(id);
       setResidues(toLabResidues(res, reportInternalId));
       setParseInfo({ lab, id, count, file: file.name });
       toast.success(`Read ${file.name}: ${lab || 'report'} ${id} · ${count} residue${count === 1 ? '' : 's'} detected`);
@@ -178,8 +180,21 @@ export function AddReportDialog({ sample, editingReport, onClose }: AddReportDia
     />
   );
 
+  // Lab + Lab report ID — prefilled from the parsed report, editable so the
+  // user can correct/overwrite the auto-detected values.
+  const detailsFields = (
+    <ReportFields
+      laboratory={laboratory} onLaboratoryChange={setLaboratory}
+      allLabs={allLabs} onAddLab={() => setAddLabOpen(true)}
+      labReportId={labReportId} onLabReportIdChange={setLabReportId}
+      attachments={attachments} onAddFiles={handleAddFiles} onRemoveAttachment={handleClearFile}
+      showErrors={touched}
+      hideUpload
+    />
+  );
+
   const resultsPane = (
-    <Box>
+    <Box sx={{ mt: 2.5 }}>
       {!parseDone ? (
         <Stack direction="row" spacing={1} alignItems="center" sx={{ color: 'text.secondary' }}>
           <CircularProgress size={16} /><Typography variant="body2">Reading residues from the report…</Typography>
@@ -284,8 +299,9 @@ export function AddReportDialog({ sample, editingReport, onClose }: AddReportDia
                 </Alert>
               )}
             </Box>
-            {/* Right: residues found in the report */}
+            {/* Right: auto-filled (editable) Lab + Lab report ID, then residues */}
             <Box sx={{ flex: 1, minWidth: 0 }}>
+              {detailsFields}
               {resultsPane}
             </Box>
           </Box>
