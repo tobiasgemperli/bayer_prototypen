@@ -403,6 +403,17 @@ export function deleteLabReport(reportId: string): void {
 let _residueIdCounter = 1;
 export function newResidueId(): string { return `res-${_residueIdCounter++}`; }
 
+/**
+ * Per-sample report **return address** — a unique email printed on the sample
+ * sheet. The lab emails the report to this address and ResiYou auto-files it
+ * against this exact sample (no QR scan or manual sample-ID entry needed).
+ */
+export function getReturnAddress(sample: { sampleCode?: string; id: string }): string {
+  const token = (sample.sampleCode || sample.id)
+    .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+  return `${token}@reports.resiyou.com`;
+}
+
 export function residueLabel(r: LabResidue): string {
   if (r.residueLevel === 'Residue') return r.residueValue || '-';
   if (r.residueLevel === 'Trace') return 'Trace';

@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { useParams } from 'react-router';
-import { getLabSample } from '../data/lab-results-data';
+import { getLabSample, getReturnAddress } from '../data/lab-results-data';
 import { usePlots } from '../data/plots-data';
 import ResiYouLogo from '../../imports/ResiYouLogo1';
 
@@ -84,6 +84,7 @@ export function SampleSheetPage() {
   }
 
   const labLabel = sample.laboratory || 'the laboratory';
+  const returnAddress = getReturnAddress(sample);
 
   return (
     <>
@@ -147,8 +148,13 @@ export function SampleSheetPage() {
               <h2 style={{ margin: 0 }}>For the laboratory</h2>
             </div>
             <p style={{ marginTop: SPACE[8] }}>
-              Scan the QR code or enter the sample ID when uploading the report.
-              This links the report to the correct sample and plot.
+              Email the report to the return address below — it is filed to the
+              correct sample and plot automatically. Or scan the QR code / enter
+              the sample ID when uploading.
+            </p>
+            <p style={{ marginTop: SPACE[8], marginBottom: 0 }}>
+              Return the report to:{' '}
+              <strong style={{ wordBreak: 'break-all' }}>{returnAddress}</strong>
             </p>
           </div>
         </div>

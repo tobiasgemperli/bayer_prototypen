@@ -12,7 +12,7 @@ import {
 import { toast } from 'sonner';
 import { usePlots } from '../data/plots-data';
 import {
-  useLabSamples, updateLabSample, getAnalytesForPlot, isDetected, LABS_WITH_API_CONNECTION,
+  useLabSamples, updateLabSample, getAnalytesForPlot, getReturnAddress, isDetected, LABS_WITH_API_CONNECTION,
   LabAttachment, LabReport, LabResidue,
 } from '../data/lab-results-data';
 import { PageLayout } from '../design-system/PageLayout';
@@ -357,9 +357,22 @@ export interface ReportsCardProps {
   onAddReport: () => void;
   onViewReport: (report: LabReport) => void;
   onDeleteReport: (report: LabReport) => void;
+  /** Per-sample report return address, shown so the user knows where emailed
+   *  reports land. */
+  returnAddress?: string;
 }
 
-export function ReportsCard({ reports, onAddReport, onViewReport, onDeleteReport }: ReportsCardProps) {
+// One-line note explaining the email return address for this sample.
+function ReturnAddressNote({ address }: { address?: string }) {
+  if (!address) return null;
+  return (
+    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 2 }}>
+      Reports the lab emails to <Box component="strong" sx={{ color: 'text.primary' }}>{address}</Box> are filed here automatically.
+    </Typography>
+  );
+}
+
+export function ReportsCard({ reports, onAddReport, onViewReport, onDeleteReport, returnAddress }: ReportsCardProps) {
   // Before the first report exists, show the section title plus a plain
   // add-CTA in a dashed dropzone-style box.
   if (reports.length === 0) {
@@ -367,6 +380,7 @@ export function ReportsCard({ reports, onAddReport, onViewReport, onDeleteReport
       <Box>
         <SectionTitle>Reports</SectionTitle>
         <EmptyDropzone onClick={onAddReport} ctaLabel="Add report" />
+        <ReturnAddressNote address={returnAddress} />
       </Box>
     );
   }
@@ -390,6 +404,7 @@ export function ReportsCard({ reports, onAddReport, onViewReport, onDeleteReport
           <ReportThumbnail key={r.id} report={r} onClick={() => onViewReport(r)} onDelete={onDeleteReport} />
         ))}
       </Stack>
+      <ReturnAddressNote address={returnAddress} />
     </Section>
   );
 }
@@ -894,6 +909,7 @@ export function SampleReportPage() {
             onAddReport={openAddReport}
             onViewReport={setViewingReport}
             onDeleteReport={handleReportDelete}
+            returnAddress={getReturnAddress(sample)}
           />
 
           {/* ── Results ──────────────────────────────────────────────── */}
