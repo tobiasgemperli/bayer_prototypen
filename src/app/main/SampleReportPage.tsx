@@ -3,8 +3,9 @@ import { useParams } from 'react-router';
 import { useNavigate } from '../variants/variant-context';
 import {
   Accordion, AccordionDetails, AccordionSummary,
-  Box, Breadcrumbs, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, Link, Stack, Tooltip, Typography,
+  Box, Breadcrumbs, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, IconButton, Link, Stack, Tooltip, Typography,
 } from '@mui/material';
+import { alpha } from '@mui/material/styles';
 import {
   Add, Close as CloseIcon, DeleteOutline, EditOutlined, ExpandMore, NavigateNext,
 } from '@mui/icons-material';
@@ -173,9 +174,8 @@ function FilterChip({ label, active, onClick }: { label: string; active: boolean
 }
 
 // ── EmptyDropzone — the Reports/Results pre-first-item state: a transparent,
-// dashed-border box with just the add CTA centered inside. Replaces the
-// accordion entirely (there's nothing yet to collapse), not an accordion
-// with empty content inside it.
+// dashed-border box with a single big "+" add button centered inside (no
+// label). ctaLabel is kept for the accessible name/tooltip only.
 function EmptyDropzone({ onClick, ctaLabel }: { onClick: () => void; ctaLabel: string }) {
   return (
     <Box
@@ -185,12 +185,18 @@ function EmptyDropzone({ onClick, ctaLabel }: { onClick: () => void; ctaLabel: s
         display: 'flex', alignItems: 'center', justifyContent: 'center',
       }}
     >
-      <Button variant="soft" color="primary"
-        startIcon={<Add sx={{ fontSize: 16 }} />}
-        onClick={onClick}
-        sx={softBtnSx}>
-        {ctaLabel}
-      </Button>
+      <Tooltip title={ctaLabel} arrow>
+        <IconButton
+          aria-label={ctaLabel}
+          onClick={onClick}
+          sx={{
+            width: 56, height: 56, color: 'primary.main', bgcolor: 'primary.softBg',
+            '&:hover': { bgcolor: alpha('#d4183d', 0.16) },
+          }}
+        >
+          <Add sx={{ fontSize: 30 }} />
+        </IconButton>
+      </Tooltip>
     </Box>
   );
 }
@@ -547,7 +553,7 @@ export function ResultsCard({
   if (residues.length === 0) {
     return (
       <Box>
-        <SectionTitle>Results</SectionTitle>
+        <SectionTitle>Residues</SectionTitle>
         <EmptyDropzone onClick={onOpenAddResults} ctaLabel="Add residue" />
       </Box>
     );
@@ -605,7 +611,7 @@ export function ResultsCard({
   return (
     <>
     <Section
-      title="Results"
+      title="Residues"
       toolbar={
         <Stack direction="row" justifyContent={hasMixedResults ? 'space-between' : 'flex-end'} alignItems="center" flexWrap="wrap" gap={1.5}>
           {hasMixedResults && (
