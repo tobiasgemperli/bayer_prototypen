@@ -125,7 +125,7 @@ function ReportThumbnailImage({ width = 132 }: { width?: number }) {
       {line('55%')}{line('85%')}{line('80%')}{line('70%')}{line('82%')}{line('40%')}
       <Chip label="PDF" size="small" sx={{
         position: 'absolute', bottom: 6, right: 6, height: 18, fontSize: '0.625rem', fontWeight: 700,
-        bgcolor: 'error.main', color: '#fff', '& .MuiChip-label': { px: 0.75 },
+        bgcolor: 'grey.800', color: '#fff', '& .MuiChip-label': { px: 0.75 },
       }} />
     </Box>
   );
