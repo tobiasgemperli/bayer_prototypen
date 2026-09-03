@@ -131,19 +131,32 @@ function ReportThumbnailImage({ width = 132 }: { width?: number }) {
   );
 }
 
-function ReportThumbnail({ report, onClick }: { report: LabReport; onClick: () => void }) {
-  const isApi = LABS_WITH_API_CONNECTION.has(report.laboratory);
+function ReportThumbnail({ report, onClick, onDelete }: { report: LabReport; onClick: () => void; onDelete: (r: LabReport) => void }) {
+  const locked = !!report.managedBy;
   return (
     <Box onClick={onClick} sx={{
       width: 132, cursor: 'pointer',
       '&:hover .thumb': { borderColor: 'primary.main', boxShadow: '0 2px 10px rgba(0,0,0,0.08)' },
     }}>
-      <ReportThumbnailImage />
+      <Box sx={{ position: 'relative' }}>
+        <ReportThumbnailImage />
+        {!locked && (
+          <IconButton
+            aria-label="Delete report"
+            size="small"
+            onClick={(e) => { e.stopPropagation(); onDelete(report); }}
+            sx={{
+              position: 'absolute', top: -8, right: -8, width: 22, height: 22, p: 0,
+              bgcolor: 'grey.900', color: '#fff', border: '2px solid #fff',
+              boxShadow: '0 1px 4px rgba(0,0,0,0.3)',
+              '&:hover': { bgcolor: '#000' },
+            }}>
+            <CloseIcon sx={{ fontSize: 13 }} />
+          </IconButton>
+        )}
+      </Box>
       <Typography variant="body2" sx={{ fontWeight: 600, mt: 1 }} noWrap>{report.laboratory || 'Lab report'}</Typography>
-      <Stack direction="row" alignItems="center" spacing={0.5} sx={{ minWidth: 0 }}>
-        <Typography variant="caption" color="text.secondary" noWrap>{report.labReportId || '—'}</Typography>
-        {isApi && <ApiConnectionChip condensed />}
-      </Stack>
+      <Typography variant="caption" color="text.secondary" noWrap sx={{ display: 'block' }}>{report.labReportId || '—'}</Typography>
     </Box>
   );
 }
@@ -343,9 +356,10 @@ export interface ReportsCardProps {
   reports: LabReport[];
   onAddReport: () => void;
   onViewReport: (report: LabReport) => void;
+  onDeleteReport: (report: LabReport) => void;
 }
 
-export function ReportsCard({ reports, onAddReport, onViewReport }: ReportsCardProps) {
+export function ReportsCard({ reports, onAddReport, onViewReport, onDeleteReport }: ReportsCardProps) {
   // Before the first report exists, show the section title plus a plain
   // add-CTA in a dashed dropzone-style box.
   if (reports.length === 0) {
@@ -373,7 +387,7 @@ export function ReportsCard({ reports, onAddReport, onViewReport }: ReportsCardP
     >
       <Stack direction="row" flexWrap="wrap" gap={2.5}>
         {reports.map((r) => (
-          <ReportThumbnail key={r.id} report={r} onClick={() => onViewReport(r)} />
+          <ReportThumbnail key={r.id} report={r} onClick={() => onViewReport(r)} onDelete={onDeleteReport} />
         ))}
       </Stack>
     </Section>
@@ -648,9 +662,9 @@ export function ResultsCard({
     >
       {isDirty && <SaveBar onSave={handleSaveClick} onCancel={handleCancelClick} />}
 
-      {/* TableCard — same edge-to-edge card wrapper the Reports cards' own
-          borders echo, so the grid still reads as "the same visual family"
-          even though Reports itself is no longer a table. */}
+      {/* TableCard — extra top margin so the grid isn't crowded against the
+          Add residue button in the section header. */}
+      <Box sx={{ mt: 1.5 }} />
       <TableCard>
         <Box sx={{ height: gridHeight }}>
           {/* key includes resultsFilter (remount on filter flip — see below)
@@ -879,6 +893,7 @@ export function SampleReportPage() {
             reports={reports}
             onAddReport={openAddReport}
             onViewReport={setViewingReport}
+            onDeleteReport={handleReportDelete}
           />
 
           {/* ── Results ──────────────────────────────────────────────── */}

@@ -1,7 +1,7 @@
 import React, { useRef, useState } from 'react';
 import {
   Button, Dialog, DialogActions, DialogContent, DialogTitle, IconButton, Typography,
-  Alert, Box, Stack, CircularProgress,
+  Alert, Box, Stack, CircularProgress, Chip,
 } from '@mui/material';
 import { Close as CloseIcon, AutoAwesome, Add, DeleteOutline } from '@mui/icons-material';
 import { toast } from 'sonner';
@@ -257,12 +257,25 @@ export function AddReportDialog({ sample, editingReport, onClose }: AddReportDia
             {/* Left: PDF thumbnail */}
             <Box sx={{ width: 300, flexShrink: 0 }}>
               <FieldLabel required>Report file</FieldLabel>
-              {pdfFile && <PdfThumbnail file={pdfFile} width={300} />}
-              <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mt: 1 }}>
-                <Typography variant="caption" color="text.secondary" noWrap sx={{ maxWidth: 220 }}>{pdfFile?.name}</Typography>
-                <Button size="small" color="inherit" onClick={handleClearFile}
-                  sx={{ textTransform: 'none', minWidth: 0, color: 'text.secondary' }}>Replace</Button>
-              </Stack>
+              {pdfFile && (
+                <Box sx={{ position: 'relative', width: 300 }}>
+                  <PdfThumbnail file={pdfFile} width={300} />
+                  <Chip label="PDF" size="small" sx={{
+                    position: 'absolute', bottom: 8, right: 8, height: 18, fontSize: '0.625rem', fontWeight: 700,
+                    bgcolor: 'grey.800', color: '#fff', '& .MuiChip-label': { px: 0.75 },
+                  }} />
+                  <IconButton aria-label="Remove file" size="small" onClick={handleClearFile}
+                    sx={{
+                      position: 'absolute', top: -8, right: -8, width: 24, height: 24, p: 0,
+                      bgcolor: 'grey.900', color: '#fff', border: '2px solid #fff',
+                      boxShadow: '0 1px 4px rgba(0,0,0,0.3)',
+                      '&:hover': { bgcolor: '#000' },
+                    }}>
+                    <CloseIcon sx={{ fontSize: 14 }} />
+                  </IconButton>
+                </Box>
+              )}
+              <Typography variant="caption" color="text.secondary" noWrap sx={{ display: 'block', mt: 1, maxWidth: 300 }}>{pdfFile?.name}</Typography>
               {parseInfo && (
                 <Alert icon={<AutoAwesome fontSize="small" />} severity="success"
                   sx={{ mt: 1.5, borderRadius: '8px', '& .MuiAlert-message': { fontSize: '0.75rem' } }}>
@@ -285,7 +298,7 @@ export function AddReportDialog({ sample, editingReport, onClose }: AddReportDia
         </Button>
         <Button onClick={handleSave} variant="contained" color="primary"
           sx={{ fontWeight: 600, textTransform: 'none', px: 2, height: 36, borderRadius: '8px' }}>
-          {isEditing ? 'Save' : 'Analyse'}
+          Save
         </Button>
       </DialogActions>
     </Dialog>
