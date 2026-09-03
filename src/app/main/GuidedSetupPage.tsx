@@ -1,6 +1,7 @@
 import React, { useRef, useState } from 'react';
 import {
   Box, Button, CircularProgress, MenuItem, Select, Stack, TextField, Typography, Chip,
+  Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
 } from '@mui/material';
 import { UploadFile, AutoAwesome, CheckCircle } from '@mui/icons-material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
@@ -12,10 +13,13 @@ import {
 import { usePlots } from '../data/plots-data';
 import { useNavigate } from '../variants/variant-context';
 import { PageLayout } from '../design-system/PageLayout';
-import { FieldLabel } from '../design-system/FormField';
 import { PdfThumbnail } from '../lab-shared/PdfThumbnail';
+import { Th, readOnlyHeaderRowSx } from './SamplesReportsTable';
+import { TableCard } from '../design-system/TableCard';
 import { loadDoc } from '../lab-shared/parsers/load-pdf';
 import { route, ParseResult } from '../lab-shared/parsers';
+
+const cellInputSx = { '& .MuiOutlinedInput-root': { height: 36, bgcolor: 'white', borderRadius: '8px' } } as const;
 
 const TEMPLATE_LAB: Record<string, string> = {
   'aqua-informe-de-ensayo': 'Tentamus',
@@ -148,63 +152,95 @@ export function GuidedSetupPage() {
 
       {busy && <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 2, color: 'text.secondary' }}><CircularProgress size={16} /><Typography variant="body2">Reading reports…</Typography></Stack>}
 
-      {/* Assignment rows */}
-      <Stack spacing={2} sx={{ maxWidth: 1000 }}>
-        {items.map((it) => (
-          <Box key={it.id} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: '12px', p: 2, display: 'flex', gap: 2, alignItems: 'flex-start' }}>
-            <Box sx={{ width: 96, flexShrink: 0 }}>
-              <PdfThumbnail file={it.file} width={96} />
-            </Box>
-            <Box sx={{ flex: 1, minWidth: 0 }}>
-              <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1.5, flexWrap: 'wrap' }}>
-                <Typography sx={{ fontWeight: 700 }} noWrap>{it.file.name}</Typography>
-                {it.parse ? (
-                  <Chip size="small" icon={<AutoAwesome sx={{ fontSize: 14 }} />}
-                    label={`${it.lab || 'report'}${it.reportId ? ` ${it.reportId}` : ''} · ${it.parse.detected_residues.length} residues`}
-                    sx={{ bgcolor: '#fef2f4', color: 'primary.main', fontWeight: 600 }} />
-                ) : (
-                  <Chip size="small" label="Not auto-read — assign manually" sx={{ bgcolor: 'grey.100', color: 'text.secondary' }} />
-                )}
-              </Stack>
-
-              <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
-                <Box>
-                  <FieldLabel required>Assign to sample</FieldLabel>
-                  <Select fullWidth size="small" value={it.target} onChange={(e) => patch(it.id, { target: e.target.value })}>
-                    <MenuItem value="new">➕ Create a new sample</MenuItem>
-                    {samples.map((s) => (
-                      <MenuItem key={s.id} value={s.id}>{plotName(s.plotId)} · {s.sampleName || 'Unnamed'}</MenuItem>
-                    ))}
-                  </Select>
-                </Box>
-                {it.target === 'new' ? (
-                  <Box>
-                    <FieldLabel required>Plot</FieldLabel>
-                    <Select fullWidth size="small" value={it.plotId} onChange={(e) => patch(it.id, { plotId: e.target.value })} displayEmpty>
-                      <MenuItem value="" disabled>Select plot…</MenuItem>
-                      {plots.map((p) => <MenuItem key={p.id} value={p.id}>{p.plotName}</MenuItem>)}
-                    </Select>
-                  </Box>
-                ) : <Box />}
-                {it.target === 'new' && (
-                  <>
-                    <Box>
-                      <FieldLabel required>Sample name</FieldLabel>
-                      <TextField fullWidth size="small" value={it.sampleName}
-                        onChange={(e) => patch(it.id, { sampleName: e.target.value })} placeholder="e.g. Routine check" />
-                    </Box>
-                    <Box>
-                      <FieldLabel required>When was the sample taken?</FieldLabel>
-                      <DatePicker value={it.sampleDate} onChange={(d) => patch(it.id, { sampleDate: d })}
-                        slotProps={{ textField: { size: 'small', fullWidth: true, placeholder: 'DD/MM/YYYY' } }} />
-                    </Box>
-                  </>
-                )}
-              </Box>
-            </Box>
-          </Box>
-        ))}
-      </Stack>
+      {/* Assignment table — one row per report; Lab and Lab report ID are
+          editable columns (auto-filled from the parse). */}
+      {items.length > 0 && (
+        <TableCard>
+          <TableContainer>
+            <Table sx={{ minWidth: 1120 }}>
+              <TableHead>
+                <TableRow sx={readOnlyHeaderRowSx}>
+                  <Th>Report</Th>
+                  <Th>Lab</Th>
+                  <Th>Lab report ID</Th>
+                  <Th>Assign to sample</Th>
+                  <Th>Plot</Th>
+                  <Th>Sample name</Th>
+                  <Th>Sample taken</Th>
+                  <Th>Results</Th>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {items.map((it) => {
+                  const existing = it.target !== 'new' ? samples.find((s) => s.id === it.target) : null;
+                  return (
+                    <TableRow key={it.id}>
+                      <TableCell sx={{ minWidth: 180 }}>
+                        <Stack direction="row" spacing={1} alignItems="center">
+                          <Box sx={{ width: 40, flexShrink: 0 }}><PdfThumbnail file={it.file} width={40} /></Box>
+                          <Typography variant="body2" noWrap sx={{ maxWidth: 130 }}>{it.file.name}</Typography>
+                        </Stack>
+                      </TableCell>
+                      <TableCell sx={{ width: 150 }}>
+                        <TextField fullWidth size="small" value={it.lab} placeholder="Lab"
+                          onChange={(e) => patch(it.id, { lab: e.target.value })} sx={cellInputSx} />
+                      </TableCell>
+                      <TableCell sx={{ width: 150 }}>
+                        <TextField fullWidth size="small" value={it.reportId} placeholder="Report ID"
+                          onChange={(e) => patch(it.id, { reportId: e.target.value })} sx={cellInputSx} />
+                      </TableCell>
+                      <TableCell sx={{ width: 180 }}>
+                        <Select fullWidth size="small" value={it.target}
+                          onChange={(e) => patch(it.id, { target: e.target.value })} sx={cellInputSx}>
+                          <MenuItem value="new">➕ Create a new sample</MenuItem>
+                          {samples.map((s) => (
+                            <MenuItem key={s.id} value={s.id}>{plotName(s.plotId)} · {s.sampleName || 'Unnamed'}</MenuItem>
+                          ))}
+                        </Select>
+                      </TableCell>
+                      <TableCell sx={{ width: 150 }}>
+                        {existing ? (
+                          <Typography variant="body2" color="text.secondary">{plotName(existing.plotId)}</Typography>
+                        ) : (
+                          <Select fullWidth size="small" value={it.plotId} displayEmpty
+                            onChange={(e) => patch(it.id, { plotId: e.target.value })} sx={cellInputSx}>
+                            <MenuItem value="" disabled>Select plot…</MenuItem>
+                            {plots.map((p) => <MenuItem key={p.id} value={p.id}>{p.plotName}</MenuItem>)}
+                          </Select>
+                        )}
+                      </TableCell>
+                      <TableCell sx={{ width: 170 }}>
+                        {existing ? (
+                          <Typography variant="body2" color="text.secondary" noWrap>{existing.sampleName || 'Unnamed'}</Typography>
+                        ) : (
+                          <TextField fullWidth size="small" value={it.sampleName} placeholder="Sample name"
+                            onChange={(e) => patch(it.id, { sampleName: e.target.value })} sx={cellInputSx} />
+                        )}
+                      </TableCell>
+                      <TableCell sx={{ width: 160 }}>
+                        {existing ? (
+                          <Typography variant="body2" color="text.secondary">
+                            {existing.dateOfSample ? new Intl.DateTimeFormat('en-GB').format(existing.dateOfSample) : '—'}
+                          </Typography>
+                        ) : (
+                          <DatePicker value={it.sampleDate} onChange={(d) => patch(it.id, { sampleDate: d })}
+                            slotProps={{ textField: { size: 'small', fullWidth: true, placeholder: 'DD/MM/YYYY', sx: cellInputSx } }} />
+                        )}
+                      </TableCell>
+                      <TableCell sx={{ width: 90 }}>
+                        {it.parse ? (
+                          <Chip size="small" icon={<AutoAwesome sx={{ fontSize: 13 }} />} label={`${it.parse.detected_residues.length}`}
+                            sx={{ bgcolor: '#fef2f4', color: 'primary.main', fontWeight: 700 }} />
+                        ) : <Typography variant="caption" color="text.secondary">—</Typography>}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </TableCard>
+      )}
 
       {items.length > 0 && (
         <Stack direction="row" justifyContent="flex-end" sx={{ mt: 3, maxWidth: 1000 }}>
