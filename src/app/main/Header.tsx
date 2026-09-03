@@ -6,7 +6,7 @@ import {
 import {
   Notifications, HelpOutline, Menu as MenuIcon, Person,
   Settings, Logout, KeyboardArrowDown,
-  GrassOutlined, ScienceOutlined,
+  GrassOutlined, ScienceOutlined, InboxOutlined,
 } from '@mui/icons-material';
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router';
@@ -44,6 +44,7 @@ export function Header() {
   const navItems = [
     { label: 'Plots', icon: <GrassOutlined fontSize="small" />, path: `${variantPrefix}/` },
     { label: 'Samples', icon: <ScienceOutlined fontSize="small" />, path: `${variantPrefix}/samples` },
+    { label: 'Inbox', icon: <InboxOutlined fontSize="small" />, path: `${variantPrefix}/inbox` },
   ];
   const go = (path: string) => { navigate(path); setNavOpen(false); };
 

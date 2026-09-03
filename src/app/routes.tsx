@@ -22,6 +22,7 @@ import { TableActionsTagsDemoPage } from './variants/table-actions-v1/TableActio
 import { LabParserDemoPage } from './lab-shared/LabParserDemoPage';
 import { SampleReportsPage } from './main/SampleReportsPage';
 import { AllSamplesPage } from './main/AllSamplesPage';
+import { InboxPage } from './main/InboxPage';
 
 function Root() {
   const authPhase = useAuthPhase();
@@ -119,6 +120,7 @@ export const router = createBrowserRouter([
       { path: "plot/:id/samples/:sampleId", Component: SampleReportPage },
       { path: "add-plot", Component: AddPlotPage },
       { path: "samples", Component: AllSamplesPage },
+      { path: "inbox", Component: InboxPage },
       { path: "sample-reports", Component: SampleReportsPage },
       { path: "prototypes", Component: PrototypeGallery },
 
