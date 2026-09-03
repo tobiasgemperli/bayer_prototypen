@@ -1,9 +1,9 @@
 import React, { useRef, useState } from 'react';
 import {
   Box, Button, CircularProgress, MenuItem, Select, Stack, TextField, Typography, Chip,
-  Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
+  Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Collapse,
 } from '@mui/material';
-import { UploadFile, AutoAwesome, CheckCircle } from '@mui/icons-material';
+import { UploadFile, AutoAwesome, CheckCircle, ExpandMore, Add } from '@mui/icons-material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { toast } from 'sonner';
 import {
@@ -16,10 +16,17 @@ import { PageLayout } from '../design-system/PageLayout';
 import { PdfThumbnail } from '../lab-shared/PdfThumbnail';
 import { Th, readOnlyHeaderRowSx } from './SamplesReportsTable';
 import { TableCard } from '../design-system/TableCard';
+import { LabResiduesGrid, LabResiduesGridHandle } from '../lab-shared/LabResiduesGrid';
 import { loadDoc } from '../lab-shared/parsers/load-pdf';
 import { route, ParseResult } from '../lab-shared/parsers';
 
-const cellInputSx = { '& .MuiOutlinedInput-root': { height: 36, bgcolor: 'white', borderRadius: '8px' } } as const;
+// Underline (standard) inputs so the table reads like a clean editable grid
+// rather than a grid of boxed form fields.
+const cellInputSx = {
+  '& .MuiInput-root': { fontSize: '0.875rem' },
+  '& .MuiInput-input': { py: 0.5 },
+  '& .MuiSelect-select': { py: 0.5 },
+} as const;
 
 const TEMPLATE_LAB: Record<string, string> = {
   'aqua-informe-de-ensayo': 'Tentamus',
@@ -48,6 +55,7 @@ interface Item {
   parse: ParseResult | null;
   lab: string;
   reportId: string;
+  residues: LabResidue[];   // editable, seeded from the parse
   // assignment
   target: string;      // 'new' or an existing sample id
   plotId: string;
@@ -69,6 +77,8 @@ export function GuidedSetupPage() {
   const [items, setItems] = useState<Item[]>([]);
   const [busy, setBusy] = useState(false);
   const [over, setOver] = useState(false);
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const toggle = (id: string) => setExpanded((prev) => ({ ...prev, [id]: !prev[id] }));
   const inputRef = useRef<HTMLInputElement>(null);
 
   const addFiles = async (files: File[]) => {
@@ -81,8 +91,9 @@ export function GuidedSetupPage() {
       const reportId = String(parse?.header.sample_id ?? parse?.header.report_number ?? '');
       const sampleName = String(parse?.header.client_reference ?? parse?.header.lab_description ?? reportId ?? file.name.replace(/\.[^.]+$/, ''));
       const sampleDate = parseDate(parse?.header.sampling_datetime ?? parse?.header.sampling_date ?? parse?.header.reception_datetime);
+      const residues = parse ? toLabResidues(parse, reportId) : [];
       setItems((prev) => [...prev, {
-        id, file, parse, lab, reportId, target: 'new',
+        id, file, parse, lab, reportId, residues, target: 'new',
         plotId: plots[0]?.id ?? '', sampleName, sampleDate,
       }]);
     }
@@ -91,6 +102,8 @@ export function GuidedSetupPage() {
 
   const patch = (id: string, p: Partial<Item>) =>
     setItems((prev) => prev.map((it) => (it.id === id ? { ...it, ...p } : it)));
+  const patchResidues = (id: string, fn: (rs: LabResidue[]) => LabResidue[]) =>
+    setItems((prev) => prev.map((it) => (it.id === id ? { ...it, residues: fn(it.residues) } : it)));
 
   const canFinish = items.length > 0 && items.every((it) =>
     it.target !== 'new' || (it.plotId && it.sampleName.trim() && it.sampleDate));
@@ -103,7 +116,8 @@ export function GuidedSetupPage() {
         id: newReportId(), laboratory: it.lab, labReportId,
         attachments: [{ id: `att-${it.id}`, name: it.file.name, size: it.file.size }],
       };
-      const residues = it.parse ? toLabResidues(it.parse, labReportId) : [];
+      // Use the (possibly edited) residues from the grid, linked to this report.
+      const residues = it.residues.map((r) => ({ ...r, labReportId, isDraft: false }));
       if (it.target === 'new') {
         const s = createLabSample(it.plotId);
         updateLabSample(s.id, {
@@ -157,7 +171,7 @@ export function GuidedSetupPage() {
       {items.length > 0 && (
         <TableCard>
           <TableContainer>
-            <Table sx={{ minWidth: 1120 }}>
+            <Table sx={{ minWidth: 1320 }}>
               <TableHead>
                 <TableRow sx={readOnlyHeaderRowSx}>
                   <Th>Report</Th>
@@ -174,23 +188,24 @@ export function GuidedSetupPage() {
                 {items.map((it) => {
                   const existing = it.target !== 'new' ? samples.find((s) => s.id === it.target) : null;
                   return (
-                    <TableRow key={it.id}>
+                    <React.Fragment key={it.id}>
+                    <TableRow>
                       <TableCell sx={{ minWidth: 180 }}>
                         <Stack direction="row" spacing={1} alignItems="center">
                           <Box sx={{ width: 40, flexShrink: 0 }}><PdfThumbnail file={it.file} width={40} /></Box>
                           <Typography variant="body2" noWrap sx={{ maxWidth: 130 }}>{it.file.name}</Typography>
                         </Stack>
                       </TableCell>
-                      <TableCell sx={{ width: 150 }}>
-                        <TextField fullWidth size="small" value={it.lab} placeholder="Lab"
+                      <TableCell sx={{ width: 160 }}>
+                        <TextField variant="standard" fullWidth value={it.lab} placeholder="—"
                           onChange={(e) => patch(it.id, { lab: e.target.value })} sx={cellInputSx} />
                       </TableCell>
-                      <TableCell sx={{ width: 150 }}>
-                        <TextField fullWidth size="small" value={it.reportId} placeholder="Report ID"
+                      <TableCell sx={{ width: 160 }}>
+                        <TextField variant="standard" fullWidth value={it.reportId} placeholder="—"
                           onChange={(e) => patch(it.id, { reportId: e.target.value })} sx={cellInputSx} />
                       </TableCell>
-                      <TableCell sx={{ width: 180 }}>
-                        <Select fullWidth size="small" value={it.target}
+                      <TableCell sx={{ width: 200 }}>
+                        <Select variant="standard" fullWidth value={it.target}
                           onChange={(e) => patch(it.id, { target: e.target.value })} sx={cellInputSx}>
                           <MenuItem value="new">➕ Create a new sample</MenuItem>
                           {samples.map((s) => (
@@ -198,42 +213,62 @@ export function GuidedSetupPage() {
                           ))}
                         </Select>
                       </TableCell>
-                      <TableCell sx={{ width: 150 }}>
+                      <TableCell sx={{ width: 160 }}>
                         {existing ? (
                           <Typography variant="body2" color="text.secondary">{plotName(existing.plotId)}</Typography>
                         ) : (
-                          <Select fullWidth size="small" value={it.plotId} displayEmpty
+                          <Select variant="standard" fullWidth value={it.plotId} displayEmpty
                             onChange={(e) => patch(it.id, { plotId: e.target.value })} sx={cellInputSx}>
                             <MenuItem value="" disabled>Select plot…</MenuItem>
                             {plots.map((p) => <MenuItem key={p.id} value={p.id}>{p.plotName}</MenuItem>)}
                           </Select>
                         )}
                       </TableCell>
-                      <TableCell sx={{ width: 170 }}>
+                      <TableCell sx={{ width: 180 }}>
                         {existing ? (
                           <Typography variant="body2" color="text.secondary" noWrap>{existing.sampleName || 'Unnamed'}</Typography>
                         ) : (
-                          <TextField fullWidth size="small" value={it.sampleName} placeholder="Sample name"
+                          <TextField variant="standard" fullWidth value={it.sampleName} placeholder="—"
                             onChange={(e) => patch(it.id, { sampleName: e.target.value })} sx={cellInputSx} />
                         )}
                       </TableCell>
-                      <TableCell sx={{ width: 160 }}>
+                      <TableCell sx={{ width: 150 }}>
                         {existing ? (
                           <Typography variant="body2" color="text.secondary">
                             {existing.dateOfSample ? new Intl.DateTimeFormat('en-GB').format(existing.dateOfSample) : '—'}
                           </Typography>
                         ) : (
                           <DatePicker value={it.sampleDate} onChange={(d) => patch(it.id, { sampleDate: d })}
-                            slotProps={{ textField: { size: 'small', fullWidth: true, placeholder: 'DD/MM/YYYY', sx: cellInputSx } }} />
+                            slotProps={{ textField: { variant: 'standard', fullWidth: true, placeholder: 'DD/MM/YYYY', sx: { ...cellInputSx, minWidth: 128, '& input': { whiteSpace: 'nowrap' } } } }} />
                         )}
                       </TableCell>
-                      <TableCell sx={{ width: 90 }}>
-                        {it.parse ? (
-                          <Chip size="small" icon={<AutoAwesome sx={{ fontSize: 13 }} />} label={`${it.parse.detected_residues.length}`}
-                            sx={{ bgcolor: '#fef2f4', color: 'primary.main', fontWeight: 700 }} />
-                        ) : <Typography variant="caption" color="text.secondary">—</Typography>}
+                      <TableCell sx={{ width: 110 }}>
+                        <Chip size="small" clickable onClick={() => toggle(it.id)}
+                          icon={<AutoAwesome sx={{ fontSize: 13 }} />}
+                          label={
+                            <Stack direction="row" alignItems="center" spacing={0.25}>
+                              <span>{it.residues.length}</span>
+                              <ExpandMore sx={{ fontSize: 15, transform: expanded[it.id] ? 'rotate(180deg)' : 'none', transition: '.15s' }} />
+                            </Stack>
+                          }
+                          sx={{ bgcolor: '#fef2f4', color: 'primary.main', fontWeight: 700 }} />
                       </TableCell>
                     </TableRow>
+                    <TableRow>
+                      <TableCell colSpan={8} sx={{ p: 0, borderBottom: expanded[it.id] ? '1px solid' : 'none', borderColor: 'divider' }}>
+                        <Collapse in={!!expanded[it.id]} unmountOnExit>
+                          <Box sx={{ bgcolor: 'grey.50', px: 2, py: 1.5 }}>
+                            <ReportResiduesEditor
+                              residues={it.residues}
+                              onAdd={(r) => patchResidues(it.id, (rs) => [...rs, r])}
+                              onUpdate={(rid, p) => patchResidues(it.id, (rs) => rs.map((r) => (r.id === rid ? { ...r, ...p } : r)))}
+                              onDelete={(rid) => patchResidues(it.id, (rs) => rs.filter((r) => r.id !== rid))}
+                            />
+                          </Box>
+                        </Collapse>
+                      </TableCell>
+                    </TableRow>
+                    </React.Fragment>
                   );
                 })}
               </TableBody>
@@ -252,5 +287,48 @@ export function GuidedSetupPage() {
         </Stack>
       )}
     </PageLayout>
+  );
+}
+
+const softBtnSx = { fontWeight: 600, borderRadius: '8px', px: 2, height: 34, textTransform: 'none' } as const;
+
+/** Editable residues grid for an expanded report row — the same grid used in
+ *  the extraction/add-report overlay, so values can be overwritten and rows
+ *  added before finishing. */
+function ReportResiduesEditor({ residues, onAdd, onUpdate, onDelete }: {
+  residues: LabResidue[];
+  onAdd: (r: LabResidue) => void;
+  onUpdate: (id: string, patch: Partial<LabResidue>) => void;
+  onDelete: (id: string) => void;
+}) {
+  const gridRef = useRef<LabResiduesGridHandle>(null);
+  const height = Math.min(360, Math.max(120, residues.length * 52 + 56));
+  return (
+    <Box>
+      <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
+        <Typography sx={{ fontWeight: 700, fontSize: '0.6875rem', textTransform: 'uppercase', letterSpacing: '.03em', color: 'text.secondary' }}>
+          Results found in this report ({residues.length})
+        </Typography>
+        <Button variant="soft" color="primary" startIcon={<Add sx={{ fontSize: 16 }} />}
+          onClick={() => gridRef.current?.addRow()} sx={softBtnSx}>
+          Add residue
+        </Button>
+      </Stack>
+      <TableCard>
+        <Box sx={{ height }}>
+          <LabResiduesGrid
+            ref={gridRef}
+            residues={residues}
+            reports={[]}
+            hideLabReport
+            hideSource
+            onAdd={onAdd}
+            onUpdate={onUpdate}
+            onDelete={onDelete}
+            noRowsMessage="No residues — add them manually."
+          />
+        </Box>
+      </TableCard>
+    </Box>
   );
 }
