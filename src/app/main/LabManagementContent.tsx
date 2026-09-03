@@ -269,6 +269,7 @@ const handleDuplicate = (s: LabSampleData) => {
                   onDelete={handleDelete}
                   uploadCta={g.todo}
                   onUploadReport={openUploadReport}
+                  hideCounts={g.todo}
                 />
               </Box>
             );

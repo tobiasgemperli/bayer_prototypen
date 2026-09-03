@@ -23,6 +23,9 @@ interface SamplesReportsTableProps {
   onUploadReport?: (s: LabSampleData) => void;
   /** When set, a leading "Plot" column is shown (global all-plots view). */
   plotNameOf?: (s: LabSampleData) => string;
+  /** Hide the "Reports uploaded" and "Residues detected" columns (e.g. the
+   *  awaiting-report group, where both are always empty). */
+  hideCounts?: boolean;
 }
 
 type SortField = 'sampleName' | 'dateOfSample' | 'commodity';
@@ -49,7 +52,7 @@ export const readOnlyHeaderRowSx = {
 export const checkboxCellSx = { width: 52 } as const;
 
 export function SamplesReportsTable({
-  rows, selected = [], onSelectChange = () => {}, onRowClick, onDelete, uploadCta, onUploadReport, plotNameOf,
+  rows, selected = [], onSelectChange = () => {}, onRowClick, onDelete, uploadCta, onUploadReport, plotNameOf, hideCounts,
 }: SamplesReportsTableProps) {
   const [orderBy, setOrderBy] = useState<SortField | null>(null);
   const [order, setOrder] = useState<SortOrder>('asc');
@@ -106,8 +109,8 @@ export function SamplesReportsTable({
               <Th sortable active={orderBy === 'commodity'} dir={order} onClick={() => handleSort('commodity')}>
                 Commodity
               </Th>
-              <Th>Reports uploaded</Th>
-              <Th>Residues detected</Th>
+              {!hideCounts && <Th>Reports uploaded</Th>}
+              {!hideCounts && <Th>Residues detected</Th>}
               <Th
                 trailingInfoTip="Print the sample sheet and send it together with your physical sample to the laboratory."
               >
@@ -146,12 +149,16 @@ export function SamplesReportsTable({
                   <TableCell sx={{ fontSize: '0.875rem' }}>
                     {s.commodity ?? <EmDash />}
                   </TableCell>
-                  <TableCell sx={{ fontSize: '0.875rem' }}>
-                    {(s.reports?.length ?? 0) > 0 ? s.reports!.length : <EmDash />}
-                  </TableCell>
-                  <TableCell sx={{ fontSize: '0.875rem', color: detectedCount > 0 ? 'text.primary' : 'text.secondary' }}>
-                    {detectedCount}
-                  </TableCell>
+                  {!hideCounts && (
+                    <TableCell sx={{ fontSize: '0.875rem' }}>
+                      {(s.reports?.length ?? 0) > 0 ? s.reports!.length : <EmDash />}
+                    </TableCell>
+                  )}
+                  {!hideCounts && (
+                    <TableCell sx={{ fontSize: '0.875rem', color: detectedCount > 0 ? 'text.primary' : 'text.secondary' }}>
+                      {detectedCount}
+                    </TableCell>
+                  )}
                   {/* No stopPropagation on the cell itself — clicking
                       anywhere in this cell OUTSIDE the button should still
                       navigate to the sample detail page, same as the row

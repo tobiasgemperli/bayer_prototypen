@@ -92,6 +92,7 @@ export function AllSamplesPage() {
               onDelete={setConfirmDelete}
               uploadCta={g.todo}
               onUploadReport={openUploadReport}
+              hideCounts={g.todo}
             />
           </Box>
         ))}
