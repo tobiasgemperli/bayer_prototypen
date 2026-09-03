@@ -70,6 +70,17 @@ export const PROTOTYPE_SECTIONS: PrototypeSection[] = [
       },
     ],
   },
+  {
+    title: 'Lab reports',
+    prototypes: [
+      {
+        id: 'extraction',
+        name: 'Extraction · Lab report parser',
+        blurb: 'Drop a lab-report PDF and it is parsed to structured results in the browser — deterministic, no LLM.',
+        launch: () => { router.navigate('/sample-reports'); },
+      },
+    ],
+  },
 ];
 
 /** Flat list for lookups / persistence. */
