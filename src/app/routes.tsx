@@ -23,6 +23,7 @@ import { LabParserDemoPage } from './lab-shared/LabParserDemoPage';
 import { SampleReportsPage } from './main/SampleReportsPage';
 import { AllSamplesPage } from './main/AllSamplesPage';
 import { InboxPage } from './main/InboxPage';
+import { GuidedSetupPage } from './main/GuidedSetupPage';
 
 function Root() {
   const authPhase = useAuthPhase();
@@ -121,6 +122,7 @@ export const router = createBrowserRouter([
       { path: "add-plot", Component: AddPlotPage },
       { path: "samples", Component: AllSamplesPage },
       { path: "inbox", Component: InboxPage },
+      { path: "guided-setup", Component: GuidedSetupPage },
       { path: "sample-reports", Component: SampleReportsPage },
       { path: "prototypes", Component: PrototypeGallery },
 
