@@ -13,14 +13,16 @@ import { LabSampleData, isDetected } from '../data/lab-results-data';
 
 interface SamplesReportsTableProps {
   rows: LabSampleData[];
-  selected: string[];
-  onSelectChange: (ids: string[]) => void;
+  selected?: string[];
+  onSelectChange?: (ids: string[]) => void;
   /** Click anywhere on the row (outside actions) navigates to the sample page. */
   onRowClick: (s: LabSampleData) => void;
   onDelete: (s: LabSampleData) => void;
   /** When set, each row shows an "Upload report" CTA (used for the to-do group). */
   uploadCta?: boolean;
   onUploadReport?: (s: LabSampleData) => void;
+  /** When set, a leading "Plot" column is shown (global all-plots view). */
+  plotNameOf?: (s: LabSampleData) => string;
 }
 
 type SortField = 'sampleName' | 'dateOfSample' | 'commodity';
@@ -47,7 +49,7 @@ export const readOnlyHeaderRowSx = {
 export const checkboxCellSx = { width: 52 } as const;
 
 export function SamplesReportsTable({
-  rows, selected, onSelectChange, onRowClick, onDelete, uploadCta, onUploadReport,
+  rows, selected = [], onSelectChange = () => {}, onRowClick, onDelete, uploadCta, onUploadReport, plotNameOf,
 }: SamplesReportsTableProps) {
   const [orderBy, setOrderBy] = useState<SortField | null>(null);
   const [order, setOrder] = useState<SortOrder>('asc');
@@ -94,9 +96,7 @@ export function SamplesReportsTable({
         <Table stickyHeader aria-label="samples table">
           <TableHead>
             <TableRow sx={readOnlyHeaderRowSx}>
-              {/* No select-all — deleting every sample at once is intentionally
-                  not offered; rows are deleted individually. */}
-              <TableCell padding="checkbox" sx={checkboxCellSx} />
+              {plotNameOf && <Th>Plot</Th>}
               <Th sortable active={orderBy === 'sampleName'} dir={order} onClick={() => handleSort('sampleName')}>
                 Sample name
               </Th>
@@ -119,24 +119,24 @@ export function SamplesReportsTable({
           <TableBody>
             {sorted.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} align="center" sx={{ py: 4, color: 'text.secondary' }}>
+                <TableCell colSpan={7} align="center" sx={{ py: 4, color: 'text.secondary' }}>
                   No samples yet
                 </TableCell>
               </TableRow>
             ) : sorted.map((s) => {
               const detectedCount = (s.residues ?? []).filter(isDetected).length;
-              const isSel = selected.includes(s.id);
               return (
                 <TableRow
                   key={s.id}
                   hover
-                  selected={isSel}
                   onClick={() => onRowClick(s)}
                   sx={{ cursor: 'pointer', ...readOnlyRowSx }}
                 >
-                  <TableCell padding="checkbox" sx={checkboxCellSx} onClick={(e) => e.stopPropagation()}>
-                    <Checkbox checked={isSel} onChange={() => toggleOne(s.id)} />
-                  </TableCell>
+                  {plotNameOf && (
+                    <TableCell sx={{ fontSize: '0.875rem', fontWeight: 600 }}>
+                      {plotNameOf(s) || <EmDash />}
+                    </TableCell>
+                  )}
                   <TableCell sx={{ color: 'text.primary', fontSize: '0.875rem' }}>
                     {s.sampleName || <EmDash />}
                   </TableCell>

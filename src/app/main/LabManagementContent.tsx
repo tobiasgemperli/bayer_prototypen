@@ -216,24 +216,13 @@ const handleDuplicate = (s: LabSampleData) => {
             }}
             sx={{ width: 300, '& .MuiOutlinedInput-root': { height: 40, bgcolor: 'white' } }}
           />
-          <Stack direction="row" alignItems="center" spacing={1.5}>
-            <OptionsTrigger
-              onClick={(e) => setAnchorEl(e.currentTarget)}
-              disabled={selected.length === 0}
-              hasSelection={selected.length > 0}
-            />
-            <ActionMenu
-              anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={() => setAnchorEl(null)}
-              actions={menuActions}
-            />
-            <Button
-              variant="soft" color="primary" startIcon={<Add />}
-              onClick={openCreate}
-              sx={{ px: 2, height: 40, fontWeight: 600, borderRadius: '8px', textTransform: 'none' }}
-            >
-              Add sample
-            </Button>
-          </Stack>
+          <Button
+            variant="soft" color="primary" startIcon={<Add />}
+            onClick={openCreate}
+            sx={{ px: 2, height: 40, fontWeight: 600, borderRadius: '8px', textTransform: 'none' }}
+          >
+            Add sample
+          </Button>
         </Stack>
       </Box>
 
@@ -241,7 +230,7 @@ const handleDuplicate = (s: LabSampleData) => {
           group table gets a scoped slice of the shared selection so its own
           select-all stays correct while bulk delete still sees everything. */}
       <Box sx={{ flexGrow: 1, overflow: 'auto', p: 2 }}>
-        <Stack spacing={3}>
+        <Stack spacing={5}>
           {[
             { key: 'without', title: 'Awaiting lab report', rows: withoutReports, todo: true },
             { key: 'with', title: 'Samples with reports', rows: withReports, todo: false },
@@ -249,12 +238,29 @@ const handleDuplicate = (s: LabSampleData) => {
             const ids = new Set(g.rows.map((r) => r.id));
             return (
               <Box key={g.key}>
-                <Stack direction="row" alignItems="center" spacing={0.75} sx={{ mb: 1.5 }}>
-                  {g.todo && <ScheduleOutlined sx={{ fontSize: 18, color: 'warning.main' }} />}
-                  <Typography sx={{ fontWeight: 700, fontSize: '0.875rem', color: g.todo ? 'warning.main' : 'text.primary' }}>
-                    {g.title} ({g.rows.length})
-                  </Typography>
-                </Stack>
+                {g.todo ? (
+                  // Prominent solid header bar (matches the "Sum of substances and %"
+                  // row style) so the to-do group clearly stands out.
+                  <Box sx={{
+                    display: 'flex', alignItems: 'center', gap: 0.75,
+                    bgcolor: 'primary.main', color: 'white',
+                    px: 2, py: 1.25, borderRadius: '8px', mb: 1.5,
+                  }}>
+                    <ScheduleOutlined sx={{ fontSize: 18 }} />
+                    <Typography sx={{ fontWeight: 700, fontSize: '0.875rem' }}>
+                      {g.title} ({g.rows.length})
+                    </Typography>
+                  </Box>
+                ) : (
+                  <Box sx={{
+                    bgcolor: 'grey.200', color: 'text.primary',
+                    px: 2, py: 1.25, borderRadius: '8px', mb: 1.5,
+                  }}>
+                    <Typography sx={{ fontWeight: 700, fontSize: '0.875rem' }}>
+                      {g.title} ({g.rows.length})
+                    </Typography>
+                  </Box>
+                )}
                 <SamplesReportsTable
                   rows={g.rows}
                   selected={selected.filter((id) => ids.has(id))}
