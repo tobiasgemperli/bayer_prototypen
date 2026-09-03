@@ -5,3 +5,11 @@ dist
 .DS_Store
 .env
 .claude/
+
+# Python bytecode (lab-report-parser prototype)
+__pycache__/
+*.pyc
+
+# Prototype screenshots that contain real client PII — do not commit
+prototypes/lab-report-parser/shot-eurofins.png
+prototypes/lab-report-parser/shot-orangedata.png
