@@ -109,6 +109,37 @@
     .btn-text { background: transparent; border: 0; cursor: pointer; font: inherit; font-size: 14px; font-weight: 600; color: #6b6b6b; padding: 8px 16px; }
     .btn-primary { background: #d4183d; color: #fff; border: 0; border-radius: 8px; cursor: pointer; font: inherit; font-size: 14px; font-weight: 600; padding: 9px 18px; }
     .btn-primary:hover { background: #b31333; }
+
+    /* Parsed report (two-pane) — shown after "upload". */
+    .parsed-view { display: none; }
+    .dialog.parsed { max-width: 900px; }
+    .dialog.parsed .upload-view { display: none; }
+    .dialog.parsed .parsed-view { display: block; }
+    .two-pane { display: flex; gap: 24px; align-items: flex-start; padding-top: 8px; }
+    .pane-left { width: 240px; flex-shrink: 0; }
+    .thumb-wrap { position: relative; width: 240px; }
+    .thumb { width: 100%; display: block; border: 1px solid #e0e0e0; border-radius: 6px; }
+    .pdf-chip { position: absolute; bottom: 8px; right: 8px; background: #2a2a2a; color: #fff; font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px; }
+    .thumb-x { position: absolute; top: -8px; right: -8px; width: 24px; height: 24px; padding: 0; border-radius: 50%; background: #1a1a1a; color: #fff; border: 2px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,.3); cursor: pointer; display: flex; align-items: center; justify-content: center; }
+    .thumb-x svg { width: 14px; height: 14px; fill: currentColor; }
+    .thumb-name { font-size: 12px; color: #6b6b6b; margin-top: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .detected { display: flex; align-items: center; gap: 6px; margin-top: 12px; background: #e7f6ec; border-radius: 8px; padding: 8px 12px; font-size: 12px; color: #1b5e20; }
+    .detected svg { width: 16px; height: 16px; fill: #2e7d32; flex: none; }
+    .detected strong { font-weight: 700; }
+    .pane-right { flex: 1; min-width: 0; }
+    .fields-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+    .input-fake { border: 1px solid #cfcfcf; border-radius: 8px; height: 40px; padding: 0 12px; display: flex; align-items: center; font-size: 14px; background: #fff; color: #1a1a1a; }
+    .res-head { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
+    .res-count { font-size: 11px; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; color: #6b6b6b; }
+    .res-sub { font-size: 12px; color: #6b6b6b; margin-top: 2px; }
+    .add-res { background: #fde7eb; color: #d4183d; border: 0; border-radius: 8px; padding: 8px 14px; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+    .add-res:hover { background: #fbd9e0; }
+    .res-card { border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; }
+    .res-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    .res-table th { text-align: left; font-size: 12px; font-weight: 600; color: #6b6b6b; padding: 10px 14px; border-bottom: 1px solid #eee; background: #fafafa; }
+    .res-table td { padding: 10px 14px; border-bottom: 1px solid #f0f0f0; color: rgba(0,0,0,.87); }
+    .res-table tr:last-child td { border-bottom: 0; }
+    .lvl { display: inline-block; font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 12px; background: #fdecea; color: #c62828; }
   </style>
 </head>
 <body>
@@ -231,12 +262,65 @@
         </button>
       </div>
       <div class="dialog-body">
-        <p class="dialog-sub">Upload the report you received from the lab — we’ll read the lab, report ID and residues from it.</p>
-        <label class="field-label">Report files <span class="req">*</span></label>
-        <div class="dropzone">
-          <svg viewBox="0 0 24 24"><path d="M18 15v3H6v-3H4v3c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2v-3zm-1-4-1.41-1.41L13 12.17V4h-2v8.17L8.41 9.59 7 11l5 5z"/></svg>
-          <div class="dz-text"><span class="up-link">Click to upload</span> or drag and drop</div>
-          <div class="up-hint">Supports PDF, PNG, JPG, and CSV · Up to 10 MB</div>
+        <!-- Step 1: upload -->
+        <div class="upload-view">
+          <p class="dialog-sub">Upload the report you received from the lab — we’ll read the lab, report ID and residues from it.</p>
+          <label class="field-label">Report files <span class="req">*</span></label>
+          <div class="dropzone">
+            <svg viewBox="0 0 24 24"><path d="M18 15v3H6v-3H4v3c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2v-3zm-1-4-1.41-1.41L13 12.17V4h-2v8.17L8.41 9.59 7 11l5 5z"/></svg>
+            <div class="dz-text"><span class="up-link">Click to upload</span> or drag and drop</div>
+            <div class="up-hint">Supports PDF, PNG, JPG, and CSV · Up to 10 MB</div>
+          </div>
+        </div>
+
+        <!-- Step 2: parsed report (fake — data extracted from a real Eurofins report) -->
+        <div class="parsed-view">
+          <div class="two-pane">
+            <div class="pane-left">
+              <label class="field-label">Report file</label>
+              <div class="thumb-wrap">
+                <img class="thumb" src="report-thumb.png" alt="Report preview" />
+                <span class="pdf-chip">PDF</span>
+                <button class="thumb-x" data-reset aria-label="Remove file">
+                  <svg viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+                </button>
+              </div>
+              <div class="thumb-name">335 PH REF-0001 A 26.pdf</div>
+              <div class="detected">
+                <svg viewBox="0 0 24 24"><path d="M19 9l1.25-2.75L23 5l-2.75-1.25L19 1l-1.25 2.75L15 5l2.75 1.25zM11.5 9.5 9 4 6.5 9.5 1 12l5.5 2.5L9 20l2.5-5.5L17 12zM19 15l-1.25 2.75L15 19l2.75 1.25L19 23l1.25-2.75L23 19l-2.75-1.25z"/></svg>
+                Detected <strong>Eurofins</strong> · REF-0001
+              </div>
+            </div>
+            <div class="pane-right">
+              <div class="fields-row">
+                <div>
+                  <label class="field-label">Lab <span class="req">*</span></label>
+                  <div class="input-fake">Eurofins</div>
+                </div>
+                <div>
+                  <label class="field-label">Lab report ID <span class="req">*</span></label>
+                  <div class="input-fake">REF-0001</div>
+                </div>
+              </div>
+              <div class="res-head">
+                <div>
+                  <div class="res-count">3 analytes added</div>
+                  <div class="res-sub">2 found in this plot’s treatments</div>
+                </div>
+                <button class="add-res">+ Add residue</button>
+              </div>
+              <div class="res-card">
+                <table class="res-table">
+                  <thead><tr><th>Analyte</th><th>Residue level</th><th>Result (mg/kg)</th><th>LOQ (mg/kg)</th></tr></thead>
+                  <tbody>
+                    <tr><td>Fenpyroximate</td><td><span class="lvl">Residue</span></td><td>0.070</td><td>0.01</td></tr>
+                    <tr><td>Fluopyram</td><td><span class="lvl">Residue</span></td><td>0.27</td><td>0.01</td></tr>
+                    <tr><td>Trifloxystrobin</td><td><span class="lvl">Residue</span></td><td>0.12</td><td>0.01</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
       <div class="dialog-actions">
@@ -288,6 +372,8 @@
     // Fake wiring: Sample sheet opens the printable sheet in a new tab;
     // Upload report opens the (fake) dialog; anything [data-close] closes it.
     const modal = document.getElementById('uploadModal');
+    const dialog = modal.querySelector('.dialog');
+    const closeModal = () => { modal.classList.remove('open'); dialog.classList.remove('parsed'); };
     document.addEventListener('click', (e) => {
       const sh = e.target.closest('.sheet');
       if (sh) {
@@ -298,10 +384,15 @@
         window.open('sample-sheet.html?' + q, '_blank');
         return;
       }
-      if (e.target.closest('.upload')) { modal.classList.add('open'); return; }
-      if (e.target.closest('[data-close]')) modal.classList.remove('open');
+      // Open dialog on the upload step.
+      if (e.target.closest('.upload')) { dialog.classList.remove('parsed'); modal.classList.add('open'); return; }
+      // "Uploading" a file jumps to the parsed two-pane view.
+      if (e.target.closest('.dropzone')) { dialog.classList.add('parsed'); return; }
+      // Removing the file returns to the upload step.
+      if (e.target.closest('[data-reset]')) { dialog.classList.remove('parsed'); return; }
+      if (e.target.closest('[data-close]')) closeModal();
     });
-    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') modal.classList.remove('open'); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
   </script>
   <script src="app.js"></script>
 </body>
