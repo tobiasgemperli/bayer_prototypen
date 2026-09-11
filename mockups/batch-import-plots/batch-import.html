@@ -91,6 +91,7 @@
     }
     .cell-select:focus, .cell-input:focus { outline: 0; border-color: #A90C3C; box-shadow: 0 0 0 2px #F6E1E8; }
     .cell-select.unmatched { border-color: #d9534f; background: #fff6f6; }
+    .cell-select:disabled { background: #f3f3f3; color: #9a9a9a; cursor: not-allowed; }
     .match-cell { white-space: nowrap; }
     .match-cell .warn-ico { display: inline-flex; vertical-align: middle; margin-right: 6px; }
     .match-cell .warn-ico svg { width: 16px; height: 16px; fill: #d9534f; }
@@ -214,7 +215,7 @@
           <p class="order-note">Imported in dependency order: plots → treatments &amp; samples → lab reports.</p>
           <div class="done-actions">
             <a class="btn-text" href="index.html">Back to Plots</a>
-            <button class="btn-primary" id="importAnother">Import another file</button>
+            <button class="btn-primary" id="importAnother">Import more data</button>
           </div>
         </div>
       </section>
@@ -320,8 +321,8 @@
         { report: 'REF-0009', analyte: 'Deltamethrin', result: '0.02', loq: '0.01', level: 'Trace' },
       ],
       review: [
-        { src: 'North Orchard 1; 0.5 l/ha; 12 Jun', type: '', plot: '' },
-        { src: 'REF-0044; Eurofins; 2 residues', type: '', plot: '' },
+        { src: 'North Orchard 1; 0.5 l/ha; 12 Jun', type: '', parent: '' },
+        { src: 'REF-0044; Eurofins; 2 residues', type: '', parent: '' },
       ],
     };
 
@@ -359,6 +360,14 @@
     };
 
     // Per-entity config: tab label, headers, and how to render a row.
+    // A "Needs review" row's parent depends on the record type the user picks.
+    const PARENT_OF = {
+      Treatment: () => ({ opts: plotTargets(), ph: 'pick plot' }),
+      Sample: () => ({ opts: plotTargets(), ph: 'pick plot' }),
+      'Lab report': () => ({ opts: sampleTargets(), ph: 'pick sample' }),
+      Residue: () => ({ opts: reportTargets(), ph: 'pick report' }),
+    };
+
     const ENTITIES = {
       plots: {
         label: 'Plots',
@@ -403,11 +412,26 @@
       },
       review: {
         label: 'Needs review',
-        headers: ['Source row', 'Record type', 'Plot', ''],
-        row: (r, i) => `<td class="src">${esc(r.src)}</td>` +
-          match('review', i, 'type', r.type, TYPE_OPTIONS, 'pick type') +
-          match('review', i, 'plot', r.plot, plotTargets(), 'pick plot') + del('review', i),
-        unresolved: () => data.review.filter(r => !TYPE_OPTIONS.includes(r.type) || !plotTargets().includes(r.plot)).length,
+        headers: ['Source row', 'Record type', 'Belongs to', ''],
+        row: (r, i) => {
+          const head = `<td class="src">${esc(r.src)}</td>` +
+            match('review', i, 'type', r.type, TYPE_OPTIONS, 'pick type');
+          let parent;
+          if (!TYPE_OPTIONS.includes(r.type)) {
+            parent = `<td><select class="cell-select" disabled><option>— pick a type first —</option></select></td>`;
+          } else if (r.type === 'Plot') {
+            parent = `<td class="deriv">— top-level, no parent —</td>`;
+          } else {
+            const cfg = PARENT_OF[r.type]();
+            parent = match('review', i, 'parent', r.parent, cfg.opts, cfg.ph);
+          }
+          return head + parent + del('review', i);
+        },
+        unresolved: () => data.review.filter(r => {
+          if (!TYPE_OPTIONS.includes(r.type)) return true;
+          if (r.type === 'Plot') return false;
+          return !PARENT_OF[r.type]().opts.includes(r.parent);
+        }).length,
       },
     };
     const ORDER = ['plots', 'treatments', 'samples', 'labReports', 'residues', 'review'];
@@ -432,7 +456,7 @@
         const E = ENTITIES[k];
         const rows = data[k].map((r, i) => `<tr>${E.row(r, i)}</tr>`).join('');
         const hint = k === 'review'
-          ? '<span class="pane-hint">These rows couldn’t be auto-classified — set a type and plot, or delete them.</span>'
+          ? '<span class="pane-hint">These rows couldn’t be auto-classified — set a type and where each belongs, or delete them.</span>'
           : `<span class="pane-hint">${data[k].length} ${data[k].length === 1 ? 'record' : 'records'}</span>`;
         const addBtn = k === 'review' ? '' : `<button class="add-row" data-add="${k}">+ Add row</button>`;
         return `<section class="tabpane${k === activeTab ? ' active' : ''}" data-pane="${k}">
