@@ -6,8 +6,9 @@
   <title>ResiYou — Samples (mockup)</title>
   <link rel="stylesheet" href="app.css" />
   <style>
-    body { background: #f5f5f7; }
-    .frame { position: relative; min-height: 100vh; }
+    body { background: #e9eaee; }
+    /* Same width as the Plots screenshot page (index.html): 1260px, centered. */
+    .frame { position: relative; min-height: 100vh; max-width: 1260px; margin: 0 auto; background: #f5f5f7; }
 
     /* Top app bar — same elements as the Plots screenshot. */
     .appbar {
@@ -84,7 +85,7 @@
     .trash svg { width: 18px; height: 18px; fill: currentColor; }
 
     /* Drawer overlays the full viewport, above the app bar (page scrolls behind). */
-    .overlay { position: fixed; inset: 0; overflow: hidden; pointer-events: none; z-index: 1300; }
+    .overlay { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 1300; }
 
     /* Add-a-report dialog (fake). */
     .modal-overlay { position: fixed; inset: 0; z-index: 1400; display: none; align-items: flex-start; justify-content: center; padding-top: 12vh; }
@@ -140,6 +141,32 @@
     .res-table td { padding: 10px 14px; border-bottom: 1px solid #f0f0f0; color: rgba(0,0,0,.87); }
     .res-table tr:last-child td { border-bottom: 0; }
     .lvl { display: inline-block; font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 12px; background: #fdecea; color: #c62828; }
+
+    /* Dialog title swaps to "PDF recognized" once a report is parsed. */
+    .dialog-head .title-parsed { display: none; }
+    .dialog.parsed .dialog-head .title-upload { display: none; }
+    .dialog.parsed .dialog-head .title-parsed { display: inline; }
+
+    /* Residue cells use dropdowns (Analyte, Residue level) + numeric inputs
+       (Result, LOQ) — mirroring the DropdownEditor grid in the real prototype. */
+    .res-table td { padding: 8px 14px; vertical-align: middle; }
+    .cell-select, .cell-input {
+      width: 100%; font: inherit; font-size: 14px; color: rgba(0,0,0,.87); box-sizing: border-box;
+      border: 1px solid #cfcfcf; border-radius: 6px; padding: 6px 8px; background: #fff;
+    }
+    .cell-select:focus, .cell-input:focus { outline: 0; border-color: #A90C3C; box-shadow: 0 0 0 2px #F6E1E8; }
+    .lvl-select {
+      font: inherit; font-size: 12px; font-weight: 600; border: 0; border-radius: 12px; cursor: pointer;
+      padding: 4px 26px 4px 10px; background: #fdecea; color: #c62828;
+      -webkit-appearance: none; appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23c62828'%3E%3Cpath d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 6px center; background-size: 16px;
+    }
+    .lvl-select:focus { outline: 0; box-shadow: 0 0 0 2px #F6E1E8; }
+    .res-actions { text-align: right; width: 44px; padding-right: 8px; }
+    .res-del { background: transparent; border: 0; cursor: pointer; padding: 4px; color: #8a8a8a; display: inline-flex; }
+    .res-del:hover { color: #A90C3C; }
+    .res-del svg { width: 16px; height: 16px; fill: currentColor; }
   </style>
 </head>
 <body>
@@ -192,7 +219,7 @@
       <section class="group">
         <div class="banner todo">
           <svg viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2M12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8m.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>
-          Awaiting lab report (1)
+          Awaiting lab report (<span id="awaitingCount">5</span>)
         </div>
         <div class="card">
           <table>
@@ -256,7 +283,7 @@
     <div class="modal-scrim" data-close></div>
     <div class="dialog" role="dialog" aria-modal="true" aria-label="Add a report">
       <div class="dialog-head">
-        <h2>Add a report</h2>
+        <h2><span class="title-upload">Add a report</span><span class="title-parsed">PDF recognized</span></h2>
         <button class="dialog-close" data-close aria-label="Close">
           <svg viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
         </button>
@@ -311,12 +338,8 @@
               </div>
               <div class="res-card">
                 <table class="res-table">
-                  <thead><tr><th>Analyte</th><th>Residue level</th><th>Result (mg/kg)</th><th>LOQ (mg/kg)</th></tr></thead>
-                  <tbody>
-                    <tr><td>Fenpyroximate</td><td><span class="lvl">Residue</span></td><td>0.070</td><td>0.01</td></tr>
-                    <tr><td>Fluopyram</td><td><span class="lvl">Residue</span></td><td>0.27</td><td>0.01</td></tr>
-                    <tr><td>Trifloxystrobin</td><td><span class="lvl">Residue</span></td><td>0.12</td><td>0.01</td></tr>
-                  </tbody>
+                  <thead><tr><th>Analyte</th><th>Residue level</th><th>Result (mg/kg)</th><th>LOQ (mg/kg)</th><th></th></tr></thead>
+                  <tbody id="resBody"></tbody>
                 </table>
               </div>
             </div>
@@ -340,9 +363,16 @@
     const trash = `<button class="trash" aria-label="Delete">${TRASH}</button>`;
     const upload = `<button class="upload">+ Upload report</button>`;
 
-    const awaiting = [
+    const AWAITING_SEED = [
       ['North Field A', 'No reports yet', 'Jul 8, 2026', 'Fruit'],
+      ['South Field B', 'No reports yet', 'Jul 5, 2026', 'Soil'],
+      ['East Plot 12', 'No reports yet', 'Jul 1, 2026', 'Irrigation water'],
+      ['West Valley', 'No reports yet', 'Jun 27, 2026', 'Leaf'],
+      ['Central Garden', 'No reports yet', 'Jun 22, 2026', 'Fruit'],
     ];
+    // Working copy — "Upload report" removes a row; pressing "Samples" in the
+    // drawer restores the full seed list.
+    let awaiting = AWAITING_SEED.slice();
     const withReports = [
       ['North Field A', 'Routine check #1', 'Sep 4, 2026', 'Fruit', 3, 0],
       ['South Field B', 'Routine check #2', 'Aug 28, 2026', 'Soil', 3, 1],
@@ -360,9 +390,14 @@
       ['North Field A', 'Manual reports sample', 'May 12, 2026', 'Fruit', 2, 3],
     ];
 
-    document.getElementById('awaiting').innerHTML = awaiting.map(([p, n, d, c]) => `
-      <tr><td class="plot">${p}</td><td>${n}</td><td>${d}</td><td>${c}</td>
-      <td>${sheetBtn(p, n, d, c)}</td><td><div class="sheet-cell">${upload}${trash}</div></td></tr>`).join('');
+    const awaitingCount = document.getElementById('awaitingCount');
+    function renderAwaiting() {
+      document.getElementById('awaiting').innerHTML = awaiting.map(([p, n, d, c], i) => `
+        <tr><td class="plot">${p}</td><td>${n}</td><td>${d}</td><td>${c}</td>
+        <td>${sheetBtn(p, n, d, c)}</td><td><div class="sheet-cell"><button class="upload" data-idx="${i}">+ Upload report</button>${trash}</div></td></tr>`).join('');
+      awaitingCount.textContent = awaiting.length;
+    }
+    renderAwaiting();
 
     document.getElementById('withReports').innerHTML = withReports.map(([p, n, d, c, r, res]) => `
       <tr><td class="plot">${p}</td><td>${n}</td><td>${d}</td><td>${c}</td>
@@ -373,6 +408,7 @@
     // Upload report opens the (fake) dialog; anything [data-close] closes it.
     const modal = document.getElementById('uploadModal');
     const dialog = modal.querySelector('.dialog');
+    let pendingIdx = null; // which awaiting row the open dialog is uploading for
     const closeModal = () => { modal.classList.remove('open'); dialog.classList.remove('parsed'); };
     document.addEventListener('click', (e) => {
       const sh = e.target.closest('.sheet');
@@ -384,15 +420,89 @@
         window.open('sample-sheet.html?' + q, '_blank');
         return;
       }
-      // Open dialog on the upload step.
-      if (e.target.closest('.upload')) { dialog.classList.remove('parsed'); modal.classList.add('open'); return; }
+      // Open dialog on the upload step; remember which awaiting row it's for.
+      const up = e.target.closest('.upload');
+      if (up) { pendingIdx = up.dataset.idx != null ? Number(up.dataset.idx) : null; dialog.classList.remove('parsed'); modal.classList.add('open'); return; }
       // "Uploading" a file jumps to the parsed two-pane view.
       if (e.target.closest('.dropzone')) { dialog.classList.add('parsed'); return; }
+      // Remove a parsed residue row; keep the "N analytes added" count in sync.
+      const del = e.target.closest('.res-del');
+      if (del) { residues.splice(Number(del.dataset.i), 1); renderResidues(); return; }
+      // Add a blank, editable residue row.
+      if (e.target.closest('.add-res')) { addResidueRow(); return; }
       // Removing the file returns to the upload step.
       if (e.target.closest('[data-reset]')) { dialog.classList.remove('parsed'); return; }
+      // Saving a parsed report removes that row from "Awaiting lab report".
+      if (e.target.closest('.btn-primary')) {
+        if (dialog.classList.contains('parsed') && pendingIdx != null && pendingIdx < awaiting.length) {
+          awaiting.splice(pendingIdx, 1);
+          renderAwaiting();
+        }
+        pendingIdx = null;
+        closeModal();
+        return;
+      }
       if (e.target.closest('[data-close]')) closeModal();
     });
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
+
+    // Pressing "Samples" in the drawer (the current page) restores the full
+    // awaiting list — undoing any uploads made this session.
+    document.querySelectorAll('.item[data-current]').forEach(a =>
+      a.addEventListener('click', () => { awaiting = AWAITING_SEED.slice(); pendingIdx = null; renderAwaiting(); }));
+
+    // Parsed-report residue table. Analyte + Residue level are dropdowns and
+    // Result/LOQ are numeric inputs — same field types as the real prototype's
+    // LabResiduesGrid (ANALYTE_OPTIONS / RESIDUE_LEVEL_OPTIONS).
+    const RES_TRASH = '<svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6zM19 4h-3.5l-1-1h-5l-1 1H5v2h14z"/></svg>';
+    const RES_LEVELS = ['Residue', 'Trace', 'Below LOQ', 'Not analyzed'];
+    const ANALYTE_OPTIONS = [
+      '1,2,4-triazole', '1,4-dimethylnaphthalene', '2,4-D', '2-phenylphenol', 'acetamiprid',
+      'azoxystrobin', 'boscalid', 'captan', 'carbendazim', 'chlorpyrifos', 'chlorpyrifos-methyl',
+      'cyprodinil', 'deltamethrin', 'difenoconazole', 'dimethoate', 'dithianon', 'fenhexamid',
+      'fenpyroximate', 'fipronil', 'fludioxonil', 'fluopyram', 'glyphosate', 'imazalil',
+      'imidacloprid', 'iprodione', 'malathion', 'mancozeb', 'metalaxyl', 'myclobutanil',
+      'penconazole', 'phosmet', 'propamocarb', 'propiconazole', 'pyraclostrobin', 'pyrimethanil',
+      'spinosad', 'tebuconazole', 'thiacloprid', 'thiamethoxam', 'thiophanate-methyl', 'trifloxystrobin',
+    ];
+    let residues = [
+      { analyte: 'fenpyroximate', level: 'Residue', result: '0.070', loq: '0.01' },
+      { analyte: 'fluopyram', level: 'Residue', result: '0.27', loq: '0.01' },
+      { analyte: 'trifloxystrobin', level: 'Residue', result: '0.12', loq: '0.01' },
+    ];
+    const esc = (s) => String(s).replace(/"/g, '&quot;');
+    function optionList(options, selected) {
+      const opts = options.includes(selected) ? options : [selected, ...options];
+      return opts.map(o => `<option${o === selected ? ' selected' : ''}>${o}</option>`).join('');
+    }
+    function updateResCount() {
+      const n = residues.length;
+      const el = document.querySelector('.res-count');
+      if (el) el.textContent = `${n} ${n === 1 ? 'analyte' : 'analytes'} added`;
+    }
+    function renderResidues() {
+      document.getElementById('resBody').innerHTML = residues.map((r, i) => `
+        <tr>
+          <td><select class="cell-select" data-i="${i}" data-f="analyte">${optionList(ANALYTE_OPTIONS, r.analyte)}</select></td>
+          <td><select class="lvl-select" data-i="${i}" data-f="level">${optionList(RES_LEVELS, r.level)}</select></td>
+          <td><input class="cell-input" data-i="${i}" data-f="result" value="${esc(r.result)}" inputmode="decimal"></td>
+          <td><input class="cell-input" data-i="${i}" data-f="loq" value="${esc(r.loq)}" inputmode="decimal"></td>
+          <td class="res-actions"><button class="res-del" data-i="${i}" aria-label="Remove residue">${RES_TRASH}</button></td>
+        </tr>`).join('');
+      updateResCount();
+    }
+    function addResidueRow() {
+      residues.push({ analyte: '', level: 'Residue', result: '', loq: '' });
+      renderResidues();
+      const last = document.querySelector('#resBody tr:last-child .cell-select');
+      if (last) last.focus();
+    }
+    // Keep the model in sync as the user edits dropdowns / inputs.
+    document.addEventListener('change', (e) => {
+      const el = e.target.closest('.cell-select, .lvl-select, .cell-input');
+      if (el && residues[el.dataset.i]) residues[el.dataset.i][el.dataset.f] = el.value;
+    });
+    renderResidues();
   </script>
   <script src="app.js"></script>
 </body>
