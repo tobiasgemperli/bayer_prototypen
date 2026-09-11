@@ -21,6 +21,7 @@
     }
     .menu-btn:hover { background: rgba(0,0,0,.05); }
     .menu-btn svg { width: 24px; height: 24px; fill: currentColor; }
+    .logo-link { display: flex; cursor: pointer; }
     .logo { width: 128px; height: 32px; display: block; }
     .spacer { flex: 1; }
     .appbar-right { display: flex; align-items: center; gap: 16px; }
@@ -117,6 +118,7 @@
       <button class="menu-btn" id="menuBtn" aria-label="Open navigation menu">
         <svg viewBox="0 0 24 24"><path d="M3 18h18v-2H3zm0-5h18v-2H3zm0-7v2h18V6z"/></svg>
       </button>
+      <a class="logo-link" href="index.html" aria-label="ResiYou — go to Plots">
       <svg class="logo" viewBox="0 0 128 32" aria-label="ResiYou">
         <g clip-path="url(#lclip)">
           <path fill-rule="evenodd" clip-rule="evenodd" fill="url(#lg0)" d="M22.158 1.23249C21.9599 1.14991 21.7606 1.07144 21.56 0.997113C20.6377 0.655299 19.6902 0.400848 18.7297 0.234561C16.4409 -0.161708 14.0785 -0.0573067 11.8092 0.558602C8.38043 1.48917 5.35893 3.53446 3.22105 6.37201C1.08316 9.20956 -0.0494908 12.678 0.00165939 16.2304C0.0528095 19.7828 1.28486 23.2171 3.50355 25.992C5.72225 28.7668 8.80138 30.7242 12.2555 31.5557C15.7096 32.3872 19.3422 32.0453 22.5806 30.5841C25.819 29.1229 28.4789 26.6254 30.141 23.4854C31.243 21.4038 31.8648 19.1182 31.9803 16.7943C32.0041 16.3166 32.0064 15.8373 31.9871 15.3578C31.9588 14.6514 31.8835 13.9445 31.7605 13.2419L16.8 14.8445L22.158 1.23249ZM28.3885 17.179V15.2L28.1778 13.6257L16.8 14.8445L20.8937 4.44445L19.3778 3.99003L17.3917 3.63363C15.843 3.45934 14.2648 3.57633 12.7405 3.99003C10.0737 4.7138 7.72362 6.30459 6.06082 8.51157C4.39802 10.7186 3.51706 13.4162 3.55685 16.1792C3.59663 18.9422 4.55489 21.6133 6.28054 23.7715C8.00619 25.9297 10.4011 27.4522 13.0876 28.0989C15.7741 28.7456 18.5995 28.4797 21.1182 27.3432C23.637 26.2067 25.7058 24.2642 26.9986 21.822C27.7668 20.3708 28.2349 18.7923 28.3885 17.179Z"/>
@@ -135,6 +137,7 @@
           <clipPath id="lclip"><rect width="128" height="32" fill="#fff"/></clipPath>
         </defs>
       </svg>
+      </a>
       <div class="spacer"></div>
       <div class="appbar-right">
         <button class="icon-btn" aria-label="Notifications"><svg viewBox="0 0 24 24"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.89 2 2 2m6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1zm-2 1H8v-6c0-2.48 1.51-4.5 4-4.5s4 2.02 4 4.5z"/></svg></button>
