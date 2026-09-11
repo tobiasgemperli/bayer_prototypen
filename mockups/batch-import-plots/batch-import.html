@@ -83,6 +83,7 @@
     tbody tr:last-child td { border-bottom: 0; }
     .card.table-card { overflow: hidden; }
     td.src { font-size: 13px; color: #6b6b6b; font-family: ui-monospace, Menlo, monospace; }
+    td.deriv { color: #6b6b6b; }
 
     .cell-select, .cell-input {
       width: 100%; font: inherit; font-size: 14px; color: rgba(0,0,0,.87); box-sizing: border-box;
@@ -331,6 +332,9 @@
     const plotTargets = () => [...data.plots.map(p => p.name).filter(Boolean), ...ACCOUNT_PLOTS];
     const sampleTargets = () => [...data.samples.map(s => s.name).filter(Boolean), ...ACCOUNT_SAMPLES];
     const reportTargets = () => data.labReports.map(l => l.reportId).filter(Boolean);
+    // A residue's sample + plot are derived through its lab report.
+    const reportSample = (rep) => { const l = data.labReports.find(x => x.reportId === rep); return l ? l.sample : ''; };
+    const reportPlot = (rep) => { const s = data.samples.find(x => x.name === reportSample(rep)); return s ? s.plot : ''; };
 
     const esc = (s) => String(s).replace(/"/g, '&quot;');
     const WARN = '<span class="warn-ico"><svg viewBox="0 0 24 24"><path d="M1 21h22L12 2zm12-3h-2v-2h2zm0-4h-2v-4h2z"/></svg></span>';
@@ -344,6 +348,8 @@
     const txt = (e, i, f, v) => `<td><input class="cell-input" data-e="${e}" data-i="${i}" data-f="${f}" value="${esc(v)}"></td>`;
     const sel = (e, i, f, v, opts) => `<td><select class="cell-select" data-e="${e}" data-i="${i}" data-f="${f}">${optionList(opts, v)}</select></td>`;
     const del = (e, i) => `<td class="row-actions"><button class="row-del" data-e="${e}" data-i="${i}" aria-label="Remove"><svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6zM19 4h-3.5l-1-1h-5l-1 1H5v2h14z"/></svg></button></td>`;
+    // Read-only derived context cell.
+    const deriv = (v) => `<td class="deriv">${v ? esc(v) : '—'}</td>`;
     // Match cell: a reference dropdown, flagged when unresolved.
     const match = (e, i, f, v, opts, ph) => {
       const ok = v && opts.includes(v);
@@ -388,8 +394,9 @@
       },
       residues: {
         label: 'Residues',
-        headers: ['Lab report', 'Analyte', 'Result (mg/kg)', 'LOQ (mg/kg)', 'Level', ''],
-        row: (r, i) => match('residues', i, 'report', r.report, reportTargets(), 'pick report') +
+        headers: ['Plot', 'Sample', 'Lab report', 'Analyte', 'Result (mg/kg)', 'LOQ (mg/kg)', 'Level', ''],
+        row: (r, i) => deriv(reportPlot(r.report)) + deriv(reportSample(r.report)) +
+          match('residues', i, 'report', r.report, reportTargets(), 'pick report') +
           txt('residues', i, 'analyte', r.analyte) + txt('residues', i, 'result', r.result) +
           txt('residues', i, 'loq', r.loq) + sel('residues', i, 'level', r.level, LEVEL_OPTIONS) + del('residues', i),
         unresolved: () => data.residues.filter(r => !reportTargets().includes(r.report)).length,
