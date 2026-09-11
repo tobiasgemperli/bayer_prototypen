@@ -96,6 +96,9 @@
     .match-cell .warn-ico { display: inline-flex; vertical-align: middle; margin-right: 6px; }
     .match-cell .warn-ico svg { width: 16px; height: 16px; fill: #d9534f; }
     .match-cell .cell-select { display: inline-block; width: calc(100% - 22px); }
+    .report-cell .report-pick { display: flex; align-items: center; gap: 6px; }
+    .report-cell .report-pick .cell-select { flex: 1; }
+    .report-cell .ctx { font-size: 12px; color: #9a9a9a; margin-top: 4px; }
     .row-actions { text-align: right; width: 44px; padding-right: 8px; }
     .row-del { background: transparent; border: 0; cursor: pointer; padding: 4px; color: #8a8a8a; display: inline-flex; }
     .row-del:hover { color: #A90C3C; }
@@ -349,8 +352,15 @@
     const txt = (e, i, f, v) => `<td><input class="cell-input" data-e="${e}" data-i="${i}" data-f="${f}" value="${esc(v)}"></td>`;
     const sel = (e, i, f, v, opts) => `<td><select class="cell-select" data-e="${e}" data-i="${i}" data-f="${f}">${optionList(opts, v)}</select></td>`;
     const del = (e, i) => `<td class="row-actions"><button class="row-del" data-e="${e}" data-i="${i}" aria-label="Remove"><svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6zM19 4h-3.5l-1-1h-5l-1 1H5v2h14z"/></svg></button></td>`;
-    // Read-only derived context cell.
-    const deriv = (v) => `<td class="deriv">${v ? esc(v) : '—'}</td>`;
+
+    // Residue's Lab report cell: report dropdown + a derived "plot · sample" context line.
+    const reportCell = (i, r) => {
+      const ok = r.report && reportTargets().includes(r.report);
+      const list = `<option value=""${ok ? '' : ' selected'}>— pick report —</option>` +
+        reportTargets().map(o => `<option${o === r.report ? ' selected' : ''}>${esc(o)}</option>`).join('');
+      const ctx = ok ? `<div class="ctx">${esc(reportPlot(r.report) || '—')} · ${esc(reportSample(r.report) || '—')}</div>` : '';
+      return `<td class="report-cell"><div class="report-pick">${ok ? '' : WARN}<select class="cell-select match${ok ? '' : ' unmatched'}" data-e="residues" data-i="${i}" data-f="report">${list}</select></div>${ctx}</td>`;
+    };
     // Match cell: a reference dropdown, flagged when unresolved.
     const match = (e, i, f, v, opts, ph) => {
       const ok = v && opts.includes(v);
@@ -403,9 +413,8 @@
       },
       residues: {
         label: 'Residues',
-        headers: ['Plot', 'Sample', 'Lab report', 'Analyte', 'Result (mg/kg)', 'LOQ (mg/kg)', 'Level', ''],
-        row: (r, i) => deriv(reportPlot(r.report)) + deriv(reportSample(r.report)) +
-          match('residues', i, 'report', r.report, reportTargets(), 'pick report') +
+        headers: ['Lab report', 'Analyte', 'Result (mg/kg)', 'LOQ (mg/kg)', 'Level', ''],
+        row: (r, i) => reportCell(i, r) +
           txt('residues', i, 'analyte', r.analyte) + txt('residues', i, 'result', r.result) +
           txt('residues', i, 'loq', r.loq) + sel('residues', i, 'level', r.level, LEVEL_OPTIONS) + del('residues', i),
         unresolved: () => data.residues.filter(r => !reportTargets().includes(r.report)).length,
