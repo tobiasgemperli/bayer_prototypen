@@ -1,0 +1,45 @@
+/* Shared chrome for the mockup: the Navigate side drawer + its open/close
+   animation. Loaded by both index.html (Plots screenshot) and samples.html
+   (coded Samples page) so the menu behaves identically on both. */
+
+:root { font-family: "Inter", -apple-system, system-ui, sans-serif; }
+* { box-sizing: border-box; }
+body { margin: 0; }
+
+/* Dimming scrim behind the drawer. */
+.scrim {
+  position: absolute; inset: 0; background: rgba(0,0,0,0.5);
+  opacity: 0; transition: opacity .225s ease;
+}
+
+/* Left navigation drawer — mirrors the real ResiYou side menu (250px white
+   panel, red icons, hairline row dividers, Conditions/Privacy footer). */
+.drawer {
+  position: absolute; top: 0; left: 0; height: 100%;
+  width: 250px; background: #fff;
+  box-shadow: 0 8px 10px -5px rgba(0,0,0,.2), 0 16px 24px 2px rgba(0,0,0,.14);
+  transform: translateX(-100%); transition: transform .225s cubic-bezier(0,0,.2,1);
+  display: flex; flex-direction: column;
+}
+.nav { list-style: none; margin: 0; padding: 0; flex: 1; }
+.item {
+  display: flex; align-items: center; gap: 12px; width: 100%;
+  padding: 12px; border: 0; border-bottom: 1px solid #DCDBDB; background: transparent;
+  cursor: pointer; font: inherit; font-size: 14px; color: #000; text-align: left;
+  text-decoration: none; transition: background .15s;
+}
+.item:hover { background: rgba(0,0,0,0.04); }
+.item.selected { background: rgba(0,0,0,0.06); }
+.item svg { width: 24px; height: 24px; fill: #A90C3C; flex: none; }
+
+/* Conditions & Privacy footer, pinned to the bottom of the panel. */
+.drawer-footer {
+  padding: 12px; text-align: center; font-size: 13px; color: #000;
+}
+.drawer-footer a { color: #A90C3C; text-decoration: none; }
+.drawer-footer a:hover { text-decoration: underline; }
+
+/* Open state — class toggled on .frame by app.js. */
+.frame.open .overlay { pointer-events: auto; }
+.frame.open .scrim { opacity: 1; }
+.frame.open .drawer { transform: none; }
