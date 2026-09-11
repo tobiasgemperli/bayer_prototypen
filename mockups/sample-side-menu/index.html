@@ -17,21 +17,21 @@
     body { margin: 0; background: #e9eaee; display: flex; justify-content: center; }
 
     /* Wrapper is sized to the screenshot so % coordinates map to the image. */
-    .frame { position: relative; width: 100%; max-width: 1160px; }
+    .frame { position: relative; width: 100%; max-width: 1260px; }
     .screenshot { display: block; width: 100%; height: auto; user-select: none; -webkit-user-drag: none; }
 
     /* Transparent clickable area over the hamburger icon. */
     .hotspot {
-      position: absolute; left: 3.8%; top: 8.5%; width: 3.6%; height: 4.6%;
+      position: absolute; left: 0.6%; top: 1.2%; width: 3.2%; height: 4.6%;
       border: 0; background: transparent; padding: 0; cursor: pointer; border-radius: 8px;
       transition: background .15s;
     }
     .hotspot:hover { background: rgba(0,0,0,0.06); }
     .hotspot:focus-visible { outline: 2px solid #d4183d; outline-offset: 2px; }
 
-    /* Overlay clipped to the browser's app window (below the black chrome). */
+    /* Overlay covers the whole app (screenshot has no browser chrome). */
     .overlay {
-      position: absolute; top: 8.3%; left: 3.4%; right: 3.25%; bottom: 4.5%;
+      position: absolute; inset: 0;
       overflow: hidden; pointer-events: none;
     }
     .scrim {
@@ -42,7 +42,7 @@
     /* Left navigation drawer — mirrors the real MUI temporary Drawer. */
     .drawer {
       position: absolute; top: 0; left: 0; height: 100%;
-      width: 22%; min-width: 232px; background: #fff;
+      width: 20%; min-width: 232px; background: #fff;
       box-shadow: 0 8px 10px -5px rgba(0,0,0,.2), 0 16px 24px 2px rgba(0,0,0,.14);
       transform: translateX(-100%); transition: transform .225s cubic-bezier(0,0,.2,1);
       padding-top: 8px;
