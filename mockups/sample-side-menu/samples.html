@@ -12,13 +12,13 @@
 
     /* Top app bar — same elements as the Plots screenshot. */
     .appbar {
-      height: 56px; display: flex; align-items: center; gap: 8px;
+      height: 60px; display: flex; align-items: center; gap: 8px;
       padding: 0 24px; background: #fff; border-bottom: 1px solid #DCDBDB;
       position: relative; z-index: 1;
     }
     .menu-btn {
       background: transparent; border: 0; cursor: pointer; padding: 6px; margin-right: 4px;
-      color: #6b6b6b; display: flex; border-radius: 8px;
+      color: #000; display: flex; border-radius: 8px;
     }
     .menu-btn:hover { background: rgba(0,0,0,.05); }
     .menu-btn svg { width: 24px; height: 24px; fill: currentColor; }
@@ -26,15 +26,23 @@
     .logo { width: 128px; height: 32px; display: block; }
     .spacer { flex: 1; }
     .appbar-right { display: flex; align-items: center; gap: 16px; }
-    .icon-btn { background: transparent; border: 0; cursor: pointer; color: #6b6b6b; display: flex; padding: 4px; }
+    .icon-btn { background: transparent; border: 0; cursor: pointer; color: #000; display: flex; padding: 4px; }
     .icon-btn svg { width: 24px; height: 24px; fill: currentColor; }
     .user { display: flex; align-items: center; gap: 8px; cursor: pointer; }
     .avatar {
-      width: 32px; height: 32px; border-radius: 50%; background: #A90C3C; color: #fff;
-      display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 500;
+      width: 32px; height: 32px; border-radius: 50%; background: #CC3D55; color: #fff;
+      display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 400;
     }
-    .user .name { font-size: 13px; color: #1a1a1a; }
-    .caret { width: 20px; height: 20px; fill: #6b6b6b; }
+    .user .name { font-size: 14px; color: #000; }
+    .caret { width: 20px; height: 20px; fill: #000; }
+
+    /* Breadcrumb band — matches the real ResiYou header (grey band under the app bar). */
+    .crumbs { background: #E4E6EC; padding: 20px 32px 22px; }
+    .crumb-trail { display: flex; align-items: center; gap: 4px; margin-bottom: 4px; }
+    .crumb { font-size: 12px; font-weight: 700; color: #333; text-transform: uppercase; letter-spacing: .2px; cursor: pointer; }
+    .crumb:hover { color: #A90C3C; }
+    .crumb-sep { width: 16px; height: 16px; fill: #9a9aa2; flex: none; }
+    .crumb-title { font-size: 18px; font-weight: 700; color: #333; margin: 0; }
 
     /* Page body. */
     .page { padding: 24px 32px 48px; max-width: 1280px; }
@@ -208,9 +216,19 @@
       </div>
     </header>
 
+    <!-- Breadcrumb band — mirrors the real ResiYou header (Plots › Lab results › page title). -->
+    <div class="crumbs">
+      <div class="crumb-trail">
+        <span class="crumb">Plots</span>
+        <svg class="crumb-sep" viewBox="0 0 24 24"><path d="M8.59 16.59 13.17 12 8.59 7.41 10 6l6 6-6 6z"/></svg>
+        <span class="crumb">Lab results</span>
+        <svg class="crumb-sep" viewBox="0 0 24 24"><path d="M8.59 16.59 13.17 12 8.59 7.41 10 6l6 6-6 6z"/></svg>
+      </div>
+      <h1 class="crumb-title">Samples</h1>
+    </div>
+
     <!-- Page -->
     <main class="page">
-      <h1 class="title">Samples</h1>
       <div class="search">
         <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27a6.5 6.5 0 001.48-5.34c-.47-2.78-2.79-5-5.59-5.34a6.505 6.505 0 00-7.27 7.27c.34 2.8 2.56 5.12 5.34 5.59a6.5 6.5 0 005.34-1.48l.27.28v.79l4.25 4.25c.41.41 1.08.41 1.49 0 .41-.41.41-1.08 0-1.49L15.5 14zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
         <input type="text" placeholder="Search all samples…" />
