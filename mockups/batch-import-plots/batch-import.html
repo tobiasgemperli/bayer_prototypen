@@ -165,7 +165,7 @@
     <!-- Page -->
     <main class="page">
       <h1 class="title">Batch import</h1>
-      <p class="sub">Import plots and everything on them — treatments, samples and lab reports — from one file.</p>
+      <p class="sub">Import plots and everything on them — treatments, samples, lab reports and their residues — from one file.</p>
 
       <!-- Step 1: upload -->
       <section class="step active" id="uploadStep">
@@ -256,7 +256,8 @@
     const CROP_OPTIONS = ['Apricot', 'Peach', 'Nectarine', 'Cherry', 'Plum', 'Apple', 'Pear', 'Strawberry'];
     const SEASON_OPTIONS = ['Winter', 'Spring', 'Summer', 'Autumn'];
     const COMMODITY_OPTIONS = ['Fruit', 'Soil', 'Irrigation water', 'Leaf'];
-    const TYPE_OPTIONS = ['Plot', 'Treatment', 'Sample', 'Lab report'];
+    const LEVEL_OPTIONS = ['Residue', 'Trace', 'Below LOQ', 'Not analyzed'];
+    const TYPE_OPTIONS = ['Plot', 'Treatment', 'Sample', 'Lab report', 'Residue'];
 
     // ── Seed data (what the parser "found" in the workbook) ────────────────
     const SEED = {
@@ -304,6 +305,19 @@
         { sample: '', lab: 'Eurofins', reportId: 'REF-0009', residues: '4' },  // file said "Q2 screen" — no match
         { sample: 'Soil check', lab: 'orange-data', reportId: 'OD-5559', residues: '0' },
       ],
+      residues: [
+        { report: 'REF-0001', analyte: 'Fenpyroximate', result: '0.070', loq: '0.01', level: 'Residue' },
+        { report: 'REF-0001', analyte: 'Fluopyram', result: '0.27', loq: '0.01', level: 'Residue' },
+        { report: 'REF-0001', analyte: 'Trifloxystrobin', result: '0.12', loq: '0.01', level: 'Residue' },
+        { report: 'RPT-2026-011', analyte: 'Deltamethrin', result: '0.03', loq: '0.01', level: 'Residue' },
+        { report: 'OD-5541', analyte: 'Boscalid', result: '0.05', loq: '0.01', level: 'Residue' },
+        { report: 'OD-5541', analyte: 'Spirotetramat', result: '0.02', loq: '0.01', level: 'Trace' },
+        { report: 'RPT-2026-014', analyte: 'Propiconazole', result: '0.04', loq: '0.01', level: 'Residue' },
+        { report: 'REF-0009', analyte: 'Fenpyroximate', result: '0.09', loq: '0.01', level: 'Residue' },
+        { report: 'REF-0009', analyte: 'Pyraclostrobin', result: '0.012', loq: '0.005', level: 'Residue' },
+        { report: 'REF-0009', analyte: 'Fluopyram', result: '0.15', loq: '0.01', level: 'Residue' },
+        { report: 'REF-0009', analyte: 'Deltamethrin', result: '0.02', loq: '0.01', level: 'Trace' },
+      ],
       review: [
         { src: 'North Orchard 1; 0.5 l/ha; 12 Jun', type: '', plot: '' },
         { src: 'REF-0044; Eurofins; 2 residues', type: '', plot: '' },
@@ -316,6 +330,7 @@
     // Valid match targets grow with what's being imported.
     const plotTargets = () => [...data.plots.map(p => p.name).filter(Boolean), ...ACCOUNT_PLOTS];
     const sampleTargets = () => [...data.samples.map(s => s.name).filter(Boolean), ...ACCOUNT_SAMPLES];
+    const reportTargets = () => data.labReports.map(l => l.reportId).filter(Boolean);
 
     const esc = (s) => String(s).replace(/"/g, '&quot;');
     const WARN = '<span class="warn-ico"><svg viewBox="0 0 24 24"><path d="M1 21h22L12 2zm12-3h-2v-2h2zm0-4h-2v-4h2z"/></svg></span>';
@@ -371,6 +386,14 @@
           txt('labReports', i, 'residues', r.residues) + del('labReports', i),
         unresolved: () => data.labReports.filter(r => !sampleTargets().includes(r.sample)).length,
       },
+      residues: {
+        label: 'Residues',
+        headers: ['Lab report', 'Analyte', 'Result (mg/kg)', 'LOQ (mg/kg)', 'Level', ''],
+        row: (r, i) => match('residues', i, 'report', r.report, reportTargets(), 'pick report') +
+          txt('residues', i, 'analyte', r.analyte) + txt('residues', i, 'result', r.result) +
+          txt('residues', i, 'loq', r.loq) + sel('residues', i, 'level', r.level, LEVEL_OPTIONS) + del('residues', i),
+        unresolved: () => data.residues.filter(r => !reportTargets().includes(r.report)).length,
+      },
       review: {
         label: 'Needs review',
         headers: ['Source row', 'Record type', 'Plot', ''],
@@ -380,7 +403,7 @@
         unresolved: () => data.review.filter(r => !TYPE_OPTIONS.includes(r.type) || !plotTargets().includes(r.plot)).length,
       },
     };
-    const ORDER = ['plots', 'treatments', 'samples', 'labReports', 'review'];
+    const ORDER = ['plots', 'treatments', 'samples', 'labReports', 'residues', 'review'];
     let activeTab = 'plots';
 
     function render() {
@@ -415,7 +438,7 @@
       }).join('');
 
       // Import button + type count.
-      const importable = data.plots.length + data.treatments.length + data.samples.length + data.labReports.length;
+      const importable = data.plots.length + data.treatments.length + data.samples.length + data.labReports.length + data.residues.length;
       document.getElementById('importBtn').textContent = `Import all (${importable} records)`;
       document.getElementById('typeCount').textContent = shown.filter(k => k !== 'review').length;
       document.getElementById('blockWarn').classList.remove('show');
@@ -450,7 +473,8 @@
         const blank = { plots: { name: '', crop: 'Apricot', variety: '', location: '', season: 'Winter', area: '' },
           treatments: { plot: '', substance: '', date: '', rate: '' },
           samples: { plot: '', name: '', date: '', commodity: 'Fruit' },
-          labReports: { sample: '', lab: '', reportId: '', residues: '0' } }[k];
+          labReports: { sample: '', lab: '', reportId: '', residues: '0' },
+          residues: { report: '', analyte: '', result: '', loq: '', level: 'Residue' } }[k];
         data[k].push(clone(blank));
         activeTab = k; render();
         const inp = document.querySelector(`[data-pane="${k}"] tbody tr:last-child .cell-input`);
@@ -475,14 +499,15 @@
           return;
         }
         // Fold resolved "Needs review" rows into their chosen type for the tally.
-        const counts = { plots: data.plots.length, treatments: data.treatments.length, samples: data.samples.length, labReports: data.labReports.length };
-        const key = { 'Plot': 'plots', 'Treatment': 'treatments', 'Sample': 'samples', 'Lab report': 'labReports' };
+        const counts = { plots: data.plots.length, treatments: data.treatments.length, samples: data.samples.length, labReports: data.labReports.length, residues: data.residues.length };
+        const key = { 'Plot': 'plots', 'Treatment': 'treatments', 'Sample': 'samples', 'Lab report': 'labReports', 'Residue': 'residues' };
         data.review.forEach(r => { if (key[r.type]) counts[key[r.type]]++; });
         const rows = [
           [counts.plots, 'plot', 'plots'],
           [counts.treatments, 'treatment', 'treatments'],
           [counts.samples, 'sample', 'samples'],
           [counts.labReports, 'lab report', 'lab reports'],
+          [counts.residues, 'residue', 'residues'],
         ].filter(([n]) => n > 0);
         document.getElementById('summary').innerHTML = rows.map(([n, s, p]) =>
           `<li><svg viewBox="0 0 24 24"><path d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>${n} ${n === 1 ? s : p} imported</li>`).join('');
