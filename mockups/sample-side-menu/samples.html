@@ -12,7 +12,7 @@
     /* Top app bar — same elements as the Plots screenshot. */
     .appbar {
       height: 56px; display: flex; align-items: center; gap: 8px;
-      padding: 0 24px; background: #fff; border-bottom: 1px solid #e6e6e6;
+      padding: 0 24px; background: #fff; border-bottom: 1px solid #DCDBDB;
       position: relative; z-index: 1;
     }
     .menu-btn {
@@ -29,7 +29,7 @@
     .icon-btn svg { width: 24px; height: 24px; fill: currentColor; }
     .user { display: flex; align-items: center; gap: 8px; cursor: pointer; }
     .avatar {
-      width: 32px; height: 32px; border-radius: 50%; background: #d4183d; color: #fff;
+      width: 32px; height: 32px; border-radius: 50%; background: #A90C3C; color: #fff;
       display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 500;
     }
     .user .name { font-size: 13px; color: #1a1a1a; }
@@ -51,11 +51,11 @@
       display: flex; align-items: center; gap: 8px; border-radius: 8px;
       padding: 11px 16px; margin-bottom: 12px; font-weight: 700; font-size: 14px;
     }
-    .banner.todo { background: #d4183d; color: #fff; }
+    .banner.todo { background: #A90C3C; color: #fff; }
     .banner.done { background: #eeeeee; color: rgba(0,0,0,.87); }
     .banner svg { width: 18px; height: 18px; fill: currentColor; }
 
-    .card { background: #fff; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; }
+    .card { background: #fff; border: 1px solid #DCDBDB; border-radius: 8px; overflow: hidden; }
     table { width: 100%; border-collapse: collapse; font-size: 14px; }
     thead th {
       text-align: left; color: #6b6b6b; font-weight: 600; font-size: 12px;
@@ -75,12 +75,12 @@
     .sheet:hover { background: #e9e9ea; }
     .sheet svg { width: 16px; height: 16px; fill: currentColor; }
     .upload {
-      display: inline-flex; align-items: center; gap: 4px; background: #fde7eb; color: #d4183d; border: 0;
+      display: inline-flex; align-items: center; gap: 4px; background: #F6E1E8; color: #A90C3C; border: 0;
       border-radius: 6px; padding: 6px 12px; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap;
     }
-    .upload:hover { background: #fbd9e0; }
+    .upload:hover { background: #EFD0DA; }
     .trash { background: transparent; border: 0; cursor: pointer; padding: 6px; color: #8a8a8a; display: flex; }
-    .trash:hover { color: #d4183d; }
+    .trash:hover { color: #A90C3C; }
     .trash svg { width: 18px; height: 18px; fill: currentColor; }
 
     /* Drawer overlays the full viewport, above the app bar (page scrolls behind). */
@@ -98,17 +98,17 @@
     .dialog-body { padding: 4px 24px; }
     .dialog-sub { font-size: 14px; color: #6b6b6b; margin: 8px 0 16px; }
     .field-label { display: block; font-size: 13px; font-weight: 600; color: #333; margin-bottom: 8px; }
-    .req { color: #d4183d; }
+    .req { color: #A90C3C; }
     .dropzone { border: 1px dashed #d0d0d0; border-radius: 8px; background: #fafafa; padding: 24px; text-align: center; cursor: pointer; transition: border-color .15s, background .15s; }
-    .dropzone:hover { border-color: #d4183d; background: #fff5f7; }
+    .dropzone:hover { border-color: #A90C3C; background: #FCF3F6; }
     .dropzone svg { width: 24px; height: 24px; fill: #8a8a8a; margin-bottom: 8px; }
     .dz-text { font-size: 14px; color: #6b6b6b; }
-    .up-link { font-weight: 600; color: #d4183d; }
+    .up-link { font-weight: 600; color: #A90C3C; }
     .up-hint { font-size: 12px; color: #a0a0a0; margin-top: 6px; }
     .dialog-actions { display: flex; justify-content: flex-end; gap: 8px; padding: 16px 24px 24px; }
     .btn-text { background: transparent; border: 0; cursor: pointer; font: inherit; font-size: 14px; font-weight: 600; color: #6b6b6b; padding: 8px 16px; }
-    .btn-primary { background: #d4183d; color: #fff; border: 0; border-radius: 8px; cursor: pointer; font: inherit; font-size: 14px; font-weight: 600; padding: 9px 18px; }
-    .btn-primary:hover { background: #b31333; }
+    .btn-primary { background: #A90C3C; color: #fff; border: 0; border-radius: 8px; cursor: pointer; font: inherit; font-size: 14px; font-weight: 600; padding: 9px 18px; }
+    .btn-primary:hover { background: #8A0A31; }
 
     /* Parsed report (two-pane) — shown after "upload". */
     .parsed-view { display: none; }
@@ -118,7 +118,7 @@
     .two-pane { display: flex; gap: 24px; align-items: flex-start; padding-top: 8px; }
     .pane-left { width: 240px; flex-shrink: 0; }
     .thumb-wrap { position: relative; width: 240px; }
-    .thumb { width: 100%; display: block; border: 1px solid #e0e0e0; border-radius: 6px; }
+    .thumb { width: 100%; display: block; border: 1px solid #DCDBDB; border-radius: 6px; }
     .pdf-chip { position: absolute; bottom: 8px; right: 8px; background: #2a2a2a; color: #fff; font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px; }
     .thumb-x { position: absolute; top: -8px; right: -8px; width: 24px; height: 24px; padding: 0; border-radius: 50%; background: #1a1a1a; color: #fff; border: 2px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,.3); cursor: pointer; display: flex; align-items: center; justify-content: center; }
     .thumb-x svg { width: 14px; height: 14px; fill: currentColor; }
@@ -132,9 +132,9 @@
     .res-head { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
     .res-count { font-size: 11px; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; color: #6b6b6b; }
     .res-sub { font-size: 12px; color: #6b6b6b; margin-top: 2px; }
-    .add-res { background: #fde7eb; color: #d4183d; border: 0; border-radius: 8px; padding: 8px 14px; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; }
-    .add-res:hover { background: #fbd9e0; }
-    .res-card { border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; }
+    .add-res { background: #F6E1E8; color: #A90C3C; border: 0; border-radius: 8px; padding: 8px 14px; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+    .add-res:hover { background: #EFD0DA; }
+    .res-card { border: 1px solid #DCDBDB; border-radius: 8px; overflow: hidden; }
     .res-table { width: 100%; border-collapse: collapse; font-size: 14px; }
     .res-table th { text-align: left; font-size: 12px; font-weight: 600; color: #6b6b6b; padding: 10px 14px; border-bottom: 1px solid #eee; background: #fafafa; }
     .res-table td { padding: 10px 14px; border-bottom: 1px solid #f0f0f0; color: rgba(0,0,0,.87); }
