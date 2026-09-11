@@ -82,8 +82,6 @@
     tbody td { padding: 8px 14px; border-bottom: 1px solid #f0f0f0; vertical-align: middle; }
     tbody tr:last-child td { border-bottom: 0; }
     .card.table-card { overflow: hidden; }
-    td.src { font-size: 13px; color: #6b6b6b; font-family: ui-monospace, Menlo, monospace; }
-    td.deriv { color: #6b6b6b; }
 
     .cell-select, .cell-input {
       width: 100%; font: inherit; font-size: 14px; color: rgba(0,0,0,.87); box-sizing: border-box;
@@ -192,7 +190,7 @@
           Sorted <strong>2 files</strong> — farm-2026.xlsx, lab-exports.csv — into <strong id="typeCount">5</strong>&nbsp;record types
           <span class="replace" id="replaceFile">Replace files</span>
         </div>
-        <p class="mixed-note">Rows are auto-classified by their columns — a single mixed sheet is split across the tabs below. Anything we couldn’t place lands in <strong>Needs review</strong>.</p>
+        <p class="mixed-note">Rows are auto-classified by their columns — a single mixed sheet is split across the tabs below. Anything we can’t match to an existing plot, sample or report is highlighted in <strong>red</strong> for you to fix.</p>
 
         <div class="tabs" id="tabs"></div>
 
@@ -262,7 +260,6 @@
     const SEASON_OPTIONS = ['Winter', 'Spring', 'Summer', 'Autumn'];
     const COMMODITY_OPTIONS = ['Fruit', 'Soil', 'Irrigation water', 'Leaf'];
     const LEVEL_OPTIONS = ['Residue', 'Trace', 'Below LOQ', 'Not analyzed'];
-    const TYPE_OPTIONS = ['Plot', 'Treatment', 'Sample', 'Lab report', 'Residue'];
 
     // ── Seed data (what the parser "found" in the workbook) ────────────────
     const SEED = {
@@ -323,10 +320,6 @@
         { report: 'REF-0009', analyte: 'Fluopyram', result: '0.15', loq: '0.01', level: 'Residue' },
         { report: 'REF-0009', analyte: 'Deltamethrin', result: '0.02', loq: '0.01', level: 'Trace' },
       ],
-      review: [
-        { src: 'North Orchard 1; 0.5 l/ha; 12 Jun', type: '', parent: '' },
-        { src: 'REF-0044; Eurofins; 2 residues', type: '', parent: '' },
-      ],
     };
 
     const clone = (o) => JSON.parse(JSON.stringify(o));
@@ -370,14 +363,6 @@
     };
 
     // Per-entity config: tab label, headers, and how to render a row.
-    // A "Needs review" row's parent depends on the record type the user picks.
-    const PARENT_OF = {
-      Treatment: () => ({ opts: plotTargets(), ph: 'pick plot' }),
-      Sample: () => ({ opts: plotTargets(), ph: 'pick plot' }),
-      'Lab report': () => ({ opts: sampleTargets(), ph: 'pick sample' }),
-      Residue: () => ({ opts: reportTargets(), ph: 'pick report' }),
-    };
-
     const ENTITIES = {
       plots: {
         label: 'Plots',
@@ -419,35 +404,12 @@
           txt('residues', i, 'loq', r.loq) + sel('residues', i, 'level', r.level, LEVEL_OPTIONS) + del('residues', i),
         unresolved: () => data.residues.filter(r => !reportTargets().includes(r.report)).length,
       },
-      review: {
-        label: 'Needs review',
-        headers: ['Source row', 'Record type', 'Belongs to', ''],
-        row: (r, i) => {
-          const head = `<td class="src">${esc(r.src)}</td>` +
-            match('review', i, 'type', r.type, TYPE_OPTIONS, 'pick type');
-          let parent;
-          if (!TYPE_OPTIONS.includes(r.type)) {
-            parent = `<td><select class="cell-select" disabled><option>— pick a type first —</option></select></td>`;
-          } else if (r.type === 'Plot') {
-            parent = `<td class="deriv">— top-level, no parent —</td>`;
-          } else {
-            const cfg = PARENT_OF[r.type]();
-            parent = match('review', i, 'parent', r.parent, cfg.opts, cfg.ph);
-          }
-          return head + parent + del('review', i);
-        },
-        unresolved: () => data.review.filter(r => {
-          if (!TYPE_OPTIONS.includes(r.type)) return true;
-          if (r.type === 'Plot') return false;
-          return !PARENT_OF[r.type]().opts.includes(r.parent);
-        }).length,
-      },
     };
-    const ORDER = ['plots', 'treatments', 'samples', 'labReports', 'residues', 'review'];
+    const ORDER = ['plots', 'treatments', 'samples', 'labReports', 'residues'];
     let activeTab = 'plots';
 
     function render() {
-      // Tab strip (skip empty tabs; Needs review only when it has rows).
+      // Tab strip (skip empty tabs).
       const tabsEl = document.getElementById('tabs');
       const shown = ORDER.filter(k => data[k].length > 0);
       if (!shown.includes(activeTab)) activeTab = shown[0];
@@ -464,10 +426,8 @@
       document.getElementById('panes').innerHTML = shown.map(k => {
         const E = ENTITIES[k];
         const rows = data[k].map((r, i) => `<tr>${E.row(r, i)}</tr>`).join('');
-        const hint = k === 'review'
-          ? '<span class="pane-hint">These rows couldn’t be auto-classified — set a type and where each belongs, or delete them.</span>'
-          : `<span class="pane-hint">${data[k].length} ${data[k].length === 1 ? 'record' : 'records'}</span>`;
-        const addBtn = k === 'review' ? '' : `<button class="add-row" data-add="${k}">+ Add row</button>`;
+        const hint = `<span class="pane-hint">${data[k].length} ${data[k].length === 1 ? 'record' : 'records'}</span>`;
+        const addBtn = `<button class="add-row" data-add="${k}">+ Add row</button>`;
         return `<section class="tabpane${k === activeTab ? ' active' : ''}" data-pane="${k}">
           <div class="toolbar">${hint}${addBtn}</div>
           <div class="card table-card"><table>
@@ -480,7 +440,7 @@
       // Import button + type count.
       const importable = data.plots.length + data.treatments.length + data.samples.length + data.labReports.length + data.residues.length;
       document.getElementById('importBtn').textContent = `Import all (${importable} records)`;
-      document.getElementById('typeCount').textContent = shown.filter(k => k !== 'review').length;
+      document.getElementById('typeCount').textContent = shown.length;
       document.getElementById('blockWarn').classList.remove('show');
     }
 
@@ -538,10 +498,8 @@
           warn.classList.add('show');
           return;
         }
-        // Fold resolved "Needs review" rows into their chosen type for the tally.
+        // Per-type tally for the summary.
         const counts = { plots: data.plots.length, treatments: data.treatments.length, samples: data.samples.length, labReports: data.labReports.length, residues: data.residues.length };
-        const key = { 'Plot': 'plots', 'Treatment': 'treatments', 'Sample': 'samples', 'Lab report': 'labReports', 'Residue': 'residues' };
-        data.review.forEach(r => { if (key[r.type]) counts[key[r.type]]++; });
         const rows = [
           [counts.plots, 'plot', 'plots'],
           [counts.treatments, 'treatment', 'treatments'],
