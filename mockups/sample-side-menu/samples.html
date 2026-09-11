@@ -84,6 +84,30 @@
 
     /* Drawer overlays the full viewport, above the app bar (page scrolls behind). */
     .overlay { position: fixed; inset: 0; overflow: hidden; pointer-events: none; z-index: 1300; }
+
+    /* Add-a-report dialog (fake). */
+    .modal-overlay { position: fixed; inset: 0; z-index: 1400; display: none; align-items: flex-start; justify-content: center; padding-top: 12vh; }
+    .modal-overlay.open { display: flex; }
+    .modal-scrim { position: absolute; inset: 0; background: rgba(0,0,0,.5); }
+    .dialog { position: relative; z-index: 1; background: #fff; border-radius: 12px; box-shadow: 0 8px 32px rgba(0,0,0,.12); width: 100%; max-width: 520px; }
+    .dialog-head { display: flex; align-items: center; justify-content: space-between; padding: 24px 24px 0; }
+    .dialog-head h2 { font-size: 18px; font-weight: 700; margin: 0; }
+    .dialog-close { background: transparent; border: 0; cursor: pointer; color: #6b6b6b; padding: 4px; display: flex; }
+    .dialog-close svg { width: 22px; height: 22px; fill: currentColor; }
+    .dialog-body { padding: 4px 24px; }
+    .dialog-sub { font-size: 14px; color: #6b6b6b; margin: 8px 0 16px; }
+    .field-label { display: block; font-size: 13px; font-weight: 600; color: #333; margin-bottom: 8px; }
+    .req { color: #d4183d; }
+    .dropzone { border: 1px dashed #d0d0d0; border-radius: 8px; background: #fafafa; padding: 24px; text-align: center; cursor: pointer; transition: border-color .15s, background .15s; }
+    .dropzone:hover { border-color: #d4183d; background: #fff5f7; }
+    .dropzone svg { width: 24px; height: 24px; fill: #8a8a8a; margin-bottom: 8px; }
+    .dz-text { font-size: 14px; color: #6b6b6b; }
+    .up-link { font-weight: 600; color: #d4183d; }
+    .up-hint { font-size: 12px; color: #a0a0a0; margin-top: 6px; }
+    .dialog-actions { display: flex; justify-content: flex-end; gap: 8px; padding: 16px 24px 24px; }
+    .btn-text { background: transparent; border: 0; cursor: pointer; font: inherit; font-size: 14px; font-weight: 600; color: #6b6b6b; padding: 8px 16px; }
+    .btn-primary { background: #d4183d; color: #fff; border: 0; border-radius: 8px; cursor: pointer; font: inherit; font-size: 14px; font-weight: 600; padding: 9px 18px; }
+    .btn-primary:hover { background: #b31333; }
   </style>
 </head>
 <body>
@@ -184,11 +208,39 @@
     </div>
   </div>
 
+  <!-- Add-a-report dialog (mirrors the real AddReportDialog upload step) -->
+  <div class="modal-overlay" id="uploadModal">
+    <div class="modal-scrim" data-close></div>
+    <div class="dialog" role="dialog" aria-modal="true" aria-label="Add a report">
+      <div class="dialog-head">
+        <h2>Add a report</h2>
+        <button class="dialog-close" data-close aria-label="Close">
+          <svg viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </div>
+      <div class="dialog-body">
+        <p class="dialog-sub">Upload the report you received from the lab — we’ll read the lab, report ID and residues from it.</p>
+        <label class="field-label">Report files <span class="req">*</span></label>
+        <div class="dropzone">
+          <svg viewBox="0 0 24 24"><path d="M18 15v3H6v-3H4v3c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2v-3zm-1-4-1.41-1.41L13 12.17V4h-2v8.17L8.41 9.59 7 11l5 5z"/></svg>
+          <div class="dz-text"><span class="up-link">Click to upload</span> or drag and drop</div>
+          <div class="up-hint">Supports PDF, PNG, JPG, and CSV · Up to 10 MB</div>
+        </div>
+      </div>
+      <div class="dialog-actions">
+        <button class="btn-text" data-close>Cancel</button>
+        <button class="btn-primary" data-close>Save</button>
+      </div>
+    </div>
+  </div>
+
   <script>
     // Seeded sample data (mirrors the real /samples page).
     const OPEN = '<svg viewBox="0 0 24 24"><path d="M19 19H5V5h7V3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2v-7h-2zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3z"/></svg>';
     const TRASH = '<svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6zM19 4h-3.5l-1-1h-5l-1 1H5v2h14z"/></svg>';
-    const sheet = `<button class="sheet">${OPEN} Sample sheet</button>`;
+    // Sample-sheet button carries the row's data so the sheet can reflect it.
+    const sheetBtn = (p, n, d, c) =>
+      `<button class="sheet" data-plot="${p}" data-name="${n}" data-date="${d}" data-commodity="${c}">${OPEN} Sample sheet</button>`;
     const trash = `<button class="trash" aria-label="Delete">${TRASH}</button>`;
     const upload = `<button class="upload">+ Upload report</button>`;
 
@@ -214,12 +266,30 @@
 
     document.getElementById('awaiting').innerHTML = awaiting.map(([p, n, d, c]) => `
       <tr><td class="plot">${p}</td><td>${n}</td><td>${d}</td><td>${c}</td>
-      <td>${sheet}</td><td><div class="sheet-cell">${upload}${trash}</div></td></tr>`).join('');
+      <td>${sheetBtn(p, n, d, c)}</td><td><div class="sheet-cell">${upload}${trash}</div></td></tr>`).join('');
 
     document.getElementById('withReports').innerHTML = withReports.map(([p, n, d, c, r, res]) => `
       <tr><td class="plot">${p}</td><td>${n}</td><td>${d}</td><td>${c}</td>
       <td>${r}</td><td>${res}</td>
-      <td><div class="sheet-cell">${sheet}${trash}</div></td></tr>`).join('');
+      <td><div class="sheet-cell">${sheetBtn(p, n, d, c)}${trash}</div></td></tr>`).join('');
+
+    // Fake wiring: Sample sheet opens the printable sheet in a new tab;
+    // Upload report opens the (fake) dialog; anything [data-close] closes it.
+    const modal = document.getElementById('uploadModal');
+    document.addEventListener('click', (e) => {
+      const sh = e.target.closest('.sheet');
+      if (sh) {
+        const q = new URLSearchParams({
+          plot: sh.dataset.plot, name: sh.dataset.name,
+          date: sh.dataset.date, commodity: sh.dataset.commodity,
+        });
+        window.open('sample-sheet.html?' + q, '_blank');
+        return;
+      }
+      if (e.target.closest('.upload')) { modal.classList.add('open'); return; }
+      if (e.target.closest('[data-close]')) modal.classList.remove('open');
+    });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') modal.classList.remove('open'); });
   </script>
   <script src="app.js"></script>
 </body>
