@@ -94,9 +94,9 @@
     .match-cell .warn-ico { display: inline-flex; vertical-align: middle; margin-right: 6px; }
     .match-cell .warn-ico svg { width: 16px; height: 16px; fill: #d9534f; }
     .match-cell .cell-select { display: inline-block; width: calc(100% - 22px); }
-    .report-cell .report-pick { display: flex; align-items: center; gap: 6px; }
-    .report-cell .report-pick .cell-select { flex: 1; }
-    .report-cell .ctx { font-size: 12px; color: #9a9a9a; margin-top: 4px; }
+    .ctx-cell .ctx-pick { display: flex; align-items: center; gap: 6px; }
+    .ctx-cell .ctx-pick .cell-select { flex: 1; }
+    .ctx-cell .ctx { font-size: 12px; color: #9a9a9a; margin-top: 4px; }
     .row-actions { text-align: right; width: 44px; padding-right: 8px; }
     .row-del { background: transparent; border: 0; cursor: pointer; padding: 4px; color: #8a8a8a; display: inline-flex; }
     .row-del:hover { color: #A90C3C; }
@@ -352,7 +352,24 @@
       const list = `<option value=""${ok ? '' : ' selected'}>— pick report —</option>` +
         reportTargets().map(o => `<option${o === r.report ? ' selected' : ''}>${esc(o)}</option>`).join('');
       const ctx = ok ? `<div class="ctx">${esc(reportPlot(r.report) || '—')} · ${esc(reportSample(r.report) || '—')}</div>` : '';
-      return `<td class="report-cell"><div class="report-pick">${ok ? '' : WARN}<select class="cell-select match${ok ? '' : ' unmatched'}" data-e="residues" data-i="${i}" data-f="report">${list}</select></div>${ctx}</td>`;
+      return `<td class="ctx-cell"><div class="ctx-pick">${ok ? '' : WARN}<select class="cell-select match${ok ? '' : ' unmatched'}" data-e="residues" data-i="${i}" data-f="report">${list}</select></div>${ctx}</td>`;
+    };
+
+    // Plot's crop · location, for the context line under a plot dropdown.
+    const plotInfo = (name) => {
+      const p = data.plots.find(x => x.name === name);
+      if (p) return [p.crop, p.location].filter(Boolean).join(' · ');
+      if (ACCOUNT_PLOTS.includes(name)) return 'existing plot';
+      return '';
+    };
+    // Plot match cell + a derived context line (used on the Samples tab).
+    const plotCell = (e, i, v) => {
+      const ok = v && plotTargets().includes(v);
+      const list = `<option value=""${ok ? '' : ' selected'}>— pick plot —</option>` +
+        plotTargets().map(o => `<option${o === v ? ' selected' : ''}>${esc(o)}</option>`).join('');
+      const info = ok ? plotInfo(v) : '';
+      const ctx = info ? `<div class="ctx">${esc(info)}</div>` : '';
+      return `<td class="ctx-cell"><div class="ctx-pick">${ok ? '' : WARN}<select class="cell-select match${ok ? '' : ' unmatched'}" data-e="${e}" data-i="${i}" data-f="plot">${list}</select></div>${ctx}</td>`;
     };
     // Match cell: a reference dropdown, flagged when unresolved.
     const match = (e, i, f, v, opts, ph) => {
@@ -383,7 +400,7 @@
       samples: {
         label: 'Samples',
         headers: ['Plot', 'Sample name', 'Date', 'Commodity', ''],
-        row: (r, i) => match('samples', i, 'plot', r.plot, plotTargets(), 'pick plot') +
+        row: (r, i) => plotCell('samples', i, r.plot) +
           txt('samples', i, 'name', r.name) + txt('samples', i, 'date', r.date) +
           sel('samples', i, 'commodity', r.commodity, COMMODITY_OPTIONS) + del('samples', i),
         unresolved: () => data.samples.filter(r => !plotTargets().includes(r.plot)).length,
