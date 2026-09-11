@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ResiYou — Sample side menu (mockup)</title>
+  <style>
+    /* ------------------------------------------------------------------
+       Fake prototype: the Plots page is a static screenshot. The ONLY
+       interactive part is the hamburger, which opens the left "Navigate"
+       side menu (Plots / Samples / Inbox) — matching the real app drawer.
+       Everything is positioned as a % of the screenshot so it stays
+       aligned at any width.
+    ------------------------------------------------------------------ */
+    :root { font-family: "Inter", -apple-system, system-ui, sans-serif; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #e9eaee; display: flex; justify-content: center; }
+
+    /* Wrapper is sized to the screenshot so % coordinates map to the image. */
+    .frame { position: relative; width: 100%; max-width: 1160px; }
+    .screenshot { display: block; width: 100%; height: auto; user-select: none; -webkit-user-drag: none; }
+
+    /* Transparent clickable area over the hamburger icon. */
+    .hotspot {
+      position: absolute; left: 3.8%; top: 8.5%; width: 3.6%; height: 4.6%;
+      border: 0; background: transparent; padding: 0; cursor: pointer; border-radius: 8px;
+      transition: background .15s;
+    }
+    .hotspot:hover { background: rgba(0,0,0,0.06); }
+    .hotspot:focus-visible { outline: 2px solid #d4183d; outline-offset: 2px; }
+
+    /* Overlay clipped to the browser's app window (below the black chrome). */
+    .overlay {
+      position: absolute; top: 8.3%; left: 3.4%; right: 3.25%; bottom: 4.5%;
+      overflow: hidden; pointer-events: none;
+    }
+    .scrim {
+      position: absolute; inset: 0; background: rgba(0,0,0,0.5);
+      opacity: 0; transition: opacity .225s ease;
+    }
+
+    /* Left navigation drawer — mirrors the real MUI temporary Drawer. */
+    .drawer {
+      position: absolute; top: 0; left: 0; height: 100%;
+      width: 22%; min-width: 232px; background: #fff;
+      box-shadow: 0 8px 10px -5px rgba(0,0,0,.2), 0 16px 24px 2px rgba(0,0,0,.14);
+      transform: translateX(-100%); transition: transform .225s cubic-bezier(0,0,.2,1);
+      padding-top: 8px;
+    }
+    .overline {
+      font-size: 11px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase;
+      color: rgba(0,0,0,0.6); padding: 6px 16px;
+    }
+    .nav { list-style: none; margin: 8px 0 0; padding: 0; }
+    .item {
+      display: flex; align-items: center; gap: 12px; width: 100%;
+      padding: 10px 16px; border: 0; background: transparent; cursor: pointer;
+      font: inherit; font-size: 15px; color: rgba(0,0,0,0.87); text-align: left;
+      transition: background .15s;
+    }
+    .item:hover { background: rgba(0,0,0,0.04); }
+    .item.selected { background: rgba(0,0,0,0.08); }
+    .item svg { width: 20px; height: 20px; fill: rgba(0,0,0,0.54); flex: none; }
+
+    /* Open state (class toggled on .frame). */
+    .frame.open .overlay { pointer-events: auto; }
+    .frame.open .scrim { opacity: 1; }
+    .frame.open .drawer { transform: none; }
+  </style>
+</head>
+<body>
+  <div class="frame" id="frame">
+    <img class="screenshot" src="plots.png" alt="ResiYou plots page" />
+
+    <!-- Clickable hamburger -->
+    <button class="hotspot" id="menuBtn" aria-label="Open navigation menu"></button>
+
+    <!-- Side menu overlay -->
+    <div class="overlay">
+      <div class="scrim" id="scrim"></div>
+      <nav class="drawer" role="navigation" aria-label="Navigate">
+        <div class="overline">Navigate</div>
+        <ul class="nav">
+          <li>
+            <button class="item">
+              <svg viewBox="0 0 24 24"><path d="M12 20H2v-2h5.75c-.73-2.81-2.94-5.01-5.75-5.74.64-.16 1.31-.26 2-.26 4.42 0 8 3.58 8 8m10-7.74c-.64-.16-1.31-.26-2-.26-2.93 0-5.48 1.58-6.88 3.93.29.66.53 1.35.67 2.07.13.65.2 1.32.2 2h8v-2h-5.75c.74-2.81 2.95-5.01 5.76-5.74m-6.36-1.24c.78-2.09 2.23-3.84 4.09-5C15.44 6.16 12 9.67 12 14v.02c.95-1.27 2.2-2.3 3.64-3m-4.22-2.17C10.58 6.66 8.88 4.89 6.7 4 8.14 5.86 9 8.18 9 10.71c0 .21-.03.41-.04.61.43.24.83.52 1.22.82.21-1.18.65-2.29 1.24-3.29"/></svg>
+              Plots
+            </button>
+          </li>
+          <li>
+            <button class="item selected">
+              <svg viewBox="0 0 24 24"><path d="M13 11.33 18 18H6l5-6.67V6h2m2.96-2H8.04c-.42 0-.65.48-.39.81L9 6.5v4.17L3.2 18.4c-.49.66-.02 1.6.8 1.6h16c.82 0 1.29-.94.8-1.6L15 10.67V6.5l1.35-1.69c.26-.33.03-.81-.39-.81"/></svg>
+              Samples
+            </button>
+          </li>
+          <li>
+            <button class="item">
+              <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2m0 16H5v-3h3.56c.69 1.19 1.97 2 3.45 2s2.75-.81 3.45-2H19zm0-5h-4.99c0 1.1-.9 2-2 2s-2-.9-2-2H5V5h14z"/></svg>
+              Inbox
+            </button>
+          </li>
+        </ul>
+      </nav>
+    </div>
+  </div>
+
+  <script>
+    const frame = document.getElementById('frame');
+    const open = () => frame.classList.add('open');
+    const close = () => frame.classList.remove('open');
+
+    document.getElementById('menuBtn').addEventListener('click', open);
+    document.getElementById('scrim').addEventListener('click', close);
+    // Selecting an item closes the drawer (single-screen mockup).
+    document.querySelectorAll('.item').forEach(b => b.addEventListener('click', close));
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') close(); });
+  </script>
+</body>
+</html>
