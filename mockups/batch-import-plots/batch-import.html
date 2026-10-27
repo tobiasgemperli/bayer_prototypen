@@ -56,6 +56,30 @@
     .template-row a { color: #A90C3C; text-decoration: none; font-weight: 600; }
     .template-row a:hover { text-decoration: underline; }
 
+    /* Example files (pick a scenario without a real upload). */
+    .examples { margin-top: 16px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 13px; color: #6b6b6b; }
+    .example { display: inline-flex; align-items: center; gap: 6px; background: #fff; border: 1px solid #DCDBDB; border-radius: 16px; padding: 5px 12px; font: inherit; font-size: 13px; color: #333; cursor: pointer; }
+    .example:hover { border-color: #A90C3C; color: #A90C3C; }
+    .example svg { width: 16px; height: 16px; fill: #2e7d32; }
+
+    /* Column mapping disclosure (how the parser read the headers). */
+    .mapping { font-size: 13px; color: #333; margin: 0 0 16px 2px; }
+    .mapping summary { cursor: pointer; color: #A90C3C; font-weight: 600; }
+    .mapping table { margin-top: 8px; max-width: 720px; font-size: 13px; }
+    .mapping td { padding: 4px 14px 4px 0; border: 0; }
+    .mapping td:first-child { color: #6b6b6b; font-family: ui-monospace, Menlo, monospace; font-size: 12px; }
+    .mapping .ignored { color: #9a9a9a; margin-top: 8px; font-size: 12px; }
+
+    /* Inline notice inside a pane (soft, non-blocking). */
+    .notice { display: flex; align-items: center; gap: 10px; background: #fff8e1; border: 1px solid #f3e0a6; border-radius: 8px; padding: 10px 14px; font-size: 13px; color: #5d4300; margin-bottom: 12px; }
+    .notice svg { width: 18px; height: 18px; fill: #b7791f; flex: none; }
+    .notice .notice-actions { margin-left: auto; display: flex; gap: 6px; flex: none; }
+    .notice button { background: transparent; border: 0; font: inherit; font-size: 13px; font-weight: 600; color: #A90C3C; cursor: pointer; padding: 4px 8px; border-radius: 6px; }
+    .notice button:hover { background: #F6E1E8; }
+    .ctx.soft { color: #b7791f; }
+    .cell-check { width: 18px; height: 18px; accent-color: #A90C3C; cursor: pointer; }
+    tr.excluded td:not(.check-cell) { opacity: .45; }
+
     /* Detected banner (after "upload"). */
     .detected { display: flex; align-items: center; gap: 8px; background: #e7f6ec; border-radius: 8px; padding: 10px 14px; font-size: 14px; color: #1b5e20; margin-bottom: 8px; }
     .detected svg { width: 18px; height: 18px; fill: #2e7d32; flex: none; }
@@ -184,6 +208,10 @@
             <div class="dz-text"><span class="up-link">Click to upload</span> or drag and drop</div>
             <div class="up-hint">CSV or Excel — one or several files, any columns in any order. We read the headers and sort the rows. Up to 10 MB each.</div>
           </div>
+          <div class="examples">Try an example:
+            <button class="example" data-scenario="demo"><svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2m-9 14H7v-2h3zm0-4H7v-2h3zm0-4H7V7h3zm7 8h-5v-2h5zm0-4h-5v-2h5zm0-4h-5V7h5z"/></svg>farm-2026.xlsx + lab-exports.csv</button>
+            <button class="example" data-scenario="fieldbook"><svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2m-9 14H7v-2h3zm0-4H7v-2h3zm0-4H7V7h3zm7 8h-5v-2h5zm0-4h-5v-2h5zm0-4h-5V7h5z"/></svg>Cuaderno de campo test.xlsx</button>
+          </div>
           <div class="template-row">Starting from a blank slate? <a href="#" data-noop>Download an example spreadsheet</a> — optional, we adapt to your own layout.</div>
         </div>
       </section>
@@ -192,10 +220,11 @@
       <section class="step" id="previewStep">
         <div class="detected">
           <svg viewBox="0 0 24 24"><path d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
-          Sorted <strong>2 files</strong> — farm-2026.xlsx, lab-exports.csv — into <strong id="typeCount">5</strong>&nbsp;record types
+          <span><span id="detectedText"></span> into <strong id="typeCount">5</strong> record types</span>
           <span class="replace" id="replaceFile">Replace files</span>
         </div>
-        <p class="mixed-note">Rows are auto-classified by their columns — a single mixed sheet is split across the tabs below. Anything we can’t match to an existing plot, sample or report is highlighted in <strong>red</strong> for you to fix.</p>
+        <p class="mixed-note" id="mixedNote"></p>
+        <div id="mapping"></div>
 
         <div class="tabs" id="tabs"></div>
 
@@ -327,7 +356,64 @@
       ],
     };
 
+    // ── Field notebook (Chilean "Cuaderno de campo" export) ─────────────────
+    // One wide sheet, one row per product application; plot columns repeat on
+    // every row. Parsed into 1 plot (deduped on Sector + Cuartel) + 6 treatments.
+    const CATEGORY_OPTIONS = ['Fungicide', 'Insecticide', 'Acaricide', 'Herbicide', 'Plant growth regulator', 'Foliar fertiliser', 'Adjuvant'];
+    const METHOD_OPTIONS = ['Airblast spray', 'Foliar spray', 'Soil drench', 'Broadcast'];
+    // Categories that don't affect the residue forecast start unticked.
+    const NON_PPP = ['Foliar fertiliser', 'Adjuvant'];
+
+    const FIELDBOOK_SEED = {
+      plots: [
+        { name: 'xxx · Cuartel 401', crop: 'Table grape', variety: 'Autumn Crisp', location: '', season: '2025/2026', area: '1.93' },
+      ],
+      treatments: [
+        { include: false, plot: 'xxx · Cuartel 401', date: '11 Jul 2024', product: 'SILWET TX 100', substance: 'Trisiloxane ethoxylate · 85.7%', category: 'Adjuvant', method: 'Airblast spray', dose: '0.415 L/ha', perHl: '25 mL/hL', water: '1666.7 L/ha' },
+        { include: true, plot: 'xxx · Cuartel 401', date: '12 Jul 2024', product: 'CYANAMIDA 50', substance: 'Hydrogen cyanamide · 50%', category: 'Plant growth regulator', method: 'Airblast spray', dose: '83.33 L/ha', perHl: '5 L/hL', water: '1666.7 L/ha' },
+        { include: false, plot: 'xxx · Cuartel 401', date: '13 Jul 2024', product: 'SULFATO DE ZN', substance: 'Zinc', category: 'Foliar fertiliser', method: 'Airblast spray', dose: '16.81 kg/ha', perHl: '2.5 kg/hL', water: '672.3 L/ha' },
+        { include: true, plot: 'xxx · Cuartel 401', date: '14 Mar 2024', product: 'SULFUR 600 FLO', substance: 'Sulphur · 60%', category: 'Fungicide', method: 'Airblast spray', dose: '1.617 L/ha', perHl: '240 mL/hL', water: '673.6 L/ha' },
+        { include: false, plot: 'xxx · Cuartel 401', date: '15 Mar 2024', product: 'ACIDO CÍTRICO ORGÁNICO', substance: 'Citric acid · 100%', category: 'Foliar fertiliser', method: 'Airblast spray', dose: '0.108 L/ha', perHl: '16 mL/hL', water: '673.6 L/ha' },
+        { include: true, plot: 'xxx · Cuartel 401', date: '16 Mar 2024', product: 'ACTIVOL 4%', substance: 'Gibberellic acid · 3.2%', category: 'Plant growth regulator', method: 'Airblast spray', dose: '0.035 L/ha', perHl: '5.208 mL/hL', water: '673.6 L/ha' },
+      ],
+      samples: [], labReports: [], residues: [],
+    };
+
+    // Source header → ResiYou field, shown in the "how we read your columns" disclosure.
+    const FIELDBOOK_MAPPING = [
+      ['Sector + Cuartel', 'Plot name'],
+      ['Cultivo', 'Crop'],
+      ['Variedad', 'Variety'],
+      ['Area (ha)', 'Area (ha)'],
+      ['Programa', 'Season (2025/2026 extracted)'],
+      ['Fecha', 'Application date'],
+      ['Producto', 'Product'],
+      ['Ingrediente activo + Concentración', 'Active substance'],
+      ['Acción', 'Category'],
+      ['Total x ha + UM total x ha', 'Product dose (per ha)'],
+      ['Dosis x hL + UM dosis', 'Concentration (per hL) — kept as reference'],
+      ['Cobertura + UM cob.', 'Water volume'],
+      ['Maquinaria (“turbo”)', 'Method → Airblast spray (inferred)'],
+    ];
+    const FIELDBOOK_IGNORED = ['Hora Termino', 'Orden', 'Objetivo', 'Repetición', 'Max Repeticiones', 'Consumo', 'Agua utilizada (L)', 'Carencia etiqueta', 'Fecha viable cosecha', 'Condicion', 'Dosificadores', 'Aplicadores', 'Reingreso'];
+
+    const SCENARIOS = {
+      demo: {
+        seed: SEED,
+        detected: 'Sorted <strong>2 files</strong> — farm-2026.xlsx, lab-exports.csv —',
+        note: 'Rows are auto-classified by their columns — a single mixed sheet is split across the tabs below. Anything we can’t match to an existing plot, sample or report is highlighted in <strong>red</strong> for you to fix.',
+      },
+      fieldbook: {
+        seed: FIELDBOOK_SEED,
+        detected: 'Read <strong>Cuaderno de campo test.xlsx</strong> (Spanish field notebook, 6 rows)',
+        note: 'One row per product application — we grouped the repeated plot columns into a single plot and kept each product as a treatment. Fertilisers and adjuvants don’t affect the residue forecast, so they start unticked.',
+        mapping: true,
+      },
+    };
+
     const clone = (o) => JSON.parse(JSON.stringify(o));
+    let scenario = 'demo';
+    let yearChecked = false;  // field notebook: user answered the "check year" notice
     let data = clone(SEED);
 
     // Valid match targets grow with what's being imported.
@@ -436,6 +522,53 @@
         unresolved: () => data.residues.filter(r => !reportTargets().includes(r.report)).length,
       },
     };
+    // Field-notebook overrides: richer treatment columns + plot warnings.
+    const NOTE = '<svg viewBox="0 0 24 24"><path d="M1 21h22L12 2zm12-3h-2v-2h2zm0-4h-2v-4h2z"/></svg>';
+    const check = (e, i, f, v) => `<td class="check-cell"><input type="checkbox" class="cell-check" data-e="${e}" data-i="${i}" data-f="${f}"${v ? ' checked' : ''} aria-label="Include"></td>`;
+    // Input/select with a grey (or amber) context line underneath.
+    const txtCtx = (e, i, f, v, ctx, soft) => `<td class="ctx-cell"><input class="cell-input" data-e="${e}" data-i="${i}" data-f="${f}" value="${esc(v)}">${ctx ? `<div class="ctx${soft ? ' soft' : ''}">${esc(ctx)}</div>` : ''}</td>`;
+    const selCtx = (e, i, f, v, opts, ctx, soft) => `<td class="ctx-cell"><select class="cell-select" data-e="${e}" data-i="${i}" data-f="${f}">${optionList(opts, v)}</select>${ctx ? `<div class="ctx${soft ? ' soft' : ''}">${esc(ctx)}</div>` : ''}</td>`;
+
+    const FIELDBOOK_ENTITIES = {
+      plots: {
+        label: 'Plots',
+        headers: ['Plot name', 'Crop', 'Variety', 'Location', 'Season', 'Area (ha)', ''],
+        row: (r, i) => txtCtx('plots', i, 'name', r.name, 'Sector + Cuartel') +
+          selCtx('plots', i, 'crop', r.crop, CROP_OPTIONS, CROP_OPTIONS.includes(r.crop) ? '' : 'Not covered by forecasts yet', true) +
+          txt('plots', i, 'variety', r.variety) +
+          txtCtx('plots', i, 'location', r.location, r.location ? '' : 'Not in file — plot imports as Draft', true) +
+          txt('plots', i, 'season', r.season) + txt('plots', i, 'area', r.area) + del('plots', i),
+        unresolved: () => 0,
+      },
+      treatments: {
+        label: 'Treatments',
+        headers: ['', 'Plot', 'Date', 'Product', 'Category', 'Method', 'Dose', 'Water', ''],
+        row: (r, i) => check('treatments', i, 'include', r.include) + plotCell('treatments', i, r.plot) +
+          txt('treatments', i, 'date', r.date) +
+          txtCtx('treatments', i, 'product', r.product, r.substance) +
+          sel('treatments', i, 'category', r.category, CATEGORY_OPTIONS) +
+          selCtx('treatments', i, 'method', r.method, METHOD_OPTIONS, 'Inferred from machinery') +
+          txtCtx('treatments', i, 'dose', r.dose, r.perHl) +
+          txt('treatments', i, 'water', r.water) + del('treatments', i),
+        rowClass: (r) => r.include ? '' : 'excluded',
+        // The 2024 dates vs the 2025/2026 program — soft notice until answered.
+        notice: () => yearChecked ? '' : `<div class="notice">${NOTE}
+          <span>Spray dates are in <strong>2024</strong>, but the program is <strong>2025/2026</strong> and the file’s harvest dates are 2025. Check the year.</span>
+          <span class="notice-actions"><button id="shiftYear">Shift all to 2025</button><button id="keepYear">Keep 2024</button></span></div>`,
+        hint: () => {
+          const n = data.treatments.filter(t => t.include).length;
+          const skipped = data.treatments.length - n;
+          return `${n} to import${skipped ? ` · ${skipped} skipped (no residue impact)` : ''}`;
+        },
+        unresolved: () => data.treatments.filter(r => r.include && !plotTargets().includes(r.plot)).length,
+        importable: () => data.treatments.filter(t => t.include).length,
+        blank: { include: true, plot: '', date: '', product: '', substance: '', category: 'Fungicide', method: 'Airblast spray', dose: '', perHl: '', water: '' },
+      },
+    };
+    // Active entity config for the current scenario (falls back to the default tabs).
+    const entity = (k) => (scenario === 'fieldbook' && FIELDBOOK_ENTITIES[k]) || ENTITIES[k];
+    const importableCount = (k) => entity(k).importable ? entity(k).importable() : data[k].length;
+
     const ORDER = ['plots', 'treatments', 'samples', 'labReports', 'residues'];
     let activeTab = 'plots';
 
@@ -445,9 +578,9 @@
       const shown = ORDER.filter(k => data[k].length > 0);
       if (!shown.includes(activeTab)) activeTab = shown[0];
       tabsEl.innerHTML = shown.map(k => {
-        const u = ENTITIES[k].unresolved();
+        const u = entity(k).unresolved();
         return `<button class="tab${k === activeTab ? ' active' : ''}" data-tab="${k}">
-          ${ENTITIES[k].label}
+          ${entity(k).label}
           <span class="count">${data[k].length}</span>
           ${u ? `<span class="warn" title="${u} to resolve"><svg viewBox="0 0 24 24"><path d="M1 21h22L12 2zm12-3h-2v-2h2zm0-4h-2v-4h2z"/></svg></span>` : ''}
         </button>`;
@@ -455,11 +588,12 @@
 
       // Panes.
       document.getElementById('panes').innerHTML = shown.map(k => {
-        const E = ENTITIES[k];
-        const rows = data[k].map((r, i) => `<tr>${E.row(r, i)}</tr>`).join('');
-        const hint = `<span class="pane-hint">${data[k].length} ${data[k].length === 1 ? 'record' : 'records'}</span>`;
+        const E = entity(k);
+        const rows = data[k].map((r, i) => `<tr class="${E.rowClass ? E.rowClass(r) : ''}">${E.row(r, i)}</tr>`).join('');
+        const hint = `<span class="pane-hint">${E.hint ? E.hint() : `${data[k].length} ${data[k].length === 1 ? 'record' : 'records'}`}</span>`;
         const addBtn = `<button class="add-row" data-add="${k}">+ Add row</button>`;
         return `<section class="tabpane${k === activeTab ? ' active' : ''}" data-pane="${k}">
+          ${E.notice ? E.notice() : ''}
           <div class="toolbar">${hint}${addBtn}</div>
           <div class="card table-card"><table>
             <thead><tr>${E.headers.map(h => `<th>${h}</th>`).join('')}</tr></thead>
@@ -469,30 +603,57 @@
       }).join('');
 
       // Import button + type count.
-      const importable = data.plots.length + data.treatments.length + data.samples.length + data.labReports.length + data.residues.length;
+      const importable = ORDER.reduce((n, k) => n + importableCount(k), 0);
       document.getElementById('importBtn').textContent = `Import all (${importable} records)`;
       document.getElementById('typeCount').textContent = shown.length;
+
+      // Scenario-specific banner copy + column mapping disclosure.
+      const S = SCENARIOS[scenario];
+      document.getElementById('detectedText').innerHTML = S.detected;
+      document.getElementById('mixedNote').innerHTML = S.note;
+      const mappingEl = document.getElementById('mapping');
+      if (S.mapping && !mappingEl.firstChild) {
+        mappingEl.innerHTML = `<details class="mapping"><summary>How we read your columns (${FIELDBOOK_MAPPING.length} mapped, ${FIELDBOOK_IGNORED.length} ignored)</summary>
+          <table>${FIELDBOOK_MAPPING.map(([src, dst]) => `<tr><td>${esc(src)}</td><td>→ ${esc(dst)}</td></tr>`).join('')}</table>
+          <div class="ignored">Ignored: ${FIELDBOOK_IGNORED.map(esc).join(', ')}</div></details>`;
+      } else if (!S.mapping) {
+        mappingEl.innerHTML = '';
+      }
       document.getElementById('blockWarn').classList.remove('show');
     }
 
     function totalUnresolved() {
-      return ORDER.reduce((n, k) => n + ENTITIES[k].unresolved(), 0);
+      return ORDER.reduce((n, k) => n + entity(k).unresolved(), 0);
     }
     function firstIssueTab() {
-      return ORDER.find(k => data[k].length && ENTITIES[k].unresolved() > 0);
+      return ORDER.find(k => data[k].length && entity(k).unresolved() > 0);
     }
 
     function showStep(id) {
       document.querySelectorAll('.step').forEach(s => s.classList.toggle('active', s.id === id));
     }
-    function reset() { data = clone(SEED); activeTab = 'plots'; render(); }
+    function reset(next = scenario) {
+      scenario = next; yearChecked = false;
+      data = clone(SCENARIOS[scenario].seed); activeTab = 'plots';
+      document.getElementById('mapping').innerHTML = '';
+      render();
+    }
 
     render();
 
     document.addEventListener('click', (e) => {
       // Sidebar "Batch import" restarts the flow from step 1 (app.js closes the drawer).
       if (e.target.closest('#navBatchImport')) { reset(); showStep('uploadStep'); return; }
-      if (e.target.closest('#dropzone')) { showStep('previewStep'); return; }
+      if (e.target.closest('#dropzone')) { reset('demo'); showStep('previewStep'); return; }
+      const ex = e.target.closest('[data-scenario]');
+      if (ex) { reset(ex.dataset.scenario); showStep('previewStep'); return; }
+
+      // Field notebook "check year" notice.
+      if (e.target.closest('#shiftYear')) {
+        data.treatments.forEach(t => { t.date = t.date.replace(/(\d{4})$/, (y) => String(Number(y) + 1)); });
+        yearChecked = true; render(); return;
+      }
+      if (e.target.closest('#keepYear')) { yearChecked = true; render(); return; }
       if (e.target.closest('#replaceFile')) { showStep('uploadStep'); return; }
 
       const tab = e.target.closest('.tab');
@@ -501,7 +662,7 @@
       const addBtn = e.target.closest('[data-add]');
       if (addBtn) {
         const k = addBtn.dataset.add;
-        const blank = { plots: { name: '', crop: 'Apricot', variety: '', location: '', season: 'Winter', area: '' },
+        const blank = entity(k).blank || { plots: { name: '', crop: 'Apricot', variety: '', location: '', season: 'Winter', area: '' },
           treatments: { plot: '', substance: '', date: '', rate: '' },
           samples: { plot: '', name: '', date: '', commodity: 'Fruit' },
           labReports: { sample: '', lab: '', reportId: '', residues: '0' },
@@ -530,7 +691,7 @@
           return;
         }
         // Per-type tally for the summary.
-        const counts = { plots: data.plots.length, treatments: data.treatments.length, samples: data.samples.length, labReports: data.labReports.length, residues: data.residues.length };
+        const counts = Object.fromEntries(ORDER.map(k => [k, importableCount(k)]));
         const rows = [
           [counts.plots, 'plot', 'plots'],
           [counts.treatments, 'treatment', 'treatments'],
@@ -549,11 +710,17 @@
 
     // Keep the model in sync as cells change; re-render match cells so warnings update.
     document.addEventListener('change', (e) => {
-      const el = e.target.closest('.cell-select, .cell-input');
+      const el = e.target.closest('.cell-select, .cell-input, .cell-check');
       if (!el) return;
       const rec = data[el.dataset.e] && data[el.dataset.e][el.dataset.i];
-      if (rec) rec[el.dataset.f] = el.value;
-      if (el.classList.contains('match')) render();  // refresh ⚠ badges + counts
+      if (rec) rec[el.dataset.f] = el.type === 'checkbox' ? el.checked : el.value;
+      // Ticking a row out of the import also updates the count + dimming.
+      if (el.classList.contains('match') || el.classList.contains('cell-check') ||
+          (scenario === 'fieldbook' && el.dataset.e === 'plots') ||
+          (el.dataset.f === 'category' && el.dataset.e === 'treatments')) {
+        if (el.dataset.f === 'category') rec.include = !NON_PPP.includes(el.value);
+        render();  // refresh ⚠ badges + counts
+      }
     });
   </script>
   <script src="app.js"></script>
