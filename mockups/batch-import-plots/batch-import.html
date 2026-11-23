@@ -38,7 +38,9 @@
     .title { font-size: 28px; font-weight: 700; margin: 8px 0 4px; color: #1a1a1a; }
     .sub { font-size: 14px; color: #6b6b6b; margin: 0 0 24px; }
 
+    [hidden] { display: none !important; }
     .step { display: none; }
+    .frame:has(#uploadStep:not(.active)) .sub { display: none; }
     .step.active { display: block; }
 
     /* Upload step. */
@@ -77,7 +79,7 @@
     .notice button { background: transparent; border: 0; font: inherit; font-size: 13px; font-weight: 600; color: #A90C3C; cursor: pointer; padding: 4px 8px; border-radius: 6px; }
     .notice button:hover { background: #F6E1E8; }
     .ctx.soft { color: #b7791f; }
-    .cell-check { width: 18px; height: 18px; accent-color: #A90C3C; cursor: pointer; }
+    .cell-check { width: 18px; height: 18px; accent-color: #A90C3C; cursor: pointer; margin: 7px 0 0; }
     tr.excluded td:not(.check-cell) { opacity: .45; }
 
     /* Detected banner (after "upload"). */
@@ -97,6 +99,16 @@
     .tab .warn { display: inline-flex; }
     .tab .warn svg { width: 15px; height: 15px; fill: #d9534f; }
 
+    /* Stepper: the tab strip doubles as numbered steps — done steps can be revisited, later ones are locked. */
+    .tabs .sep { align-self: center; color: #c0c0c0; font-size: 16px; padding: 0 2px; }
+    .tab .num { width: 20px; height: 20px; border-radius: 50%; background: #eee; color: #6b6b6b; font-size: 11px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; }
+    .tab.active .num { background: #A90C3C; color: #fff; }
+    .tab.done .num { background: #e7f6ec; color: #2e7d32; }
+    .tab:disabled { cursor: default; color: #b5b5b5; }
+    .tab:disabled .count { background: #f3f3f3; color: #b5b5b5; }
+    .step-q { font-size: 18px; font-weight: 700; color: #1a1a1a; margin: 4px 0 4px; }
+    .step-sub { font-size: 13px; color: #6b6b6b; margin: 0 0 16px; }
+
     .tabpane { display: none; }
     .tabpane.active { display: block; }
 
@@ -107,7 +119,7 @@
 
     table { width: 100%; border-collapse: collapse; font-size: 14px; }
     thead th { text-align: left; color: #6b6b6b; font-weight: 600; font-size: 12px; padding: 12px 14px; border-bottom: 1px solid #eee; white-space: nowrap; }
-    tbody td { padding: 8px 14px; border-bottom: 1px solid #f0f0f0; vertical-align: middle; }
+    tbody td { padding: 8px 14px; border-bottom: 1px solid #f0f0f0; vertical-align: top; }
     tbody tr:last-child td { border-bottom: 0; }
     .card.table-card { overflow: hidden; }
 
@@ -122,7 +134,7 @@
     .ctx-cell .ctx-pick { display: flex; align-items: center; gap: 6px; }
     .ctx-cell .ctx-pick .cell-select { flex: 1; }
     .ctx-cell .ctx { font-size: 12px; color: #9a9a9a; margin-top: 4px; }
-    .row-actions { text-align: right; width: 44px; padding-right: 8px; }
+    .row-actions { text-align: right; width: 44px; padding-right: 8px; padding-top: 11px; }
     .row-del { background: transparent; border: 0; cursor: pointer; padding: 4px; color: #8a8a8a; display: inline-flex; }
     .row-del:hover { color: #A90C3C; }
     .row-del svg { width: 18px; height: 18px; fill: currentColor; }
@@ -146,6 +158,41 @@
     .summary svg { width: 16px; height: 16px; fill: #2e7d32; }
     .order-note { font-size: 12px; color: #9a9a9a; margin: 0 0 20px; }
     .done-actions { display: flex; gap: 8px; justify-content: center; }
+
+    /* Spray diary: match each distinct value once (step 1). */
+    .match-card { margin-bottom: 16px; }
+    .match-card h3 { font-size: 14px; font-weight: 700; color: #1a1a1a; margin: 0; padding: 14px 14px 2px; display: flex; gap: 8px; align-items: baseline; }
+    .match-card h3 .muted { font-weight: 400; color: #6b6b6b; font-size: 13px; }
+    .match-card table { table-layout: fixed; }
+    td.raw { font-family: ui-monospace, Menlo, monospace; font-size: 12.5px; color: #333; padding-top: 15px; word-break: break-word; }
+    td.used { color: #6b6b6b; font-size: 13px; white-space: nowrap; padding-top: 15px; }
+    .ctx.ok { color: #2e7d32; }
+    .tok { display: inline-block; background: #eef1f6; color: #333; border-radius: 10px; padding: 0 8px; margin: 2px 3px 0 0; font-size: 12px; line-height: 20px; }
+    .tok.dupe { text-decoration: line-through; color: #9a9a9a; background: #f3f3f3; }
+    .tok.bad { background: #fdecea; color: #b3261e; }
+    .tok.new { background: #e7f6ec; color: #1b5e20; }
+    .remember { font-size: 13px; color: #333; display: flex; align-items: center; gap: 8px; margin: 4px 2px 0; }
+    .remember input { accent-color: #A90C3C; width: 16px; height: 16px; }
+
+    /* Spray diary: expanded treatments (step 2). */
+    td.ro { padding-top: 13px; }
+    td.ro .v { font-size: 14px; color: #1a1a1a; white-space: nowrap; }
+    .plots-chip { border: 1px solid #cfcfcf; background: #fff; border-radius: 14px; padding: 3px 10px; font: inherit; font-size: 13px; font-weight: 600; color: #333; cursor: pointer; white-space: nowrap; }
+    .plots-chip:hover { border-color: #A90C3C; color: #A90C3C; }
+    .filters { display: flex; gap: 6px; }
+    .flt { border: 1px solid #DCDBDB; background: #fff; border-radius: 16px; padding: 4px 12px; font: inherit; font-size: 13px; cursor: pointer; color: #333; }
+    .flt.on { border-color: #A90C3C; background: #FCF3F6; color: #A90C3C; font-weight: 600; }
+    .card.table-card.no-clip { overflow: visible; }
+    .src-scan { position: relative; display: inline-flex; align-items: center; gap: 4px; color: #A90C3C; font-size: 13px; font-weight: 600; cursor: zoom-in; }
+    .src-scan svg { width: 16px; height: 16px; fill: currentColor; }
+    .scan-pop { display: none; position: absolute; left: 0; top: 22px; z-index: 20; background: #fff; border: 1px solid #DCDBDB; border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,.15); padding: 8px; width: 820px; cursor: default; }
+    .src-scan:hover .scan-pop { display: block; }
+    .scan-pop .crop { width: 820px; background-size: 820px auto; background-repeat: no-repeat; }
+    .scan-pop .crop + .crop { border-top: 2px solid #A90C3C; }
+    .scan-pop .cap { font-size: 12px; color: #6b6b6b; margin-top: 6px; font-weight: 400; }
+    .show-more { background: transparent; border: 0; font: inherit; font-size: 13px; font-weight: 600; color: #A90C3C; cursor: pointer; padding: 2px 0; }
+    .show-more:hover { text-decoration: underline; }
+    .pane-foot { font-size: 12.5px; color: #6b6b6b; margin: 10px 2px 0; }
 
     /* Drawer overlays the full frame, above the app bar. */
     .overlay { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 1300; }
@@ -211,6 +258,7 @@
           <div class="examples">Try an example:
             <button class="example" data-scenario="demo"><svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2m-9 14H7v-2h3zm0-4H7v-2h3zm0-4H7V7h3zm7 8h-5v-2h5zm0-4h-5v-2h5zm0-4h-5V7h5z"/></svg>farm-2026.xlsx + lab-exports.csv</button>
             <button class="example" data-scenario="fieldbook"><svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2m-9 14H7v-2h3zm0-4H7v-2h3zm0-4H7V7h3zm7 8h-5v-2h5zm0-4h-5v-2h5zm0-4h-5V7h5z"/></svg>Cuaderno de campo test.xlsx</button>
+            <button class="example" data-scenario="diary"><svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2m-9 14H7v-2h3zm0-4H7v-2h3zm0-4H7V7h3zm7 8h-5v-2h5zm0-4h-5v-2h5zm0-4h-5V7h5z"/></svg>İlaçlama defteri 2026.xlsx + scan.pdf</button>
           </div>
           <div class="template-row">Starting from a blank slate? <a href="#" data-noop>Download an example spreadsheet</a> — optional, we adapt to your own layout.</div>
         </div>
@@ -218,13 +266,13 @@
 
       <!-- Step 2: preview / edit -->
       <section class="step" id="previewStep">
-        <div class="detected">
+        <div class="detected" hidden>
           <svg viewBox="0 0 24 24"><path d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
-          <span><span id="detectedText"></span> into <strong id="typeCount">5</strong> record types</span>
+          <span><span id="detectedText"></span> into <strong id="typeCount">5</strong> <span id="typeNoun">record types</span></span>
           <span class="replace" id="replaceFile">Replace files</span>
         </div>
-        <p class="mixed-note" id="mixedNote"></p>
-        <div id="mapping"></div>
+        <p class="mixed-note" id="mixedNote" hidden></p>
+        <div id="mapping" hidden></div>
 
         <div class="tabs" id="tabs"></div>
 
@@ -397,17 +445,220 @@
     ];
     const FIELDBOOK_IGNORED = ['Hora Termino', 'Orden', 'Objetivo', 'Repetición', 'Max Repeticiones', 'Consumo', 'Agua utilizada (L)', 'Carencia etiqueta', 'Fecha viable cosecha', 'Condicion', 'Dosificadores', 'Aplicadores', 'Reingreso'];
 
+    // ── Turkish spray diary (İlaçlama kayıt defteri) ────────────────────────
+    // Transcribed from two real inputs: an Excel diary (diary-xlsx.png) and a
+    // handwritten scan (diary-scan.png). Rows list SEVERAL parcels in shorthand
+    // ("A5-6-7-B1-Kanal altı"), or relative areas ("tüm alan" = whole area,
+    // "kalan kısım" = the rest). 29 rows contain only a few dozen distinct
+    // values: step 1 matches each once, step 2 shows rows expanded per plot.
+    const DIARY_PLOTS = [
+      ['A1', 1.1], ['A2', 0.9], ['A3', 1.2], ['A4', 0.8], ['A5', 1.0], ['A6', 0.9], ['A7', 1.3], ['A8', 1.1], ['A9', 0.7], ['A10', 1.0],
+      ['B1', 2.12], ['B2', 0.8], ['B3', 0.9], ['B4', 1.0], ['B5', 0.7], ['B6', 0.9], ['B7', 1.1],
+    ].map(([name, area]) => ({ name, crop: 'Cherry', area }));
+    const NEW_PLOT = '__new', ALL_PLOTS = '__all', REST_PLOTS = '__rest';
+    const SKIP = 'Skip — not a crop-protection product';
+    const DIARY_PRODUCTS = {
+      'Hektaş Bordo Bulamacı': 'Copper sulphate + calcium hydroxide · Fungicide',
+      'Hektaş Göztaşı': 'Copper sulphate · Fungicide',
+      'Koruma Captan 50 WP': 'Captan · 50% · Fungicide',
+      'Yarda 400 SC': 'Fluopyram + Tebuconazole · Fungicide',
+      'Lusen': 'Fluopyram 250 g/l + Trifloxystrobin 250 g/l · Fungicide',
+      'Lamdex 50 CS': 'Lambda-cyhalothrin · Insecticide',
+      'Decis 25 EC': 'Deltamethrin 25 g/l · Insecticide',
+      'Decis 100 EC': 'Deltamethrin 100 g/l · Insecticide',
+      'Mospilan 20 SP': 'Acetamiprid · 20% · Insecticide',
+      'Delegate 250 WG': 'Spinetoram · 25% · Insecticide',
+      'Exirel 100 SE': 'Cyantraniliprole · Insecticide',
+    };
+    // Normalised key: case, spaces and punctuation don't matter ("YARDA 400SC" = "Yarda 400 SC").
+    // Turkish lower-casing turns "I" into dotless "ı" (EXIREL → exırel), so fold ı → i too.
+    const nk = (s) => String(s).toLocaleLowerCase('tr').replace(/ı/g, 'i').replace(/[\s.,%\-]/g, '');
+    const byKey = (o) => Object.fromEntries(Object.entries(o).map(([k, v]) => [nk(k), v]));
+    // Normalised raw value → [match, how, why].
+    const PRODUCT_ALIASES = {
+      'hektaşbordo': ['Hektaş Bordo Bulamacı', 'auto', 'Trade name in the Turkish product register'],
+      'hektaşgöztaşı': ['Hektaş Göztaşı', 'auto', '“Göztaşı” = bluestone (copper sulphate) · active substance column agrees'],
+      'korumacaptan50wp': ['Koruma Captan 50 WP', 'auto', 'Exact trade name'],
+      'yarda400sc': ['Yarda 400 SC', 'auto', 'Exact trade name'],
+      'lusen': ['Lusen', 'auto', 'Active substances in the file (“fluopram… trifioxstrobin…”, misspelt) agree'],
+      'lamdex': ['Lamdex 50 CS', 'auto', 'Trade name · one formulation registered'],
+      'lamdex50cs': ['Lamdex 50 CS', 'auto', 'Exact trade name'],
+      'decis': ['', '', '2 registered products — Decis 25 EC or Decis 100 EC? The file only says “decis”'],
+      'mospilan20sp': ['Mospilan 20 SP', 'auto', 'Exact trade name'],
+      'delegate': ['Delegate 250 WG', 'suggested', 'File says “spinetorom %25 wp” — Delegate is registered as 250 WG'],
+      'delegate250wg': ['Delegate 250 WG', 'auto', 'Exact trade name'],
+      'exirel100se': ['Exirel 100 SE', 'auto', 'Exact trade name'],
+    };
+    const METHOD_ALIASES = { 'püskürtme': ['Foliar spray', 'Turkish for spraying'] };
+    const REL_PARCELS = {
+      'tümalan': [ALL_PLOTS, 'Turkish for “whole area” — every plot on the farm'],
+      'kalankısım': [REST_PLOTS, 'Turkish for “remaining part” — plots not in the row above'],
+    };
+    const DOSE_UNIT_OPTS = [['g/100 l', 'g per 100 l'], ['ml/100 l', 'ml per 100 l']];
+    const WATER_UNITS = [['t', 'Tonnes for the whole row'], ['l', 'Litres for the whole row'], ['lda', 'Litres per dekar'], ['lha', 'Litres per hectare']];
+    const DATE_ORDERS = [['mdy', 'Month first (2/25/26 = 25 Feb)'], ['dmy', 'Day first (2/25/26 = invalid)']];
+
+    // Excel diary — page 1 as in the screenshot (row y-bounds are for the source preview).
+    const G1 = 'A5-6-7-8-9-10-B7-B1-A2-4-6-Kanal altı-A1-3';
+    const ORG = 'B1-2-3-4-5-Organik-20da-55da-40 da-';
+    const LUSEN_AI = 'fluopram250g/l trifioxstrobin250g/l';
+    const XLSX = [
+      // parcels, date, active ingredient, trade name, dose, PHI, water, [y0, y1]
+      [G1, '2/25/26', '', 'hektaş bordo', '2000', 21, 25, [163, 218]],
+      ['kalan kısım', '2/25/26', '', 'hektaş bordo', '1000', 21, 35, [218, 258]],
+      [G1, '3/28/26', LUSEN_AI, 'LUSEN', '25ml/100l', 3, 25, [258, 312]],
+      ['kalan kısım', '3/31/26', LUSEN_AI, 'LUSEN', '25ml/100l', 3, 35, [312, 350]],
+      [G1, '4/7/26', LUSEN_AI, 'LUSEN', '25ml/100l', 3, 25, [350, 405]],
+      ['kalan kısım', '4/9/26', LUSEN_AI, 'LUSEN', '25ml/100l', 3, 35, [405, 443]],
+      ['tüm alan', '4/18/26', 'lambda-cyhalothrin', 'lamdex', '50cc/100l', 14, 60, [443, 480]],
+      ['tüm alan', '4/25/26', 'deltametrin', 'decis', '25ml/100l', 3, 60, [480, 516]],
+      ['tüm alan', '4/25/25', 'acetamiprid%20', 'mospilan 20sp', '25gr/100l', 7, 60, [516, 553]],
+      ['tüm alan', '5/4/26', 'deltametrin', 'decis', '25ml/100l', 3, 60, [553, 590]],
+      ['tüm alan', '5/4/26', 'acetamiprid%20', 'mospilan 20sp', '25gr/100l', 7, 60, [590, 626]],
+      ['tüm alan', '5/16/26', 'lambda-cyhalothrin', 'lamdex', '50cc/100l', 14, 60, [626, 662]],
+      ['tüm alan', '5/24/26', 'spinetorom %25 wp', 'delegate', '20gr/100l', 3, 60, [662, 694]],
+      ['tüm alan', '6/1/26', 'spinetorom %25 wp', 'delegate', '20gr/100l', 3, 60, [694, 726]],
+      [G1, '6/1/26', LUSEN_AI, 'LUSEN', '25ml/100l', 3, 30, [726, 782]],
+      [ORG, '6/10/26', 'spinetorom %25 wp', 'delegate', '20gr/100l', 3, 30, [782, 852]],
+      [ORG, '6/14/26', 'spinetorom %25 wp', 'delegate', '20gr/100l', 3, 30, [852, 920]],
+    ];
+    // Handwritten scan — 12 rows, all on parcel "B C/A 21,2 da" (spelling varies).
+    const SCAN = [
+      // parcels, date, active ingredient, trade name, dose, PHI, harvest date, reason, [y0, y1]
+      ['B C/A 21,2 da', '10.03.2026', 'Bakır Sülfat', 'Hektaş Göztaşı', '1000g/100lt', 21, '22.03.2026', 'Genel Koruma', [220, 290]],
+      ['B C/A 21.2 da', '10.04.2026', 'Captan 50% WP', 'Koruma Captan 50 WP', '300g/100lt', 14, '25.04.2026', 'Monilinia laxa', [290, 360]],
+      ['BC/A 21.2 da', '25.04.2026', 'Fluopyram Tebuconazole', 'YARDA 400SC', '25g/100l', 3, '29.04.2026', 'Monilinia', [360, 432]],
+      ['BC/A 21.2 da', '10.05.2026', 'Acetamiprid', 'Mospilan 20SP', '25g/100l', 7, '18.05.26', 'Kiraz sineği', [432, 503]],
+      ['BC/A 21.2 da', '10.05.2026', 'Lambda-cyhalothrin', 'LAMDEX 50 CS', '50ml/100l', 14, '25.05-26', 'Kiraz sineği', [503, 572]],
+      ['BC/A 21.2 da', '11.05.2026', 'Captan', 'Koruma Captan 50 WP', '300g/100lt', 14, '26.05.26', 'Monilinia', [572, 643]],
+      ['BC/A 21.2 da', '15.05.2026', '%25 Spinetoram', 'Delegate 250 WG', '20g/100lt', 3, '19.05.26', 'Kiraz sineği', [643, 715]],
+      ['BC/A 21.2 da', '15.05.2026', 'Fluopyram Tebuconazole', 'YARDA 400 SC', '25g/100lt', 3, '19.05.26', 'Monilinia', [715, 785]],
+      ['BC/A 21.2 da', '18.05.2026', 'Cyantraniliprole', 'EXIREL 100 SE', '100ml/100l', 3, '22.05.2026', 'Kiraz sineği', [785, 855]],
+      ['BC/A 21.2 da', '18.05.2026', 'Fluopyram Trifloxystrobin', 'LUSEN', '25cc/100lt', 3, '22.05.2026', 'Monilinia', [855, 937]],
+      ['BC/A 21.2 da', '22.05.2026', '%25 Spinetoram', 'Delegate 250 WG', '20g/100lt', 3, '26.05.2026', 'Kiraz sineği', [937, 1008]],
+      ['BC/A 21.2 da', '22.05.2026', 'Fluopyram Trifloxystrobin', 'LUSEN', '25cc/100lt', 3, '26.05.2026', 'Monilinia', [1008, 1092]],
+    ];
+    const DIARY_ROWS = [
+      ...XLSX.map(([parcels, date, ai, trade, dose, phi, water, y], i) =>
+        ({ src: 'xlsx', line: i + 1, parcels, date, ai, trade, dose, phi, water, y, method: 'püskürtme', include: true })),
+      ...SCAN.map(([parcels, date, ai, trade, dose, phi, harvest, reason, y], i) =>
+        ({ src: 'scan', line: i + 1, parcels, date, ai, trade, dose, phi, harvest, reason, y, water: '', method: 'Püskürtme', include: true })),
+    ];
+    // Source previews: [file, natural size in the 2000-wide reference, header band].
+    const SOURCES = {
+      xlsx: { img: 'diary-xlsx.png', h: 940, head: [18, 162], file: 'İlaçlama defteri 2026.xlsx' },
+      scan: { img: 'diary-scan.png', h: 1112, head: [0, 218], file: 'ilaclama-kaydi.pdf' },
+    };
+
+    const lc = (s) => String(s).trim().toLocaleLowerCase('tr');
+    const productKey = (r) => (r.trade || r.ai).trim();
+
+    // "A5-6-7-B1-A2-4-Kanal altı" → A5 A6 A7 B1 A2 A4 "Kanal altı": bare numbers
+    // inherit the last letter, repeats are dropped, "20da"/"21,2 da" are areas.
+    function parseParcels(raw) {
+      let s = raw.trim(); const areas = [];
+      const m = s.match(/\s*(\d+[.,]\d+)\s*da$/i);
+      if (m) { areas.push(m[1].replace(',', '.')); s = s.slice(0, m.index).trim(); }
+      if (!/^[A-Z]+\d/.test(s)) return { tokens: [s], dupes: [], areas };
+      let prefix = ''; const tokens = [], dupes = [];
+      s.split('-').map(t => t.trim()).filter(Boolean).forEach(t => {
+        if (/^\d+\s*da$/i.test(t)) { areas.push(t); return; }
+        let code = t;
+        const a = t.match(/^([A-Z]+)\d+$/);
+        if (a) prefix = a[1]; else if (/^\d+$/.test(t) && prefix) code = prefix + t;
+        if (tokens.includes(code)) dupes.push(code); else tokens.push(code);
+      });
+      return { tokens, dupes, areas };
+    }
+
+    function autoPlot(code, areas) {
+      const rel = byKey(REL_PARCELS)[nk(code)];
+      if (rel) return { value: rel[0], how: 'auto', note: rel[1] };
+      if (DIARY_PLOTS.some(p => p.name === code)) return { value: code, how: 'exact' };
+      if (areas.length === 1 && areas[0].includes('.')) {
+        const ha = Number(areas[0]) / 10;
+        const p = DIARY_PLOTS.find(x => Math.abs(x.area - ha) < 0.05);
+        if (p) return { value: p.name, how: 'suggested', note: `Suggested from the area next to it: ${areas[0].replace('.', ',')} da ≈ ${p.name} (${p.area} ha)` };
+      }
+      return { value: '', how: '', note: 'Not one of your plots' };
+    }
+
+    // Dose cell → { n, unit spelling }. "1000g/100lt" → 1000, "g"; "2000" → 2000, "".
+    const parseDose = (raw) => { const m = String(raw).match(/^\s*([\d.,]+)\s*([a-zA-Z]*)/); return { n: parseFloat(m[1]), u: lc(m[2]) }; };
+    const UNIT_ALIASES = {
+      '': ['g/100 l', 'No unit in the cell — taken from the column header “(g / 100 l)”'],
+      'g': ['g/100 l', ''], 'gr': ['g/100 l', '“gr” = grams'],
+      'ml': ['ml/100 l', ''], 'cc': ['ml/100 l', '“cc” = ml'],
+    };
+
+    function buildDiaryMatches(rows) {
+      const out = [];
+      const add = (kind, key, make, sample) => {
+        let m = out.find(x => x.kind === kind && nk(x.key) === nk(key));
+        if (!m) { m = { kind, key, rows: 0, spellings: [], ...make() }; out.push(m); }
+        m.rows++;
+        if (sample && !m.spellings.includes(sample)) m.spellings.push(sample);
+      };
+      rows.forEach(r => {
+        const p = parseParcels(r.parcels);
+        p.tokens.forEach(t => add('parcel', t, () => autoPlot(t, p.areas), t));
+        add('product', productKey(r), () => {
+          const [value, how, note] = byKey(PRODUCT_ALIASES)[nk(productKey(r))] || ['', '', 'Not in the product register'];
+          return { value, how, note };
+        }, productKey(r));
+        add('method', lc(r.method), () => {
+          const [value, note] = METHOD_ALIASES[lc(r.method)] || ['', ''];
+          return { value, how: value ? 'auto' : '', note };
+        });
+        const u = parseDose(r.dose).u;
+        add('unit', 'dose:' + u, () => {
+          const [value, note] = UNIT_ALIASES[u] || ['', ''];
+          return { value, how: value ? 'auto' : '', note, label: u ? `Dose unit “${u}”` : 'Dose without a unit', sample: r.dose, opts: DOSE_UNIT_OPTS };
+        });
+      });
+      out.push({ kind: 'unit', key: 'water', rows: rows.filter(r => r.water !== '').length, value: '', how: '', note: 'The header has no unit — needed to work out the rate per hectare',
+        label: 'Toplam Kullanılan Su Miktarı', sample: '25, 35, 60, 30', opts: WATER_UNITS });
+      out.push({ kind: 'unit', key: 'date', rows: rows.filter(r => r.src === 'xlsx').length, value: 'mdy', how: 'auto', note: '“2/25/26” can only be month-first, so the whole column is. The scan uses dots — always day-first.',
+        label: 'Uygulama Tarihi (Excel)', sample: '2/25/26, 3/28/26…', opts: DATE_ORDERS });
+      return out;
+    }
+
+    const DIARY_SEED = { matches: buildDiaryMatches(DIARY_ROWS), plots: [], treatments: DIARY_ROWS, samples: [], labReports: [], residues: [] };
+    const DIARY_MAPPING = [
+      ['Uygulanan Parseller · Application Parcels', 'Plots — one row lists several'],
+      ['Uygulama Tarihi · Date of Application', 'Application date'],
+      ['Ticari Adı · Trade Name', 'Product'],
+      ['Etkili Madde/Tipi · Active Ingredient', 'Active substance — cross-checks the product'],
+      ['Doz (g / 100 l)', 'Dose (concentration, unit per cell)'],
+      ['Uygulama Metodu · Method of Application', 'Method'],
+      ['Hasat Öncesi Bekleme Süresi · Pre-harvest Interval', 'Pre-harvest interval (days)'],
+      ['Toplam Kullanılan Su Miktarı', 'Water volume'],
+      ['Uygun Hasat Tarihi · Permissible Harvest Date (scan)', 'Checked against the pre-harvest interval'],
+      ['Uygulama Nedeni · Reason of Application (scan)', 'Target — kept as a note'],
+    ];
+    const DIARY_IGNORED = ['Uygulayıcı imza (Operator signature)', 'Başlangıç-Bitiş Saati ve Hava Koşulu (Time & weather)', 'Teknik Yetkili (Authorised signature)'];
+
+    let diaryOpen = new Set();     // rows whose plot list is expanded
+    let diaryFilter = 'all';       // 'all' | 'flagged'
+    let diaryMore = new Set();     // match kinds with auto-matches expanded
+
     const SCENARIOS = {
       demo: {
         seed: SEED,
         detected: 'Sorted <strong>2 files</strong> — farm-2026.xlsx, lab-exports.csv —',
-        note: 'Rows are auto-classified by their columns — a single mixed sheet is split across the tabs below. Anything we can’t match to an existing plot, sample or report is highlighted in <strong>red</strong> for you to fix.',
+        note: 'Rows are auto-classified by their columns — a single mixed sheet is split across the steps below. Anything we can’t match to an existing plot, sample or report is highlighted in <strong>red</strong> for you to fix.',
       },
       fieldbook: {
         seed: FIELDBOOK_SEED,
         detected: 'Read <strong>Cuaderno de campo test.xlsx</strong> (Spanish field notebook, 6 rows)',
         note: 'One row per product application — we grouped the repeated plot columns into a single plot and kept each product as a treatment. Fertilisers and adjuvants don’t affect the residue forecast, so they start unticked.',
-        mapping: true,
+        mapping: { rows: FIELDBOOK_MAPPING, ignored: FIELDBOOK_IGNORED },
+      },
+      diary: {
+        seed: DIARY_SEED,
+        detected: 'Read <strong>2 files</strong> — İlaçlama defteri 2026.xlsx (17 rows), ilaclama-kaydi.pdf (12 handwritten rows) —',
+        note: 'Turkish spray diary: each row lists several parcels and one product. 29 rows use only a few dozen distinct values — match each once in step 1 and every row that uses it updates.',
+        mapping: { rows: DIARY_MAPPING, ignored: DIARY_IGNORED },
       },
     };
 
@@ -565,47 +816,286 @@
         blank: { include: true, plot: '', date: '', product: '', substance: '', category: 'Fungicide', method: 'Airblast spray', dose: '', perHl: '', water: '' },
       },
     };
-    // Active entity config for the current scenario (falls back to the default tabs).
-    const entity = (k) => (scenario === 'fieldbook' && FIELDBOOK_ENTITIES[k]) || ENTITIES[k];
-    const importableCount = (k) => entity(k).importable ? entity(k).importable() : data[k].length;
+    // ── Spray diary: derived values ────────────────────────────────────────
+    const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const matchOf = (kind, key) => data.matches.find(m => m.kind === kind && nk(m.key) === nk(key)) || {};
+    const plotByName = (n) => DIARY_PLOTS.find(p => p.name === n);
+    const diaryCreated = () => data.matches.filter(m => m.kind === 'parcel' && m.value === NEW_PLOT);
+    const farmPlots = () => [...DIARY_PLOTS.map(p => p.name), ...diaryCreated().map(m => m.key)];
+    // Resolved plots for a row: [{ code, name, isNew }] (deduped — two codes can map to one plot).
+    function rowPlots(r, depth = 0) {
+      const seen = new Set(), out = [];
+      const push = (code, name, isNew) => { if (name && seen.has(name)) return; if (name) seen.add(name); out.push({ code, name, isNew }); };
+      parseParcels(r.parcels).tokens.forEach(code => {
+        const v = matchOf('parcel', code).value;
+        if (v === ALL_PLOTS) farmPlots().forEach(n => push(code, n, !plotByName(n)));
+        else if (v === REST_PLOTS) {
+          // Everything not sprayed in the row above.
+          const prev = data.treatments[data.treatments.indexOf(r) - 1];
+          const taken = prev && depth < 3 ? new Set(rowPlots(prev, depth + 1).map(p => p.name)) : new Set();
+          farmPlots().filter(n => !taken.has(n)).forEach(n => push(code, n, !plotByName(n)));
+        } else push(code, v === NEW_PLOT ? code : v, v === NEW_PLOT);
+      });
+      return out;
+    }
+    const rowSkipped = (r) => matchOf('product', productKey(r)).value === SKIP;
+    const rowIncluded = (r) => r.include && !rowSkipped(r);
+    function parseDate(raw, order) {
+      const p = raw.split(/[\/.\-]/).map(Number);
+      if (p.length !== 3) return null;
+      let [a, b, y] = p; if (y < 100) y += 2000;
+      const [mo, d] = order === 'mdy' ? [a, b] : [b, a];
+      if (!(mo >= 1 && mo <= 12 && d >= 1 && d <= 31)) return null;
+      return new Date(Date.UTC(y, mo - 1, d));
+    }
+    const fmtD = (dt) => `${String(dt.getUTCDate()).padStart(2, '0')} ${MON[dt.getUTCMonth()]} ${dt.getUTCFullYear()}`;
+    const rowDate = (r) => parseDate(r.date, r.src === 'scan' ? 'dmy' : matchOf('unit', 'date').value);
+    const fmtN = (n) => n >= 10 ? Math.round(n).toLocaleString('en') : n.toFixed(n >= 1 ? 1 : 2);
 
-    const ORDER = ['plots', 'treatments', 'samples', 'labReports', 'residues'];
+    function doseInfo(r) {
+      const d = parseDose(r.dose);
+      const unit = matchOf('unit', 'dose:' + d.u).value;
+      const v = `${d.n.toLocaleString('en')} ${unit}`;
+      if (r.water === '') return { v, ctx: 'No water volume on the scan — kept as concentration' };
+      const wu = matchOf('unit', 'water').value;
+      if (!wu) return { v, ctx: 'Pick the water unit in step 1 for a per-ha rate', soft: true };
+      const ha = rowPlots(r).reduce((s, p) => s + ((plotByName(p.name) || {}).area || 0), 0);
+      const lha = wu === 't' ? r.water * 1000 / ha : wu === 'l' ? r.water / ha : wu === 'lda' ? r.water * 10 : r.water;
+      const rate = d.n * lha / 100 / 1000;
+      return { v, ctx: `≈ ${fmtN(rate)} ${unit.startsWith('ml') ? 'l' : 'kg'}/ha at ${fmtN(lha)} l water/ha` };
+    }
+    const mode = (arr) => { const c = {}; arr.forEach(x => { c[x] = (c[x] || 0) + 1; }); return Object.entries(c).sort((a, b) => b[1] - a[1])[0]?.[0]; };
+    // The diary's own convention for "permissible harvest date" (this one counts date + PHI + 1 day).
+    const harvestOffset = (r) => {
+      const dt = rowDate(r), h = parseDate(r.harvest, 'dmy');
+      return dt && h ? Math.round((h - dt) / 864e5) - r.phi : null;
+    };
+    // Soft, non-blocking checks shown under the cells and in the "Needs a look" filter.
+    function rowFlags(r) {
+      const f = {};
+      const dt = rowDate(r);
+      if (r.src === 'xlsx' && dt) {
+        const usualYear = Number(mode(data.treatments.filter(x => x.src === 'xlsx').map(x => rowDate(x)?.getUTCFullYear())));
+        if (dt.getUTCFullYear() !== usualYear) f.year = `Year ${dt.getUTCFullYear()} — every other row is ${usualYear}. Typo?`;
+      }
+      if (r.harvest) {
+        const usual = Number(mode(data.treatments.filter(x => x.harvest).map(harvestOffset)));
+        const off = harvestOffset(r);
+        if (off !== null && off !== usual) {
+          const exp = new Date(dt.getTime() + (r.phi + usual) * 864e5);
+          f.phi = `Diary says harvest ${fmtD(parseDate(r.harvest, 'dmy')).slice(0, 6)} — its other rows count date + PHI${usual ? ` + ${usual} d` : ''} → ${fmtD(exp).slice(0, 6)}`;
+        }
+      }
+      return f;
+    }
+    const diaryTreatmentCount = () => data.treatments.filter(rowIncluded).reduce((n, r) => n + rowPlots(r).length, 0);
+    const matchUnresolved = () => data.matches.filter(m => !m.value).length;
+
+    // Step 1 — one card per kind of value.
+    function diaryMatchPane() {
+      const idx = (m) => data.matches.indexOf(m);
+      const ctxLine = (m, info) => {
+        if (!m.value) return m.note ? `<div class="ctx">${esc(m.note)}</div>` : '';
+        if (m.how === 'suggested') return `<div class="ctx soft">${esc(m.note)}</div>`;
+        const t = [info, m.how === 'manual' ? 'Matched by you' : m.note].filter(Boolean).join(' · ');
+        return t ? `<div class="ctx${m.how === 'exact' ? ' ok' : ''}">${esc(t)}</div>` : '';
+      };
+      const select = (m, opts, placeholder) => {
+        const ok = !!m.value;
+        const list = `<option value=""${ok ? '' : ' selected'}>${placeholder}</option>` +
+          opts.map(([val, label]) => `<option value="${esc(val)}"${val === m.value ? ' selected' : ''}>${esc(label)}</option>`).join('');
+        return `<div class="ctx-pick">${ok ? '' : WARN}<select class="cell-select match-sel${ok ? '' : ' unmatched'}" data-m="${idx(m)}">${list}</select></div>`;
+      };
+      const used = (m) => `<td class="used">${m.rows} ${m.rows === 1 ? 'row' : 'rows'}</td>`;
+      const head = `<thead><tr><th style="width:30%">In your file</th><th style="width:12%">Used in</th><th>Matches to</th></tr></thead>`;
+      const card = (title, sub, extra, rows) => `<div class="card table-card match-card"><h3>${title} <span class="muted">${sub}</span></h3>${extra}
+        <table>${head}<tbody>${rows}</tbody></table></div>`;
+      const of = (kind) => data.matches.filter(m => m.kind === kind);
+      const confident = (m) => m.value && (m.how === 'exact' || m.how === 'auto');
+      const visible = (kind) => of(kind).filter(m => !confident(m) || diaryMore.has(kind));
+      const moreRow = (kind) => {
+        const n = of(kind).filter(confident).length;
+        if (!n) return '';
+        const open = diaryMore.has(kind);
+        return `<tr><td colspan="3"><button class="show-more" data-more="${kind}">${open ? 'Hide' : 'Show'} ${n} matched automatically ${open ? '▴' : '▾'}</button></td></tr>`;
+      };
+      const bad = (list) => list.filter(m => !m.value).length;
+
+      // Raw value + the other spellings that were merged into it.
+      const rawCell = (m) => {
+        const other = (m.spellings || []).filter(x => x !== m.key);
+        return `<td class="raw">${esc(m.key)}${other.length ? `<div class="ctx">also ${other.map(x => `“${esc(x)}”`).join(', ')}</div>` : ''}</td>`;
+      };
+
+      // Parcels.
+      const parcels = of('parcel');
+      const plotOpts = (m) => [[ALL_PLOTS, '★ Whole farm (every plot)'], [REST_PLOTS, '★ Rest of the farm (not in the row above)'],
+        ...DIARY_PLOTS.map(p => [p.name, `${p.name} · ${p.crop} · ${p.area} ha`]), [NEW_PLOT, `+ New plot “${m.key}”`]];
+      const parcelRows = visible('parcel').map(m => {
+        const p = plotByName(m.value);
+        const info = m.value === NEW_PLOT ? 'Created as a Draft plot — add crop and area later' : m.how === 'exact' ? 'Same code as your plot' : p ? `${p.crop} · ${p.area} ha` : '';
+        return `<tr>${rawCell(m)}${used(m)}<td class="ctx-cell">${select(m, plotOpts(m), '— pick plot —')}${ctxLine(m, info)}</td></tr>`;
+      }).join('') + moreRow('parcel');
+
+      // Products.
+      const products = of('product');
+      const prodOpts = [...Object.keys(DIARY_PRODUCTS).map(k => [k, k]), [SKIP, SKIP]];
+      const productRows = visible('product').map(m => `<tr>${rawCell(m)}${used(m)}<td class="ctx-cell">${select(m, prodOpts, '— pick product —')}${ctxLine(m, DIARY_PRODUCTS[m.value] || '')}</td></tr>`).join('') + moreRow('product');
+
+      // Methods.
+      const methods = of('method');
+      const methodRows = visible('method').map(m => `<tr>${rawCell(m)}${used(m)}<td class="ctx-cell">${select(m, METHOD_OPTIONS.map(o => [o, o]), '— pick method —')}${ctxLine(m, '')}</td></tr>`).join('') + moreRow('method');
+
+      // Units & formats (dose unit spellings, water unit, date order).
+      const units = of('unit');
+      const unitRows = visible('unit').map(m => `<tr><td class="raw">${esc(m.label)}<div class="ctx">e.g. ${esc(m.sample)}</div></td>${used(m)}<td class="ctx-cell">${select(m, m.opts, '— pick unit —')}${ctxLine(m, '')}</td></tr>`).join('') + moreRow('unit');
+
+      const status = (list) => bad(list) ? `· <span style="color:#d9534f">${bad(list)} to match</span>` : '· all matched';
+      return card('Parcels', `${parcels.length} codes ${status(parcels)}`, '', parcelRows) +
+        card('Products', `${products.length} names ${status(products)}`, '', productRows) +
+        card('Methods', `${methods.length} ${status(methods)}`, '', methodRows) +
+        card('Units &amp; formats', `${units.length} ${status(units)}`, '', unitRows) +
+        `<label class="remember"><input type="checkbox" checked> Remember these matches for this farm — next import fills them in automatically</label>`;
+    }
+
+    // Step 2 — diary rows, each expanded into one treatment per plot.
+    const SCAN_ICO = '<svg viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8zm4 18H6V4h7v5h5zM8 15h8v2H8zm0-4h8v2H8z"/></svg>';
+    const XLSX_ICO = '<svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2m-9 14H7v-2h3zm0-4H7v-2h3zm0-4H7V7h3zm7 8h-5v-2h5zm0-4h-5v-2h5zm0-4h-5V7h5z"/></svg>';
+    // Hover preview: the file's header band + this row, cropped from the source image.
+    function srcPreview(r) {
+      const S = SOURCES[r.src], k = 820 / 2000;
+      const crop = ([y0, y1]) => `<div class="crop" style="height:${Math.round((y1 - y0) * k)}px;background-image:url(${S.img});background-position:0 -${Math.round(y0 * k)}px"></div>`;
+      return `<span class="scan-pop">${crop(S.head)}${crop(r.y)}<div class="cap">${esc(S.file)} · row ${r.line}</div></span>`;
+    }
+    function diaryTreatmentsPane() {
+      const all = data.treatments.map((r, i) => ({ r, i, f: rowFlags(r) }));
+      const flagged = all.filter(x => Object.keys(x.f).length);
+      const list = diaryFilter === 'flagged' ? flagged : all;
+      const n = diaryTreatmentCount();
+      const plotsUsed = new Set(data.treatments.filter(rowIncluded).flatMap(r => rowPlots(r).map(p => p.name))).size;
+      const skipped = data.treatments.filter(rowSkipped).length;
+      const ctx = (t, soft) => t ? `<div class="ctx${soft ? ' soft' : ''}">${esc(t)}</div>` : '';
+
+      const rows = list.map(({ r, i, f }) => {
+        const skip = rowSkipped(r);
+        const plots = rowPlots(r);
+        const pm = matchOf('product', productKey(r)), mm = matchOf('method', r.method);
+        const dt = rowDate(r), dose = doseInfo(r);
+        const names = plots.map(p => p.name);
+        const src = `<span class="src-scan">${r.src === 'scan' ? SCAN_ICO + 'Scan' : XLSX_ICO + 'Excel'} ${r.line}${srcPreview(r)}</span>${ctx(r.src === 'scan' ? 'Handwritten' : '')}`;
+        const plotCellHtml = plots.length === 1
+          ? `<span class="v">${esc(names[0])}</span>${ctx(`“${r.parcels}”`)}`
+          : `<button class="plots-chip" data-open="${i}">${plots.length} plots ${diaryOpen.has(i) ? '▴' : '▾'}</button>` +
+            (diaryOpen.has(i)
+              ? `<div>${plots.map(p => `<span class="tok${p.isNew ? ' new' : ''}" title="“${esc(p.code)}” in the file">${esc(p.name)}${p.isNew ? ' · new' : ''}</span>`).join('')}</div>`
+              : ctx(names.slice(0, 4).join(', ') + (names.length > 4 ? ` +${names.length - 4}` : '')));
+        return `<tr class="${rowIncluded(r) ? '' : 'excluded'}">
+          ${skip ? '<td class="check-cell"></td>' : check('treatments', i, 'include', r.include)}
+          <td class="ro">${src}</td>
+          <td class="ro">${plotCellHtml}</td>
+          <td class="ro"><span class="v">${dt ? fmtD(dt) : '—'}</span>${f.year ? ctx(f.year, true) : ctx(`“${r.date}”`)}</td>
+          <td class="ro"><span class="v">${esc(skip ? productKey(r) : pm.value)}</span>${skip ? ctx('Skipped — no residue impact') : ctx(DIARY_PRODUCTS[pm.value])}${r.reason ? ctx(`Target: ${r.reason}`) : ''}</td>
+          <td class="ro"><span class="v">${esc(mm.value)}</span>${ctx(`“${r.method}”`)}</td>
+          <td class="ro"><span class="v">${dose.v}</span>${ctx(dose.ctx, dose.soft)}</td>
+          <td class="ro"><span class="v">${r.phi} d</span>${ctx(f.phi, true)}</td>
+        </tr>`;
+      }).join('');
+
+      return `<div class="toolbar">
+          <span class="pane-hint">${data.treatments.length} diary rows → <strong>${n} treatments</strong> on ${plotsUsed} plots${skipped ? ` · ${skipped} rows skipped (no residue impact)` : ''}</span>
+          <div class="filters">
+            <button class="flt${diaryFilter === 'all' ? ' on' : ''}" data-flt="all">All rows · ${all.length}</button>
+            <button class="flt${diaryFilter === 'flagged' ? ' on' : ''}" data-flt="flagged">Needs a look · ${flagged.length}</button>
+          </div>
+        </div>
+        <div class="card table-card no-clip"><table>
+          <thead><tr><th></th><th>Source</th><th>Plots</th><th>Date</th><th>Product</th><th>Method</th><th>Dose</th><th>PHI</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table></div>
+        <p class="pane-foot">Plots, products, methods and units come from step 1 — change a match there and every row that uses it updates.</p>`;
+    }
+
+    const DIARY_ENTITIES = {
+      matches: {
+        label: 'Match values',
+        count: () => data.matches.length,
+        pane: diaryMatchPane,
+        noun: 'value',
+        unresolved: matchUnresolved,
+        importable: () => diaryCreated().length,  // new plots created from parcel codes
+      },
+      treatments: {
+        label: 'Treatments',
+        count: () => diaryTreatmentCount(),
+        pane: diaryTreatmentsPane,
+        unresolved: () => 0,
+        importable: diaryTreatmentCount,
+      },
+    };
+
+    // Active entity config for the current scenario (falls back to the default tabs).
+    const entity = (k) => (scenario === 'fieldbook' && FIELDBOOK_ENTITIES[k]) || (scenario === 'diary' && DIARY_ENTITIES[k]) || ENTITIES[k];
+    const importableCount = (k) => !entity(k) ? 0 : entity(k).importable ? entity(k).importable() : (data[k] || []).length;
+
+    const ORDER = ['matches', 'plots', 'treatments', 'samples', 'labReports', 'residues'];
     let activeTab = 'plots';
 
+    // Per-step confirmation question; later steps link to what was confirmed before.
+    const STEP_COPY = {
+      matches: ['Do these matches look right?', 'Each value in your file is matched once and applied to every row that uses it. Red ones need you.'],
+      plots: ['Are these the right plots?', 'Check names, crops and areas — everything in the next steps is linked to these plots.'],
+      treatments: ['Are these the right treatments?', 'Each treatment is linked to a plot you confirmed in the previous step.'],
+      samples: ['Are these the right samples?', 'Each sample is linked to a plot.'],
+      labReports: ['Are these the right lab reports?', 'Each lab report is linked to a sample.'],
+      residues: ['Are these the right residues?', 'Each residue belongs to a lab report.'],
+    };
+    const shownSteps = () => ORDER.filter(k => (data[k] || []).length > 0);
+
     function render() {
-      // Tab strip (skip empty tabs).
+      // Stepper (skip empty record types).
       const tabsEl = document.getElementById('tabs');
-      const shown = ORDER.filter(k => data[k].length > 0);
+      const shown = shownSteps();
       if (!shown.includes(activeTab)) activeTab = shown[0];
-      tabsEl.innerHTML = shown.map(k => {
-        const u = entity(k).unresolved();
-        return `<button class="tab${k === activeTab ? ' active' : ''}" data-tab="${k}">
+      const cur = shown.indexOf(activeTab);
+      tabsEl.innerHTML = shown.map((k, i) => {
+        const u = i <= cur ? entity(k).unresolved() : 0;
+        const state = i === cur ? ' active' : i < cur ? ' done' : '';
+        return `<button class="tab${state}" data-tab="${k}"${i > cur ? ' disabled' : ''}>
+          <span class="num">${i < cur ? '✓' : i + 1}</span>
           ${entity(k).label}
-          <span class="count">${data[k].length}</span>
+          <span class="count">${entity(k).count ? entity(k).count() : data[k].length}</span>
           ${u ? `<span class="warn" title="${u} to resolve"><svg viewBox="0 0 24 24"><path d="M1 21h22L12 2zm12-3h-2v-2h2zm0-4h-2v-4h2z"/></svg></span>` : ''}
         </button>`;
-      }).join('');
+      }).join('<span class="sep">›</span>');
 
       // Panes.
       document.getElementById('panes').innerHTML = shown.map(k => {
         const E = entity(k);
-        const rows = data[k].map((r, i) => `<tr class="${E.rowClass ? E.rowClass(r) : ''}">${E.row(r, i)}</tr>`).join('');
+        const rows = E.pane ? '' : data[k].map((r, i) => `<tr class="${E.rowClass ? E.rowClass(r) : ''}">${E.row(r, i)}</tr>`).join('');
         const hint = `<span class="pane-hint">${E.hint ? E.hint() : `${data[k].length} ${data[k].length === 1 ? 'record' : 'records'}`}</span>`;
         const addBtn = `<button class="add-row" data-add="${k}">+ Add row</button>`;
         return `<section class="tabpane${k === activeTab ? ' active' : ''}" data-pane="${k}">
+          <h2 class="step-q">${STEP_COPY[k][0]}</h2>
+          <p class="step-sub">${STEP_COPY[k][1]}</p>
           ${E.notice ? E.notice() : ''}
-          <div class="toolbar">${hint}${addBtn}</div>
+          ${E.pane ? E.pane() : `<div class="toolbar">${hint}${addBtn}</div>
           <div class="card table-card"><table>
             <thead><tr>${E.headers.map(h => `<th>${h}</th>`).join('')}</tr></thead>
             <tbody>${rows}</tbody>
-          </table></div>
+          </table></div>`}
         </section>`;
       }).join('');
 
-      // Import button + type count.
-      const importable = ORDER.reduce((n, k) => n + importableCount(k), 0);
-      document.getElementById('importBtn').textContent = `Import all (${importable} records)`;
-      document.getElementById('typeCount').textContent = shown.length;
+      // Footer: Back/Continue until the last step, then Import.
+      const importable = shown.reduce((n, k) => n + importableCount(k), 0);
+      const next = shown[cur + 1];
+      document.getElementById('importBtn').textContent = next
+        ? `Continue to ${entity(next).label.toLowerCase()}`
+        : `Import all (${importable} records)`;
+      document.getElementById('cancelImport').textContent = cur > 0 ? 'Back' : 'Cancel';
+      const types = shown.filter(k => k !== 'matches').length;
+      document.getElementById('typeCount').textContent = types;
+      document.getElementById('typeNoun').textContent = types === 1 ? 'record type' : 'record types';
 
       // Scenario-specific banner copy + column mapping disclosure.
       const S = SCENARIOS[scenario];
@@ -613,9 +1103,9 @@
       document.getElementById('mixedNote').innerHTML = S.note;
       const mappingEl = document.getElementById('mapping');
       if (S.mapping && !mappingEl.firstChild) {
-        mappingEl.innerHTML = `<details class="mapping"><summary>How we read your columns (${FIELDBOOK_MAPPING.length} mapped, ${FIELDBOOK_IGNORED.length} ignored)</summary>
-          <table>${FIELDBOOK_MAPPING.map(([src, dst]) => `<tr><td>${esc(src)}</td><td>→ ${esc(dst)}</td></tr>`).join('')}</table>
-          <div class="ignored">Ignored: ${FIELDBOOK_IGNORED.map(esc).join(', ')}</div></details>`;
+        mappingEl.innerHTML = `<details class="mapping"><summary>How we read your columns (${S.mapping.rows.length} mapped, ${S.mapping.ignored.length} ignored)</summary>
+          <table>${S.mapping.rows.map(([src, dst]) => `<tr><td>${esc(src)}</td><td>→ ${esc(dst)}</td></tr>`).join('')}</table>
+          <div class="ignored">Ignored: ${S.mapping.ignored.map(esc).join(', ')}</div></details>`;
       } else if (!S.mapping) {
         mappingEl.innerHTML = '';
       }
@@ -623,17 +1113,17 @@
     }
 
     function totalUnresolved() {
-      return ORDER.reduce((n, k) => n + entity(k).unresolved(), 0);
+      return shownSteps().reduce((n, k) => n + entity(k).unresolved(), 0);
     }
     function firstIssueTab() {
-      return ORDER.find(k => data[k].length && entity(k).unresolved() > 0);
+      return shownSteps().find(k => entity(k).unresolved() > 0);
     }
 
     function showStep(id) {
       document.querySelectorAll('.step').forEach(s => s.classList.toggle('active', s.id === id));
     }
     function reset(next = scenario) {
-      scenario = next; yearChecked = false;
+      scenario = next; yearChecked = false; diaryOpen = new Set(); diaryFilter = 'all'; diaryMore = new Set();
       data = clone(SCENARIOS[scenario].seed); activeTab = 'plots';
       document.getElementById('mapping').innerHTML = '';
       render();
@@ -656,6 +1146,14 @@
       if (e.target.closest('#keepYear')) { yearChecked = true; render(); return; }
       if (e.target.closest('#replaceFile')) { showStep('uploadStep'); return; }
 
+      // Spray diary: expand a row's plot list / filter rows.
+      const chip = e.target.closest('[data-open]');
+      if (chip) { const i = Number(chip.dataset.open); diaryOpen.has(i) ? diaryOpen.delete(i) : diaryOpen.add(i); render(); return; }
+      const more = e.target.closest('[data-more]');
+      if (more) { const k = more.dataset.more; diaryMore.has(k) ? diaryMore.delete(k) : diaryMore.add(k); render(); return; }
+      const flt = e.target.closest('[data-flt]');
+      if (flt) { diaryFilter = flt.dataset.flt; render(); return; }
+
       const tab = e.target.closest('.tab');
       if (tab) { activeTab = tab.dataset.tab; render(); return; }
 
@@ -677,14 +1175,31 @@
       const d = e.target.closest('.row-del');
       if (d) { data[d.dataset.e].splice(Number(d.dataset.i), 1); render(); return; }
 
-      if (e.target.closest('#cancelImport')) { reset(); showStep('uploadStep'); return; }
+      if (e.target.closest('#cancelImport')) {
+        const shown = shownSteps(), cur = shown.indexOf(activeTab);
+        if (cur > 0) { activeTab = shown[cur - 1]; render(); return; }
+        reset(); showStep('uploadStep'); return;
+      }
 
       if (e.target.closest('#importBtn')) {
+        // Not the last step yet: confirm this one, then move on.
+        const shown = shownSteps(), cur = shown.indexOf(activeTab);
+        if (cur < shown.length - 1) {
+          const n = entity(activeTab).unresolved();
+          if (n > 0) {
+            document.getElementById('blockWarnText').textContent =
+              `Resolve ${n} unmatched ${n === 1 ? (entity(activeTab).noun || 'row') : (entity(activeTab).noun || 'row') + 's'} before continuing.`;
+            document.getElementById('blockWarn').classList.add('show');
+            return;
+          }
+          activeTab = shown[cur + 1]; render(); window.scrollTo(0, 0);
+          return;
+        }
         const u = totalUnresolved();
         if (u > 0) {
           const warn = document.getElementById('blockWarn');
           document.getElementById('blockWarnText').textContent =
-            `Resolve ${u} unmatched ${u === 1 ? 'row' : 'rows'} before importing — check the tabs marked ⚠.`;
+            `Resolve ${u} unmatched ${u === 1 ? 'row' : 'rows'} before importing — check the steps marked ⚠.`;
           warn.classList.add('show');
           activeTab = firstIssueTab() || activeTab; render();
           warn.classList.add('show');
@@ -692,6 +1207,7 @@
         }
         // Per-type tally for the summary.
         const counts = Object.fromEntries(ORDER.map(k => [k, importableCount(k)]));
+        counts.plots += counts.matches;  // spray diary: plots created from parcel codes
         const rows = [
           [counts.plots, 'plot', 'plots'],
           [counts.treatments, 'treatment', 'treatments'],
@@ -710,6 +1226,9 @@
 
     // Keep the model in sync as cells change; re-render match cells so warnings update.
     document.addEventListener('change', (e) => {
+      // Spray diary: one match updates every row that uses the value.
+      const ms = e.target.closest('.match-sel');
+      if (ms) { const m = data.matches[ms.dataset.m]; m.value = ms.value; m.how = 'manual'; render(); return; }
       const el = e.target.closest('.cell-select, .cell-input, .cell-check');
       if (!el) return;
       const rec = data[el.dataset.e] && data[el.dataset.e][el.dataset.i];
