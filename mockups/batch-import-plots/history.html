@@ -1,0 +1,535 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ResiYou — History (mockup)</title>
+  <link rel="stylesheet" href="app.css" />
+  <style>
+    body { background: #e9eaee; }
+    .frame { position: relative; min-height: 100vh; max-width: 1260px; margin: 0 auto; background: #f5f5f7; }
+
+    /* Top app bar — same as the other mockup pages. */
+    .appbar { height: 60px; display: flex; align-items: center; gap: 8px; padding: 0 24px; background: #fff; border-bottom: 1px solid #DCDBDB; position: relative; z-index: 1; }
+    .menu-btn { background: transparent; border: 0; cursor: pointer; padding: 6px; margin-right: 4px; color: #000; display: flex; border-radius: 8px; }
+    .menu-btn:hover { background: rgba(0,0,0,.05); }
+    .menu-btn svg { width: 24px; height: 24px; fill: currentColor; }
+    .logo-link { display: flex; cursor: pointer; }
+    .logo { width: 128px; height: 32px; display: block; }
+    .spacer { flex: 1; }
+    .appbar-right { display: flex; align-items: center; gap: 16px; }
+    .icon-btn { background: transparent; border: 0; cursor: pointer; color: #000; display: flex; padding: 4px; }
+    .icon-btn svg { width: 24px; height: 24px; fill: currentColor; }
+    .user { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+    .avatar { width: 32px; height: 32px; border-radius: 50%; background: #4a4a4a; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 16px; }
+    .user .name { font-size: 14px; color: #000; }
+    .caret { width: 20px; height: 20px; fill: #000; }
+    .crumbs { background: #E4E6EC; padding: 20px 32px 22px; }
+    .crumb-title { font-size: 18px; font-weight: 700; color: #333; margin: 0; }
+    .overlay { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 1300; }
+    [hidden] { display: none !important; }
+
+    /* ── History page ─────────────────────────────────────────────────── */
+    .page { padding: 28px 32px 64px; max-width: 900px; margin: 0 auto; }
+    .sub { margin: 0 0 20px; color: #555; font-size: 14px; }
+
+    .toolbar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 4px; }
+    .seg { display: inline-flex; background: #fff; border: 1px solid #DCDBDB; border-radius: 8px; padding: 2px; }
+    .seg button { border: 0; background: transparent; font: inherit; font-size: 13px; padding: 6px 14px; border-radius: 6px; cursor: pointer; color: #333; }
+    .seg button.on { background: #1a1a1a; color: #fff; }
+    .search { flex: 1; min-width: 220px; display: flex; align-items: center; gap: 8px; background: #fff; border: 1px solid #DCDBDB; border-radius: 8px; padding: 0 10px; }
+    .search:focus-within { border-color: #1a1a1a; }
+    .search svg { width: 18px; height: 18px; fill: #777; flex: none; }
+    .search input { border: 0; outline: 0; font: inherit; font-size: 14px; padding: 8px 0; width: 100%; background: transparent; }
+
+    /* Day group: one white card per day, one quiet line per entry. */
+    .day { font-size: 12px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: #666; margin: 26px 0 8px 2px; }
+    .card { background: #fff; border: 1px solid #DCDBDB; border-radius: 12px; overflow: hidden; }
+    .row + .row { border-top: 1px solid #efeff1; }
+
+    .head { display: grid; grid-template-columns: 44px 18px minmax(0, 1fr) auto 20px; align-items: center; column-gap: 12px; padding: 12px 14px; cursor: pointer; }
+    .head:hover { background: #fafafb; }
+    .head .t { font-size: 12px; color: #666; font-variant-numeric: tabular-nums; }
+    .head .ic svg { width: 18px; height: 18px; fill: #555; display: block; }
+    .sum { font-size: 14px; color: #1a1a1a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .sum .sec { color: #666; margin-left: 8px; }
+    .aside { display: flex; align-items: center; gap: 8px; }
+    .aside .count { font-size: 12px; color: #666; }
+    .pill { font-size: 11px; font-weight: 600; color: #444; border: 1px solid #bbb; border-radius: 10px; padding: 0 7px; line-height: 18px; }
+    .chev { width: 20px; height: 20px; fill: #666; transition: transform .15s; }
+    .row.open .chev { transform: rotate(180deg); }
+
+    /* Undo on the line only appears on hover (and always inside the open panel). */
+    .head .ghost { opacity: 0; transition: opacity .12s; }
+    .head:hover .ghost, .head .ghost:focus-visible { opacity: 1; }
+    .ghost { background: none; border: 0; font: inherit; font-size: 13px; font-weight: 600; color: #1a1a1a; padding: 4px 8px; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+    .ghost svg { width: 16px; height: 16px; fill: currentColor; }
+    .ghost:hover { background: #ededf0; }
+
+    /* Undone line: struck through, still readable. */
+    .row.undone .sum { color: #666; text-decoration: line-through; text-decoration-color: #888; }
+    .row.undone .ic svg { fill: #999; }
+
+    /* Expanded panel — aligned with the summary column. */
+    .panel { padding: 2px 48px 16px 102px; font-size: 13px; color: #333; }
+    .diff { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; }
+    .diff .f { color: #666; }
+    .diff .old { color: #666; text-decoration: line-through; }
+    .diff .new { color: #1a1a1a; font-weight: 600; }
+    .diff .arr { color: #777; }
+    .facts { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 14px; color: #444; }
+    .facts b { color: #1a1a1a; }
+    .sect { margin-top: 14px; }
+    .sect h4 { margin: 0 0 4px; font-size: 12px; font-weight: 600; color: #666; }
+    .sect table { width: 100%; border-collapse: collapse; }
+    .sect td { padding: 5px 0; border-bottom: 1px solid #f2f2f4; vertical-align: top; }
+    .sect td:first-child { width: 42%; color: #1a1a1a; padding-right: 12px; }
+    .sect td:last-child { color: #555; }
+    .sect .more { font-size: 12px; color: #666; padding: 5px 0; }
+    .fix { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 10px; align-items: center; padding: 5px 0; border-bottom: 1px solid #f2f2f4; }
+    .fix .what { color: #1a1a1a; }
+    .fix .what .diff { font-size: 13px; margin-left: 8px; }
+    .fix .when { font-size: 12px; color: #666; white-space: nowrap; }
+    .fix.undone .what { color: #666; text-decoration: line-through; text-decoration-color: #888; }
+    .fix.undone .diff .new { color: #666; font-weight: 500; }
+    .foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 14px; padding-top: 12px; border-top: 1px solid #efeff1; }
+    .foot .meta { font-size: 12px; color: #666; }
+    .btn-o { background: #fff; border: 1px solid #1a1a1a; color: #1a1a1a; font: inherit; font-size: 13px; font-weight: 600; border-radius: 8px; padding: 6px 12px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+    .btn-o svg { width: 16px; height: 16px; fill: currentColor; }
+    .btn-o:hover { background: #f1f1f4; }
+    .muted { color: #666; font-size: 12px; }
+    .row.flash .head { background: #f0f0f2; transition: background .6s; }
+
+    .empty { text-align: center; color: #777; padding: 48px 0; font-size: 14px; }
+
+    /* Source files: thumbnails, click to enlarge */
+    .thumbs { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 12px; }
+    .thumb { width: 168px; background: none; border: 0; padding: 0; font: inherit; text-align: left; cursor: zoom-in; }
+    .thumb .img { display: block; position: relative; width: 168px; height: 108px; border: 1px solid #e2e2e6; border-radius: 8px; overflow: hidden; background: #f5f5f7 center top / cover no-repeat; transition: border-color .12s, box-shadow .12s; }
+    .thumb:hover .img, .thumb:focus-visible .img { border-color: #1a1a1a; box-shadow: 0 2px 8px rgba(0,0,0,.12); }
+    .thumb .ext { position: absolute; left: 6px; bottom: 6px; background: #1a1a1a; color: #fff; font-size: 10px; font-weight: 700; letter-spacing: .04em; padding: 2px 5px; border-radius: 4px; }
+    .thumb .nm { display: block; max-width: 168px; margin-top: 5px; font-size: 12px; color: #1a1a1a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .thumb.noprev { cursor: default; }
+    .thumb.noprev .img { display: flex; align-items: center; justify-content: center; }
+    .thumb.noprev .img svg { width: 34px; height: 34px; fill: #999; }
+    .lb { position: fixed; inset: 0; background: rgba(10,10,12,.88); z-index: 2100; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 56px 72px 24px; cursor: zoom-out; }
+    .lb img { max-width: 100%; max-height: calc(100vh - 120px); border-radius: 6px; background: #fff; box-shadow: 0 12px 40px rgba(0,0,0,.4); cursor: default; }
+    .lb .cap { color: #fff; font-size: 14px; margin-top: 12px; }
+    .lb .cap span { color: #bbb; margin-left: 8px; }
+    .lb button { position: absolute; background: rgba(255,255,255,.12); border: 0; color: #fff; width: 44px; height: 44px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+    .lb button:hover { background: rgba(255,255,255,.24); }
+    .lb button svg { width: 24px; height: 24px; fill: #fff; }
+    .lb .x { top: 12px; right: 12px; }
+    .lb .pv { left: 16px; top: 50%; transform: translateY(-50%); }
+    .lb .nx { right: 16px; top: 50%; transform: translateY(-50%); }
+
+    /* Confirm dialog */
+    .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,.45); display: flex; align-items: center; justify-content: center; z-index: 2000; padding: 16px; }
+    .modal { background: #fff; border-radius: 12px; width: 480px; max-width: 100%; padding: 22px 24px 18px; box-shadow: 0 12px 40px rgba(0,0,0,.25); }
+    .modal h3 { margin: 0 0 6px; font-size: 18px; }
+    .modal p { margin: 0 0 12px; font-size: 14px; color: #555; line-height: 1.5; }
+    .modal .box { background: #f5f5f7; border-radius: 8px; padding: 10px 12px; font-size: 13px; color: #333; margin-bottom: 10px; line-height: 1.6; }
+    .modal .box b { display: block; color: #1a1a1a; margin-bottom: 2px; }
+    .modal .actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
+    .btn { font: inherit; font-size: 14px; font-weight: 600; border-radius: 8px; padding: 8px 16px; cursor: pointer; }
+    .btn.primary { background: #1a1a1a; color: #fff; border: 1px solid #1a1a1a; }
+    .btn.primary:hover { background: #000; }
+    .btn.text { background: none; border: 0; color: #333; }
+    .btn.text:hover { background: #f1f1f4; }
+
+    /* Toast */
+    .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%) translateY(20px); opacity: 0; pointer-events: none; background: #1a1a1a; color: #fff; border-radius: 8px; padding: 10px 10px 10px 16px; font-size: 14px; display: flex; align-items: center; gap: 12px; transition: all .2s; z-index: 2100; }
+    .toast.show { opacity: 1; transform: translateX(-50%); pointer-events: auto; }
+    .toast button { background: none; border: 0; color: #fff; font: inherit; font-weight: 600; text-decoration: underline; cursor: pointer; padding: 4px 6px; }
+
+    @media (max-width: 640px) {
+      .page { padding: 16px 16px 48px; }
+      .head { grid-template-columns: 40px minmax(0, 1fr) auto 20px; }
+      .head .ic { display: none; }
+      .head .aside .count { display: none; }
+      .panel { padding: 2px 14px 16px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="frame" id="frame">
+    <header class="appbar">
+      <button class="menu-btn" id="menuBtn" aria-label="Open navigation menu">
+        <svg viewBox="0 0 24 24"><path d="M3 18h18v-2H3zm0-5h18v-2H3zm0-7v2h18V6z"/></svg>
+      </button>
+      <a class="logo-link" href="index.html" aria-label="ResiYou — go to Plots">
+      <svg class="logo" viewBox="0 0 128 32" aria-label="ResiYou">
+        <g clip-path="url(#lclip)">
+          <path fill-rule="evenodd" clip-rule="evenodd" fill="url(#lg0)" d="M22.158 1.23249C21.9599 1.14991 21.7606 1.07144 21.56 0.997113C20.6377 0.655299 19.6902 0.400848 18.7297 0.234561C16.4409 -0.161708 14.0785 -0.0573067 11.8092 0.558602C8.38043 1.48917 5.35893 3.53446 3.22105 6.37201C1.08316 9.20956 -0.0494908 12.678 0.00165939 16.2304C0.0528095 19.7828 1.28486 23.2171 3.50355 25.992C5.72225 28.7668 8.80138 30.7242 12.2555 31.5557C15.7096 32.3872 19.3422 32.0453 22.5806 30.5841C25.819 29.1229 28.4789 26.6254 30.141 23.4854C31.243 21.4038 31.8648 19.1182 31.9803 16.7943C32.0041 16.3166 32.0064 15.8373 31.9871 15.3578C31.9588 14.6514 31.8835 13.9445 31.7605 13.2419L16.8 14.8445L22.158 1.23249ZM28.3885 17.179V15.2L28.1778 13.6257L16.8 14.8445L20.8937 4.44445L19.3778 3.99003L17.3917 3.63363C15.843 3.45934 14.2648 3.57633 12.7405 3.99003C10.0737 4.7138 7.72362 6.30459 6.06082 8.51157C4.39802 10.7186 3.51706 13.4162 3.55685 16.1792C3.59663 18.9422 4.55489 21.6133 6.28054 23.7715C8.00619 25.9297 10.4011 27.4522 13.0876 28.0989C15.7741 28.7456 18.5995 28.4797 21.1182 27.3432C23.637 26.2067 25.7058 24.2642 26.9986 21.822C27.7668 20.3708 28.2349 18.7923 28.3885 17.179Z"/>
+          <path fill-rule="evenodd" clip-rule="evenodd" fill="url(#lg1)" d="M31.2162 5.51988L13.9694 22.8624L7.28674 16.2893L9.78004 13.7544L13.9418 17.8479L28.6951 3.0127L31.2162 5.51988Z"/>
+          <path fill="#10384F" d="M38.9189 23.944V6.08541H45.8621C49.5197 6.08541 51.8258 8.20171 51.8258 11.5556V11.5804C51.8258 14.0061 50.4992 15.9367 48.3542 16.6669L52.359 23.944H49.1601L45.515 17.0877H41.6962V23.944H38.9189ZM41.6962 14.8105H45.5894C47.7343 14.8105 48.9618 13.6348 48.9618 11.6051V11.5804C48.9618 9.6002 47.6475 8.4121 45.515 8.4121H41.6962V14.8105Z"/>
+          <path fill="#10384F" d="M59.7113 24.2039C55.8802 24.2039 53.5616 21.5926 53.5616 17.4837V17.4713C53.5616 13.3996 55.9174 10.6769 59.5749 10.6769C63.2325 10.6769 65.4766 13.3006 65.4766 17.2114V18.1149H56.2397C56.2893 20.5777 57.6408 22.0133 59.7733 22.0133C61.3603 22.0133 62.4142 21.1965 62.749 20.2188L62.7861 20.1198H65.3279L65.3031 20.2559C64.8815 22.3227 62.8729 24.2039 59.7113 24.2039ZM59.5873 12.8675C57.8515 12.8675 56.5125 14.0432 56.2769 16.2214H62.8233C62.6002 13.9689 61.3355 12.8675 59.5873 12.8675Z"/>
+          <path fill="#10384F" d="M72.4446 24.2039C69.1838 24.2039 67.2744 22.595 67.0017 20.2188L66.9893 20.1074H69.6425L69.6673 20.2312C69.9153 21.4317 70.808 22.1371 72.457 22.1371C74.0688 22.1371 75.0359 21.4688 75.0359 20.4168V20.4045C75.0359 19.5629 74.5648 19.0802 73.1637 18.7461L71.0312 18.2634C68.5515 17.6941 67.324 16.506 67.324 14.6125V14.6001C67.324 12.2734 69.3574 10.6769 72.3578 10.6769C75.4451 10.6769 77.3048 12.3972 77.4412 14.6125L77.4536 14.761H74.9367L74.9243 14.6744C74.7631 13.5358 73.8704 12.7437 72.3578 12.7437C70.9196 12.7437 70.0145 13.4244 70.0145 14.464V14.4763C70.0145 15.2808 70.5476 15.8253 71.9487 16.1595L74.0688 16.6421C76.7345 17.2609 77.7512 18.3129 77.7512 20.1817V20.1941C77.7512 22.5703 75.5195 24.2039 72.4446 24.2039Z"/>
+          <path fill="#10384F" d="M81.2848 8.91952C80.4169 8.91952 79.7226 8.22646 79.7226 7.38489C79.7226 6.53095 80.4169 5.83789 81.2848 5.83789C82.1651 5.83789 82.847 6.53095 82.847 7.38489C82.847 8.22646 82.1651 8.91952 81.2848 8.91952ZM79.9457 23.944V10.9244H82.6238V23.944H79.9457Z"/>
+          <path fill="#10384F" d="M91.5389 23.944V17.2733L85.3149 6.08541H89.3568L93.3739 13.709H93.4607L97.4654 6.08541H101.52L95.2833 17.2733V23.944H91.5389Z"/>
+          <path fill="#10384F" d="M106.405 24.2163C102.363 24.2163 99.8212 21.6297 99.8212 17.3105V17.2857C99.8212 13.016 102.425 10.4046 106.392 10.4046C110.372 10.4046 112.988 12.9912 112.988 17.2857V17.3105C112.988 21.6421 110.422 24.2163 106.405 24.2163ZM106.417 21.3822C108.178 21.3822 109.306 19.897 109.306 17.3105V17.2857C109.306 14.7239 108.153 13.2387 106.392 13.2387C104.644 13.2387 103.504 14.7239 103.504 17.2857V17.3105C103.504 19.9094 104.632 21.3822 106.417 21.3822Z"/>
+          <path fill="#10384F" d="M119.386 24.2163C116.46 24.2163 114.799 22.3475 114.799 19.2411V10.6769H118.419V18.4862C118.419 20.2188 119.237 21.2213 120.861 21.2213C122.486 21.2213 123.515 20.0332 123.515 18.3005V10.6769H127.135V23.944H123.515V21.7534H123.44C122.758 23.2757 121.395 24.2163 119.386 24.2163Z"/>
+        </g>
+        <defs>
+          <linearGradient id="lg0" gradientUnits="userSpaceOnUse" x1="32" x2="0" y1="13.0667" y2="13.0667"><stop stop-color="#624963"/><stop offset="1" stop-color="#FF3162"/></linearGradient>
+          <linearGradient id="lg1" gradientUnits="userSpaceOnUse" x1="29.7778" x2="12.8001" y1="3.82184" y2="21.2441"><stop stop-color="#68B713"/><stop offset="1" stop-color="#87D228"/></linearGradient>
+          <clipPath id="lclip"><rect width="128" height="32" fill="#fff"/></clipPath>
+        </defs>
+      </svg>
+      </a>
+      <div class="spacer"></div>
+      <div class="appbar-right">
+        <button class="icon-btn" aria-label="Notifications"><svg viewBox="0 0 24 24"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.89 2 2 2m6-6v-5c0-3.07-1.64-5.640-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.630 5.36 6 7.92 6 11v5l-2 2v1h16v-1zm-2 1H8v-6c0-2.48 1.51-4.5 4-4.5s4 2.02 4 4.5z"/></svg></button>
+        <button class="icon-btn" aria-label="Help"><svg viewBox="0 0 24 24"><path d="M11 18h2v-2h-2zm1-16C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2m0 18c-4.41 0-8-3.590-8-8s3.590-8 8-8 8 3.590 8 8-3.590 8-8 8m0-14c-2.21 0-4 1.79-4 4h2c0-1.1.9-2 2-2s2 .9 2 2c0 2-3 1.75-3 5h2c0-2.25 3-2.5 3-5 0-2.21-1.79-4-4-4"/></svg></button>
+        <div class="user">
+          <div class="avatar">T</div>
+          <span class="name">Tobias Gemperli</span>
+          <svg class="caret" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5z"/></svg>
+        </div>
+      </div>
+    </header>
+
+    <div class="crumbs"><h1 class="crumb-title">History</h1></div>
+
+    <main class="page">
+      <p class="sub">Imports and edits to your plots, treatments and samples. Undo within 30 days.</p>
+      <div class="toolbar">
+        <div class="seg" id="seg">
+          <button data-f="all" class="on">All</button>
+          <button data-f="import">Batch imports</button>
+          <button data-f="edit">Edits</button>
+        </div>
+        <label class="search">
+          <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"/></svg>
+          <input id="q" type="search" placeholder="Search plot, product, file or person" />
+        </label>
+      </div>
+      <div id="list"></div>
+    </main>
+
+    <div class="overlay">
+      <div class="scrim" id="scrim"></div>
+      <nav class="drawer" role="navigation" aria-label="Navigate">
+        <ul class="nav">
+          <li><a class="item" href="index.html">
+            <svg viewBox="0 0 24 24"><path d="M3 13h2v-2H3v2m0 4h2v-2H3v2m0-8h2V7H3v2m4 4h14v-2H7v2m0 4h14v-2H7v2M7 7v2h14V7H7Z"/></svg>
+            Plots</a></li>
+          <li><a class="item" data-noop href="#">
+            <svg viewBox="0 0 24 24"><path d="M12 21C11.7167 21 11.4792 20.9042 11.2875 20.7125C11.0958 20.5208 11 20.2833 11 20V13.025C9.93333 13.025 8.90833 12.8208 7.925 12.4125C6.94167 12.0042 6.075 11.425 5.325 10.675C4.575 9.925 4 9.05833 3.6 8.075C3.2 7.09167 3 6.06667 3 5V4C3 3.71667 3.09583 3.47917 3.2875 3.2875C3.47917 3.09583 3.71667 3 4 3H5C6.05 3 7.06667 3.20417 8.05 3.6125C9.03333 4.02083 9.9 4.6 10.65 5.35C11.1667 5.86667 11.5958 6.43333 11.9375 7.05C12.2792 7.66667 12.5417 8.325 12.725 9.025C12.8083 8.90833 12.9 8.79583 13 8.6875C13.1 8.57917 13.2083 8.46667 13.325 8.35C14.075 7.6 14.9417 7.02083 15.925 6.6125C16.9083 6.20417 17.9333 6 19 6H20C20.2833 6 20.5208 6.09583 20.7125 6.2875C20.9042 6.47917 21 6.71667 21 7V8C21 9.06667 20.7958 10.0917 20.3875 11.075C19.9792 12.0583 19.4 12.925 18.65 13.675C17.9 14.425 17.0375 15 16.0625 15.4C15.0875 15.8 14.0667 16 13 16V20C13 20.2833 12.9042 20.5208 12.7125 20.7125C12.5208 20.9042 12.2833 21 12 21ZM11 11C11 10.2 10.8458 9.4375 10.5375 8.7125C10.2292 7.9875 9.79167 7.34167 9.225 6.775C8.65833 6.20833 8.0125 5.77083 7.2875 5.4625C6.5625 5.15417 5.8 5 5 5C5 5.8 5.15 6.56667 5.45 7.3C5.75 8.03333 6.18333 8.68333 6.75 9.25C7.31667 9.81667 7.96667 10.25 8.7 10.55C9.43333 10.85 10.2 11 11 11ZM13 14C13.8 14 14.5625 13.85 15.2875 13.55C16.0125 13.25 16.6583 12.8167 17.225 12.25C17.7917 11.6833 18.2292 11.0333 18.5375 10.3C18.8458 9.56667 19 8.8 19 8C18.2 8 17.4333 8.15417 16.7 8.4625C15.9667 8.77083 15.3167 9.20833 14.75 9.775C14.1833 10.3417 13.75 10.9875 13.45 11.7125C13.15 12.4375 13 13.2 13 14Z"/></svg>
+            Seasons</a></li>
+          <li><a class="item" data-noop href="#">
+            <svg viewBox="0 0 24 24"><path d="M8 14C7.71667 14 7.47917 13.9042 7.2875 13.7125C7.09583 13.5208 7 13.2833 7 13C7 12.7167 7.09583 12.4792 7.2875 12.2875C7.47917 12.0958 7.71667 12 8 12C8.28333 12 8.52083 12.0958 8.7125 12.2875C8.90417 12.4792 9 12.7167 9 13C9 13.2833 8.90417 13.5208 8.7125 13.7125C8.52083 13.9042 8.28333 14 8 14ZM12 14C11.7167 14 11.4792 13.9042 11.2875 13.7125C11.0958 13.5208 11 13.2833 11 13C11 12.7167 11.0958 12.4792 11.2875 12.2875C11.4792 12.0958 11.7167 12 12 12C12.2833 12 12.5208 12.0958 12.7125 12.2875C12.9042 12.4792 13 12.7167 13 13C13 13.2833 12.9042 13.5208 12.7125 13.7125C12.5208 13.9042 12.2833 14 12 14ZM16 14C15.7167 14 15.4792 13.9042 15.2875 13.7125C15.0958 13.5208 15 13.2833 15 13C15 12.7167 15.0958 12.4792 15.2875 12.2875C15.4792 12.0958 15.7167 12 16 12C16.2833 12 16.5208 12.0958 16.7125 12.2875C16.9042 12.4792 17 12.7167 17 13C17 13.2833 16.9042 13.5208 16.7125 13.7125C16.5208 13.9042 16.2833 14 16 14ZM5 22C4.45 22 3.97917 21.8042 3.5875 21.4125C3.19583 21.0208 3 20.55 3 20V6C3 5.45 3.19583 4.97917 3.5875 4.5875C3.97917 4.19583 4.45 4 5 4H6V3C6 2.71667 6.09583 2.47917 6.2875 2.2875C6.47917 2.09583 6.71667 2 7 2C7.28333 2 7.52083 2.09583 7.7125 2.2875C7.90417 2.47917 8 2.71667 8 3V4H16V3C16 2.71667 16.0958 2.47917 16.2875 2.2875C16.4792 2.09583 16.7167 2 17 2C17.2833 2 17.5208 2.09583 17.7125 2.2875C17.9042 2.47917 18 2.71667 18 3V4H19C19.55 4 20.0208 4.19583 20.4125 4.5875C20.8042 4.97917 21 5.45 21 6V20C21 20.55 20.8042 21.0208 20.4125 21.4125C20.0208 21.8042 19.55 22 19 22H5ZM5 20H19V10H5V20ZM5 8H19V6H5V8Z"/></svg>
+            Calendar</a></li>
+          <li><a class="item" data-noop href="#">
+            <svg viewBox="0 0 24 24"><path d="M5.02497 21C4.47497 21 4.00413 20.8042 3.61247 20.4125C3.2208 20.0208 3.02497 19.55 3.02497 19V11.05C2.64163 10.7 2.3458 10.25 2.13747 9.7C1.92913 9.15 1.92497 8.55 2.12497 7.9L3.17497 4.5C3.3083 4.06667 3.5458 3.70833 3.88747 3.425C4.22913 3.14167 4.62497 3 5.07497 3H18.975C19.425 3 19.8166 3.1375 20.15 3.4125C20.4833 3.6875 20.725 4.05 20.875 4.5L21.925 7.9C22.125 8.55 22.1208 9.14167 21.9125 9.675C21.7041 10.2083 21.4083 10.6667 21.025 11.05V19C21.025 19.55 20.8291 20.0208 20.4375 20.4125C20.0458 20.8042 19.575 21 19.025 21H5.02497ZM14.225 10C14.675 10 15.0166 9.84583 15.25 9.5375C15.4833 9.22917 15.575 8.88333 15.525 8.5L14.975 5H13.025V8.7C13.025 9.05 13.1416 9.35417 13.375 9.6125C13.6083 9.87083 13.8916 10 14.225 10ZM9.72497 10C10.1083 10 10.4208 9.87083 10.6625 9.6125C10.9041 9.35417 11.025 9.05 11.025 8.7V5H9.07497L8.52497 8.5C8.4583 8.9 8.5458 9.25 8.78747 9.55C9.02913 9.85 9.34163 10 9.72497 10ZM5.27497 10C5.57497 10 5.83747 9.89167 6.06247 9.675C6.28747 9.45833 6.42497 9.18333 6.47497 8.85L7.02497 5H5.07497L4.07497 8.35C3.97497 8.68333 4.02913 9.04167 4.23747 9.425C4.4458 9.80833 4.79163 10 5.27497 10ZM18.775 10C19.2583 10 19.6083 9.80833 19.825 9.425C20.0416 9.04167 20.0916 8.68333 19.975 8.35L18.925 5H17.025L17.575 8.85C17.625 9.18333 17.7625 9.45833 17.9875 9.675C18.2125 9.89167 18.475 10 18.775 10ZM5.02497 19H19.025V11.95C18.9416 11.9833 18.8875 12 18.8625 12H18.775C18.325 12 17.9291 11.925 17.5875 11.775C17.2458 11.625 16.9083 11.3833 16.575 11.05C16.275 11.35 15.9333 11.5833 15.55 11.75C15.1666 11.9167 14.7583 12 14.325 12C13.875 12 13.4541 11.9167 13.0625 11.75C12.6708 11.5833 12.325 11.35 12.025 11.05C11.7416 11.35 11.4125 11.5833 11.0375 11.75C10.6625 11.9167 10.2583 12 9.82497 12C9.34163 12 8.90413 11.9167 8.51247 11.75C8.1208 11.5833 7.77497 11.35 7.47497 11.05C7.12497 11.4 6.77913 11.6458 6.43747 11.7875C6.0958 11.9292 5.7083 12 5.27497 12H5.16247C5.1208 12 5.07497 11.9833 5.02497 11.95V19Z"/></svg>
+            Supermarkets</a></li>
+          <li><a class="item" data-noop href="#">
+            <svg viewBox="0 0 24 24"><path d="M9 17C8.71667 17 8.47917 16.9042 8.2875 16.7125C8.09583 16.5208 8 16.2833 8 16C8 15.7167 8.09583 15.4792 8.2875 15.2875C8.47917 15.0958 8.71667 15 9 15H10C10.2833 15 10.5208 15.0958 10.7125 15.2875C10.9042 15.4792 11 15.7167 11 16C11 16.2833 10.9042 16.5208 10.7125 16.7125C10.5208 16.9042 10.2833 17 10 17H9ZM8 22C6.61667 22 5.4375 21.5125 4.4625 20.5375C3.4875 19.5625 3 18.3833 3 17V8C2.45 8 1.97917 7.80417 1.5875 7.4125C1.19583 7.02083 1 6.55 1 6V4C1 3.45 1.19583 2.97917 1.5875 2.5875C1.97917 2.19583 2.45 2 3 2H13C13.55 2 14.0208 2.19583 14.4125 2.5875C14.8042 2.97917 15 3.45 15 4V6C15 6.55 14.8042 7.02083 14.4125 7.4125C14.0208 7.80417 13.55 8 13 8V11C13 11.55 12.8042 12.0208 12.4125 12.4125C12.0208 12.8042 11.55 13 11 13H9C8.71667 13 8.47917 12.9042 8.2875 12.7125C8.09583 12.5208 8 12.2833 8 12C8 11.7167 8.09583 11.4792 8.2875 11.2875C8.47917 11.0958 8.71667 11 9 11H11V8H5V17C5 17.8333 5.29167 18.5417 5.875 19.125C6.45833 19.7083 7.16667 20 8 20C8.3 20 8.5875 19.9583 8.8625 19.875C9.1375 19.7917 9.39167 19.675 9.625 19.525C9.84167 19.3917 10.075 19.3583 10.325 19.425C10.575 19.4917 10.7667 19.6417 10.9 19.875C11.05 20.1083 11.0917 20.3625 11.025 20.6375C10.9583 20.9125 10.8083 21.125 10.575 21.275C10.1917 21.5083 9.7875 21.6875 9.3625 21.8125C8.9375 21.9375 8.48333 22 8 22ZM3 6H13V4H3V6ZM16.5 19C17.2 19 17.7917 18.7583 18.275 18.275C18.7583 17.7917 19 17.2 19 16.5C19 15.8 18.7583 15.2083 18.275 14.725C17.7917 14.2417 17.2 14 16.5 14C15.8 14 15.2083 14.2417 14.725 14.725C14.2417 15.2083 14 15.8 14 16.5C14 17.2 14.2417 17.7917 14.725 18.275C15.2083 18.7583 15.8 19 16.5 19ZM16.5 21C15.25 21 14.1875 20.5625 13.3125 19.6875C12.4375 18.8125 12 17.75 12 16.5C12 15.25 12.4375 14.1875 13.3125 13.3125C14.1875 12.4375 15.25 12 16.5 12C17.75 12 18.8125 12.4375 19.6875 13.3125C20.5625 14.1875 21 15.25 21 16.5C21 16.9333 20.9417 17.35 20.825 17.75C20.7083 18.15 20.5333 18.5333 20.3 18.9L22.3 20.9C22.4833 21.0833 22.575 21.3167 22.575 21.6C22.575 21.8833 22.4833 22.1167 22.3 22.3C22.1167 22.4833 21.8833 22.575 21.6 22.575C21.3167 22.575 21.0833 22.4833 20.9 22.3L18.9 20.3C18.5333 20.5333 18.15 20.7083 17.75 20.825C17.35 20.9417 16.9333 21 16.5 21Z"/></svg>
+            Substances</a></li>
+          <li><a class="item" href="batch-import.html">
+            <svg viewBox="0 0 24 24"><path d="M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z"/></svg>
+            Batch import</a></li>
+          <li><a class="item" href="import-chat.html">
+            <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2m0 14H6l-2 2V4h16zM7 9h2v2H7zm4 0h2v2h-2zm4 0h2v2h-2z"/></svg>
+            Import assistant</a></li>
+          <li><a class="item selected" data-current href="history.html">
+            <svg viewBox="0 0 24 24"><path d="M13 3a9 9 0 0 0-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42A8.95 8.95 0 0 0 13 21a9 9 0 0 0 0-18m-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8z"/></svg>
+            History</a></li>
+          <li><a class="item" href="chat-blocks.html">
+            <svg viewBox="0 0 24 24"><path d="M4 8h4V4H4zm6 12h4v-4h-4zm-6 0h4v-4H4zm0-6h4v-4H4zm6 0h4v-4h-4zm6-10v4h4V4zm-6 4h4V4h-4zm6 6h4v-4h-4zm0 6h4v-4h-4z"/></svg>
+            Assistant components</a></li>
+        </ul>
+        <div class="drawer-footer"><a data-noop href="#">Conditions</a> &amp; <a data-noop href="#">Privacy</a></div>
+      </nav>
+    </div>
+  </div>
+
+  <div id="modalRoot"></div>
+  <div class="toast" id="toast"><span id="toastMsg"></span><button id="toastAct"></button></div>
+
+  <script src="app.js"></script>
+  <script>
+  // ── Mock history ────────────────────────────────────────────────────────
+  // Every save is one entry: a batch import or a single edit / delete.
+  // Edits made on records an import created (parent) are its "fixes" and are
+  // shown nested inside it — undoing the import undoes them too, newest first.
+  const NOW = new Date('2026-11-23T14:45');
+  const ICONS = {
+    import: '<path d="M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z"/>',
+    edit: '<path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75z"/>',
+    delete: '<path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6zM19 4h-3.5l-1-1h-5l-1 1H5v2h14z"/>',
+    undo: '<path d="M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8"/>',
+    redo: '<path d="M18.4 10.6C16.55 8.99 14.15 8 11.5 8c-4.65 0-8.58 3.03-9.96 7.22L3.9 16c1.05-3.19 4.05-5.5 7.6-5.5 1.95 0 3.73.72 5.12 1.88L13 16h9V7z"/>',
+  };
+  const svg = (k) => `<svg viewBox="0 0 24 24">${ICONS[k]}</svg>`;
+
+  const entries = [
+    { id: 'e1', type: 'import', at: '2026-11-23T14:05', by: 'You', via: 'Import assistant',
+      files: ['İlaçlama defteri 2026.xlsx', 'ilaclama-kaydi.pdf'],
+      previews: { 'İlaçlama defteri 2026.xlsx': 'diary-xlsx.png', 'ilaclama-kaydi.pdf': 'diary-scan.png' },
+      facts: [[2, 'new plots'], [238, 'treatments'], [2, 'plots updated']],
+      groups: [
+        { label: 'Plots', rows: [['Kanal altı', 'New draft plot'], ['Organik', 'New draft plot · 11.5 ha'], ['B1', 'Area 2.0 → 2.12 ha'], ['B4', 'Variety — → 0900 Ziraat']] },
+        { label: 'Treatments', more: 233, rows: [
+          ['A5 · Decis 25 EC', '12 Apr 2026 · 0.5 l/ha'], ['A6 · Decis 25 EC', '12 Apr 2026 · 0.5 l/ha'],
+          ['B1 · Hektaş Bordo Bulamacı', '28 Mar 2026 · 3 kg/ha'], ['A1–A10 · Yarda 400 SC', '6 May 2026 · 0.6 l/ha · 10 plots'],
+          ['B1 · Lamdex 50 CS', '19 May 2026 · 0.15 l/ha']] },
+      ] },
+    { id: 'e2', type: 'edit', at: '2026-11-23T14:31', by: 'You', via: 'Plot detail',
+      what: 'Decis 25 EC', plot: 'A5', field: 'Rate', from: '0.5 l/ha', to: '0.4 l/ha', parent: 'e1' },
+    { id: 'e2b', type: 'edit', at: '2026-11-23T14:38', by: 'You', via: 'Plot detail',
+      what: 'Lamdex 50 CS', plot: 'B1', field: 'Application date', from: '19 May 2026', to: '21 May 2026', parent: 'e1' },
+    { id: 'e3', type: 'edit', at: '2026-11-23T11:12', by: 'You', via: 'Plots table',
+      what: 'plot', plot: 'B2', field: 'Variety', from: '—', to: '0900 Ziraat' },
+    { id: 'e4', type: 'delete', at: '2026-11-23T10:02', by: 'You', via: 'Plot detail',
+      what: 'Mospilan 20 SP', plot: 'A3', detail: '2 Jun 2026 · 0.25 kg/ha' },
+
+    { id: 'e5', type: 'import', at: '2026-11-22T16:40', by: 'You', via: 'Batch import',
+      files: ['Cuaderno de campo test.xlsx'], facts: [[1, 'new plot'], [6, 'treatments']],
+      groups: [
+        { label: 'Plots', rows: [['Finca Los Pinos 3', 'New · Strawberry · Fortuna · 2.4 ha']] },
+        { label: 'Treatments', more: 2, rows: [
+          ['Signum', '3 Mar 2026 · 1.5 kg/ha'], ['Luna Sensation', '17 Mar 2026 · 0.8 l/ha'],
+          ['Teppeki', '2 Apr 2026 · 0.14 kg/ha'], ['Switch', '15 Apr 2026 · 1 kg/ha']] },
+      ] },
+
+    { id: 'e7', type: 'import', at: '2026-11-20T10:20', by: 'You', via: 'Batch import',
+      files: ['farm-2026.xlsx', 'lab-exports.csv'],
+      facts: [[4, 'new plots'], [12, 'treatments'], [3, 'samples'], [3, 'lab reports'], [18, 'residues']],
+      forecast: 'Residue forecasts for Erdbeeren Nord and Apfel Süd (run 21 Nov) used this data. They will be marked outdated.',
+      groups: [
+        { label: 'Plots', rows: [['Erdbeeren Nord', 'New · Strawberry · Elsanta · 1.8 ha'], ['Erdbeeren Süd', 'New · Strawberry · Clery · 1.2 ha'], ['Apfel Süd', 'New · Apple · Gala · 3.5 ha'], ['Kirsche Hang', 'New · Cherry · Kordia · 0.9 ha']] },
+        { label: 'Samples & lab reports', rows: [['S-0012 · Erdbeeren Nord', 'Fruit · Eurofins REF-0007 · 6 residues'], ['S-0013 · Apfel Süd', 'Fruit · Eurofins REF-0008 · 7 residues'], ['S-0014 · Kirsche Hang', 'Leaf · Eurofins REF-0009 · 5 residues']] },
+      ] },
+    { id: 'e8', type: 'edit', at: '2026-11-20T15:20', by: 'You', via: 'Plot detail',
+      what: 'plot', plot: 'Apfel Süd', field: 'Harvest date', from: '15 Sep 2026', to: '22 Sep 2026', parent: 'e7',
+      undone: { at: '2026-11-21T08:10', by: 'You' } },
+    { id: 'e6', type: 'edit', at: '2026-11-22T09:15', by: 'Lyle Peterer', via: 'Lab management',
+      what: 'sample S-0012', plot: 'Erdbeeren Nord', field: 'Sampling date', from: '12 Nov 2026', to: '13 Nov 2026', parent: 'e7' },
+
+    { id: 'e9', type: 'import', at: '2026-10-12T09:00', by: 'You', via: 'Batch import',
+      files: ['plots-2025.csv'], facts: [[8, 'new plots']],
+      groups: [{ label: 'Plots', more: 5, rows: [['Obstgarten 1', 'New · Apple · Braeburn · 2.0 ha'], ['Obstgarten 2', 'New · Apple · Jonagold · 1.6 ha'], ['Birne West', 'New · Pear · Conference · 1.1 ha']] }] },
+  ];
+  const byId = Object.fromEntries(entries.map(e => [e.id, e]));
+  const d = (s) => new Date(s);
+  const fixesOf = (e) => entries.filter(x => x.parent === e.id).sort((a, b) => d(b.at) - d(a.at));
+
+  // ── Formatting ──────────────────────────────────────────────────────────
+  const esc = (s) => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const dayKey = (t) => t.toDateString();
+  const hm = (t) => t.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+  const short = (t) => t.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+  const dayLabel = (t) => {
+    const diff = Math.round((new Date(NOW.toDateString()) - new Date(t.toDateString())) / 864e5);
+    if (diff === 0) return 'Today';
+    if (diff === 1) return 'Yesterday';
+    return t.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
+  };
+  // Time relative to the day it's shown under: just "14:05", or "22 Nov, 09:15" when it differs.
+  const timeIn = (t, day) => dayKey(t) === day ? hm(t) : `${short(t)}, ${hm(t)}`;
+  const ago = (t) => dayKey(t) === dayKey(NOW) ? hm(t) : `${short(t)}, ${hm(t)}`;
+  const expired = (e) => (NOW - d(e.at)) / 864e5 > 30;
+  const CHEV = '<svg class="chev" viewBox="0 0 24 24"><path d="M7.41 8.59 12 13.17l4.59-4.58L18 10l-6 6-6-6z"/></svg>';
+  const diff = (e, withField = true) => `<span class="diff">${withField ? `<span class="f">${esc(e.field)}</span>` : ''}<span class="old">${esc(e.from)}</span><span class="arr">→</span><span class="new">${esc(e.to)}</span></span>`;
+  const target = (e) => e.what === 'plot' ? esc(e.plot) : `${esc(e.what)} · ${esc(e.plot)}`;
+
+  // One line, collapsed: the essentials only.
+  function summary(e) {
+    const by = e.by !== 'You' ? `<span class="sec">${esc(e.by)}</span>` : '';
+    if (e.type === 'import') {
+      const more = e.files.length > 1 ? ` <span class="sec" style="margin-left:4px">+${e.files.length - 1} file${e.files.length > 2 ? 's' : ''}</span>` : '';
+      return `${esc(e.files[0])}${more}${by}`;
+    }
+    if (e.type === 'delete') return `Deleted ${target(e)}${by}`;
+    return `${esc(e.field)} · ${target(e)}${by}`;
+  }
+
+  // ── Render ──────────────────────────────────────────────────────────────
+  let filter = 'all', q = '';
+  const open = new Set();
+  const text = (e) => [e.by, e.via, e.what, e.plot, e.field, e.from, e.to, ...(e.files || []), ...(e.groups || []).flatMap(g => g.rows.flat())].join(' ').toLowerCase();
+  const matches = (e) => {
+    const fixes = e.type === 'import' ? fixesOf(e) : [];
+    if (filter === 'import' && e.type !== 'import') return false;
+    if (filter === 'edit' && e.type === 'import' && !fixes.length) return false;
+    return !q || text(e).includes(q) || fixes.some(f => text(f).includes(q));
+  };
+
+  // '' when there's no action (expired, or its import is undone).
+  function action(e, cls) {
+    if (e.undone) {
+      const p = e.parent && byId[e.parent];
+      return p && p.undone ? '' : `<button class="${cls}" data-redo="${e.id}">${svg('redo')}Redo</button>`;
+    }
+    return expired(e) ? '' : `<button class="${cls}" data-undo="${e.id}">${svg('undo')}${e.type === 'import' && cls === 'btn-o' ? 'Undo import' : 'Undo'}</button>`;
+  }
+  const undoneText = (e) => e.undone ? `Undone${e.undone.cascade ? ' with the import' : ''} ${ago(d(e.undone.at))}` : '';
+
+  function fixHtml(f, day) {
+    return `<div class="fix${f.undone ? ' undone' : ''}" id="${f.id}">
+      <div class="what">${f.by !== 'You' ? `${esc(f.by)}: ` : ''}${target(f)}${diff(f)}</div>
+      <span class="when">${f.undone ? undoneText(f) : timeIn(d(f.at), day)}</span>
+      <span>${action(f, 'ghost')}</span>
+    </div>`;
+  }
+
+  const FILEIC = '<svg viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8zm4 18H6V4h7v5h5z"/></svg>';
+  const extOf = (f) => f.split('.').pop().toUpperCase();
+  function thumbsHtml(e) {
+    const pv = e.previews || {};
+    return `<div class="thumbs">${e.files.map(f => pv[f]
+      ? `<button class="thumb" data-zoom="${e.id}" data-file="${esc(f)}" title="Enlarge ${esc(f)}"><span class="img" style="background-image:url('${pv[f]}')"><span class="ext">${extOf(f)}</span></span><span class="nm">${esc(f)}</span></button>`
+      : `<div class="thumb noprev" title="No preview"><span class="img">${FILEIC}<span class="ext">${extOf(f)}</span></span><span class="nm">${esc(f)}</span></div>`).join('')}</div>`;
+  }
+
+  // Lightbox: enlarges a source file; arrows step through the import's files.
+  let lb = null;
+  function openLb(e, file) {
+    const list = e.files.filter(f => (e.previews || {})[f]);
+    lb = { e, list, i: Math.max(0, list.indexOf(file)) }; drawLb();
+  }
+  function drawLb() {
+    const { e, list, i } = lb, f = list[i], many = list.length > 1;
+    document.getElementById('modalRoot').innerHTML = `<div class="lb" id="lb">
+      <button class="x" data-lb="close" aria-label="Close"><svg viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg></button>
+      ${many ? `<button class="pv" data-lb="prev" aria-label="Previous"><svg viewBox="0 0 24 24"><path d="M15.41 7.41 14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg></button><button class="nx" data-lb="next" aria-label="Next"><svg viewBox="0 0 24 24"><path d="M10 6 8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg></button>` : ''}
+      <img src="${e.previews[f]}" alt="${esc(f)}">
+      <div class="cap">${esc(f)}${many ? `<span>${i + 1} / ${list.length}</span>` : ''}</div>
+    </div>`;
+    document.getElementById('lb').onclick = (ev) => {
+      const b = ev.target.closest('[data-lb]');
+      if (b && b.dataset.lb !== 'close') { stepLb(b.dataset.lb === 'next' ? 1 : -1); return; }
+      if (ev.target.tagName !== 'IMG') closeLb();
+    };
+  }
+  const stepLb = (n) => { lb.i = (lb.i + n + lb.list.length) % lb.list.length; drawLb(); };
+  const closeLb = () => { lb = null; document.getElementById('modalRoot').innerHTML = ''; };
+
+  function panelHtml(e) {
+    const day = dayKey(d(e.at));
+    let h = '';
+    if (e.type === 'import') {
+      h += `<div class="facts">${e.facts.map(([n, w]) => `<span><b>${n}</b> ${w}</span>`).join('')}</div>`;
+      h += thumbsHtml(e);
+      const fixes = fixesOf(e);
+      if (fixes.length) h += `<div class="sect"><h4>Fixed since import</h4>${fixes.map(f => fixHtml(f, day)).join('')}</div>`;
+      h += e.groups.map(g => `<div class="sect"><h4>${esc(g.label)}</h4><table>${g.rows.map(r => `<tr><td>${esc(r[0])}</td><td>${esc(r[1])}</td></tr>`).join('')}</table>${g.more ? `<div class="more">+ ${g.more} more</div>` : ''}</div>`).join('');
+    } else if (e.type === 'delete') {
+      h += `<div class="diff"><span class="f">Treatment</span><span class="new">${esc(e.what)}</span><span class="old">${esc(e.detail)}</span></div>`;
+    } else {
+      h += diff(e);
+    }
+    const meta = [e.by, e.via, `${short(d(e.at))}, ${hm(d(e.at))}`].map(esc).join(' · ');
+    const status = e.undone ? ` · <b>${undoneText(e)}</b>` : (expired(e) ? ' · Undo no longer available (older than 30 days)' : '');
+    return `<div class="panel"><div>${h}</div><div class="foot"><span class="meta">${meta}${status}</span>${action(e, 'btn-o')}</div></div>`;
+  }
+
+  function rowHtml(e) {
+    const isOpen = open.has(e.id);
+    const fixes = e.type === 'import' ? fixesOf(e).filter(f => !f.undone).length : 0;
+    const aside = [
+      e.undone ? '<span class="pill">Undone</span>' : '',
+      fixes ? `<span class="count">${fixes} fix${fixes > 1 ? 'es' : ''}</span>` : '',
+      e.type === 'import' && !e.undone ? `<span class="count">${(([n, w]) => `${n} ${w}`)(e.facts.find(f => /treatment/.test(f[1])) || e.facts[0])}</span>` : '',
+      isOpen ? '' : action(e, 'ghost'),
+    ].join('');
+    return `<div class="row${e.undone ? ' undone' : ''}${isOpen ? ' open' : ''}" id="${e.id}">
+      <div class="head" data-toggle="${e.id}" role="button" aria-expanded="${isOpen}">
+        <span class="t">${hm(d(e.at))}</span>
+        <span class="ic">${svg(e.type)}</span>
+        <span class="sum">${summary(e)}</span>
+        <span class="aside">${aside}</span>
+        ${CHEV}
+      </div>
+      ${isOpen ? panelHtml(e) : ''}
+    </div>`;
+  }
+
+  function render() {
+    document.querySelectorAll('#seg button').forEach(b => b.classList.toggle('on', b.dataset.f === filter));
+    const tops = entries.filter(e => !e.parent).filter(matches).sort((a, b) => d(b.at) - d(a.at));
+    if (!tops.length) { document.getElementById('list').innerHTML = `<div class="empty">Nothing matches “${esc(q)}”.</div>`; return; }
+    let html = '', cur = '';
+    tops.forEach(e => {
+      const k = dayKey(d(e.at));
+      if (k !== cur) { if (cur) html += '</div>'; cur = k; html += `<div class="day">${dayLabel(d(e.at))}</div><div class="card">`; }
+      html += rowHtml(e);
+    });
+    document.getElementById('list').innerHTML = html + '</div>';
+  }
+
+  // ── Undo / redo ─────────────────────────────────────────────────────────
+  const stamp = (extra) => ({ at: NOW.toISOString(), by: 'You', ...extra });
+  function doUndo(e) {
+    fixesOf(e).filter(f => !f.undone).forEach(f => { f.undone = stamp({ cascade: true }); });
+    e.undone = stamp();
+    render(); flash(e.id);
+    toast(e.type === 'import' ? 'Import undone' : (e.type === 'delete' ? 'Treatment restored' : 'Change undone'), 'Redo', () => doRedo(e));
+  }
+  function doRedo(e) {
+    delete e.undone;
+    fixesOf(e).filter(f => f.undone && f.undone.cascade).forEach(f => delete f.undone);
+    render(); flash(e.id);
+    toast(e.type === 'import' ? 'Import restored' : 'Change redone', 'Undo', () => doUndo(e));
+  }
+
+  // A single edit undoes straight away (toast offers Redo). An import asks first.
+  function askUndo(e) {
+    if (e.type !== 'import') return doUndo(e);
+    const live = fixesOf(e).filter(f => !f.undone);
+    const fixBox = live.length ? `<div class="box"><b>${live.length} ${live.length === 1 ? 'fix' : 'fixes'} since import will be undone too</b>
+      ${live.map(f => `${esc(f.what === 'plot' ? 'Plot' : f.what)} · ${esc(f.plot)} — ${esc(f.field)} ${esc(f.from)} → ${esc(f.to)} <span style="color:#888">· ${esc(f.by)}</span>`).join('<br>')}</div>` : '';
+    const fcBox = e.forecast ? `<div class="box"><b>Forecasts affected</b>${esc(e.forecast)}</div>` : '';
+    const n = e.facts.map(([n, w]) => `${n} ${w}`).join(', ');
+    document.getElementById('modalRoot').innerHTML = `
+      <div class="modal-bg" id="mbg"><div class="modal" role="dialog" aria-modal="true">
+        <h3>Undo import of ${esc(e.files[0])}${e.files.length > 1 ? ` + ${e.files.length - 1}` : ''}?</h3>
+        <p>Removes everything this import added (${n}) and restores previous values. You can redo it afterwards.</p>
+        ${fixBox}${fcBox}
+        <div class="actions"><button class="btn text" id="mCancel">Cancel</button><button class="btn primary" id="mOk">Undo import</button></div>
+      </div></div>`;
+    const close = () => { document.getElementById('modalRoot').innerHTML = ''; };
+    document.getElementById('mCancel').onclick = close;
+    document.getElementById('mbg').onclick = (ev) => { if (ev.target.id === 'mbg') close(); };
+    document.getElementById('mOk').onclick = () => { close(); doUndo(e); };
+  }
+
+  // ── Toast + flash ───────────────────────────────────────────────────────
+  let tTimer;
+  function toast(msg, act, fn) {
+    const t = document.getElementById('toast');
+    document.getElementById('toastMsg').textContent = msg;
+    const b = document.getElementById('toastAct');
+    b.textContent = act; b.onclick = () => { t.classList.remove('show'); fn(); };
+    t.classList.add('show'); clearTimeout(tTimer);
+    tTimer = setTimeout(() => t.classList.remove('show'), 6000);
+  }
+  function flash(id) {
+    const el = document.getElementById(id); if (!el) return;
+    el.classList.add('flash'); setTimeout(() => el.classList.remove('flash'), 700);
+  }
+
+  // ── Wiring ──────────────────────────────────────────────────────────────
+  document.getElementById('seg').addEventListener('click', (ev) => {
+    const b = ev.target.closest('button'); if (!b) return;
+    filter = b.dataset.f; render();
+  });
+  document.getElementById('q').addEventListener('input', (ev) => { q = ev.target.value.trim().toLowerCase(); render(); });
+  document.getElementById('list').addEventListener('click', (ev) => {
+    const z = ev.target.closest('[data-zoom]');
+    if (z) { openLb(byId[z.dataset.zoom], z.dataset.file); return; }
+    const u = ev.target.closest('[data-undo]'), r = ev.target.closest('[data-redo]'), t = ev.target.closest('[data-toggle]');
+    if (u) askUndo(byId[u.dataset.undo]);
+    else if (r) doRedo(byId[r.dataset.redo]);
+    else if (t) { const id = t.dataset.toggle; open.has(id) ? open.delete(id) : open.add(id); render(); }
+  });
+  document.addEventListener('keydown', (ev) => {
+    if (lb && ev.key === 'ArrowRight') return stepLb(1);
+    if (lb && ev.key === 'ArrowLeft') return stepLb(-1);
+    if (ev.key === 'Escape') { lb = null; document.getElementById('modalRoot').innerHTML = ''; }
+  });
+  render();
+  </script>
+</body>
+</html>

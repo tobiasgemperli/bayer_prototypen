@@ -194,6 +194,39 @@
     .show-more:hover { text-decoration: underline; }
     .pane-foot { font-size: 12.5px; color: #6b6b6b; margin: 10px 2px 0; }
 
+    /* Import assistant — asks about values only the farmer can explain. */
+    .chat { position: fixed; bottom: 24px; right: max(24px, calc((100vw - 1260px) / 2 + 24px)); width: 380px; max-height: min(640px, calc(100vh - 120px));
+      display: flex; flex-direction: column; background: #fff; border: 1px solid #DCDBDB; border-radius: 12px; box-shadow: 0 12px 32px rgba(0,0,0,.18); z-index: 1200; }
+    .chat-head { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-bottom: 1px solid #eee; }
+    .chat-head .bot, .chat-pill .bot { width: 28px; height: 28px; border-radius: 50%; background: #F6E1E8; color: #A90C3C; display: flex; align-items: center; justify-content: center; }
+    .chat-head .bot svg, .chat-pill .bot svg { width: 16px; height: 16px; fill: currentColor; }
+    .chat-head .t { font-size: 14px; font-weight: 700; color: #1a1a1a; }
+    .chat-head .st { font-size: 12px; color: #6b6b6b; }
+    .chat-head .min { margin-left: auto; background: transparent; border: 0; cursor: pointer; color: #6b6b6b; font-size: 18px; line-height: 1; padding: 4px 6px; border-radius: 6px; }
+    .chat-head .min:hover { background: #f3f3f3; }
+    .chat-body { flex: 1; overflow-y: auto; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+    .msg { max-width: 92%; font-size: 13.5px; line-height: 1.45; padding: 9px 12px; border-radius: 12px; }
+    .msg.bot { background: #f3f4f7; color: #1a1a1a; border-top-left-radius: 4px; align-self: flex-start; }
+    .msg.me { background: #A90C3C; color: #fff; border-top-right-radius: 4px; align-self: flex-end; }
+    .msg .snip { margin: 8px 0 2px; background: #fff; border: 1px solid #e3e3e3; border-radius: 8px; overflow-x: auto; }
+    /* While the assistant is open, the page makes room for it instead of being covered. */
+    .frame.with-chat .page { padding-right: 432px; }
+    .msg .snip table { font-size: 11.5px; }
+    .msg .snip td { padding: 5px 7px; border-bottom: 1px solid #f0f0f0; white-space: nowrap; vertical-align: top; }
+    .msg .snip tr:last-child td { border-bottom: 0; }
+    .msg .snip tr.hl td { background: #FCF3F6; font-weight: 600; }
+    .chips { display: flex; flex-wrap: wrap; gap: 6px; align-self: flex-start; }
+    .chip { border: 1px solid #A90C3C; background: #fff; color: #A90C3C; border-radius: 16px; padding: 5px 12px; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+    .chip:hover { background: #FCF3F6; }
+    .typing { align-self: flex-start; color: #9a9a9a; font-size: 18px; letter-spacing: 2px; padding: 0 12px; }
+    .chat-input { display: flex; gap: 8px; padding: 10px; border-top: 1px solid #eee; }
+    .chat-input input { flex: 1; font: inherit; font-size: 13.5px; border: 1px solid #cfcfcf; border-radius: 8px; padding: 8px 10px; }
+    .chat-input input:focus { outline: 0; border-color: #A90C3C; box-shadow: 0 0 0 2px #F6E1E8; }
+    .chat-input button { background: #A90C3C; color: #fff; border: 0; border-radius: 8px; padding: 0 14px; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+    .chat-pill { position: fixed; bottom: 24px; right: max(24px, calc((100vw - 1260px) / 2 + 24px)); z-index: 1200; display: flex; align-items: center; gap: 8px;
+      background: #fff; border: 1px solid #DCDBDB; border-radius: 22px; padding: 8px 14px 8px 10px; box-shadow: 0 6px 18px rgba(0,0,0,.15); font: inherit; font-size: 13px; font-weight: 600; color: #1a1a1a; cursor: pointer; }
+    .chat-pill .dot { background: #A90C3C; color: #fff; border-radius: 10px; font-size: 11px; padding: 1px 7px; }
+
     /* Drawer overlays the full frame, above the app bar. */
     .overlay { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 1300; }
   </style>
@@ -304,6 +337,8 @@
       </section>
     </main>
 
+    <div id="chat"></div>
+
     <!-- Navigate drawer (same as the Plots page) -->
     <div class="overlay">
       <div class="scrim" id="scrim"></div>
@@ -327,12 +362,22 @@
           <li><a class="item selected" id="navBatchImport" data-current href="batch-import.html">
             <svg viewBox="0 0 24 24"><path d="M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z"/></svg>
             Batch import</a></li>
+          <li><a class="item" href="import-chat.html">
+            <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2m0 14H6l-2 2V4h16zM7 9h2v2H7zm4 0h2v2h-2zm4 0h2v2h-2z"/></svg>
+            Import assistant</a></li>
+          <li><a class="item" href="history.html">
+            <svg viewBox="0 0 24 24"><path d="M13 3a9 9 0 0 0-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42A8.95 8.95 0 0 0 13 21a9 9 0 0 0 0-18m-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8z"/></svg>
+            History</a></li>
+          <li><a class="item" href="chat-blocks.html">
+            <svg viewBox="0 0 24 24"><path d="M4 8h4V4H4zm6 12h4v-4h-4zm-6 0h4v-4H4zm0-6h4v-4H4zm6 0h4v-4h-4zm6-10v4h4V4zm-6 4h4V4h-4zm6 6h4v-4h-4zm0 6h4v-4h-4z"/></svg>
+            Assistant components</a></li>
         </ul>
         <div class="drawer-footer"><a data-noop href="#">Conditions</a> &amp; <a data-noop href="#">Privacy</a></div>
       </nav>
     </div>
   </div>
 
+  <script src="diary-data.js"></script>
   <script>
     // ── Reference targets (records already in the account) ─────────────────
     const ACCOUNT_PLOTS = ['North Field A', 'South Field B', 'East Plot 12'];
@@ -444,152 +489,6 @@
       ['Maquinaria (“turbo”)', 'Method → Airblast spray (inferred)'],
     ];
     const FIELDBOOK_IGNORED = ['Hora Termino', 'Orden', 'Objetivo', 'Repetición', 'Max Repeticiones', 'Consumo', 'Agua utilizada (L)', 'Carencia etiqueta', 'Fecha viable cosecha', 'Condicion', 'Dosificadores', 'Aplicadores', 'Reingreso'];
-
-    // ── Turkish spray diary (İlaçlama kayıt defteri) ────────────────────────
-    // Transcribed from two real inputs: an Excel diary (diary-xlsx.png) and a
-    // handwritten scan (diary-scan.png). Rows list SEVERAL parcels in shorthand
-    // ("A5-6-7-B1-Kanal altı"), or relative areas ("tüm alan" = whole area,
-    // "kalan kısım" = the rest). 29 rows contain only a few dozen distinct
-    // values: step 1 matches each once, step 2 shows rows expanded per plot.
-    const DIARY_PLOTS = [
-      ['A1', 1.1], ['A2', 0.9], ['A3', 1.2], ['A4', 0.8], ['A5', 1.0], ['A6', 0.9], ['A7', 1.3], ['A8', 1.1], ['A9', 0.7], ['A10', 1.0],
-      ['B1', 2.12], ['B2', 0.8], ['B3', 0.9], ['B4', 1.0], ['B5', 0.7], ['B6', 0.9], ['B7', 1.1],
-    ].map(([name, area]) => ({ name, crop: 'Cherry', area }));
-    const NEW_PLOT = '__new', ALL_PLOTS = '__all', REST_PLOTS = '__rest';
-    const SKIP = 'Skip — not a crop-protection product';
-    const DIARY_PRODUCTS = {
-      'Hektaş Bordo Bulamacı': 'Copper sulphate + calcium hydroxide · Fungicide',
-      'Hektaş Göztaşı': 'Copper sulphate · Fungicide',
-      'Koruma Captan 50 WP': 'Captan · 50% · Fungicide',
-      'Yarda 400 SC': 'Fluopyram + Tebuconazole · Fungicide',
-      'Lusen': 'Fluopyram 250 g/l + Trifloxystrobin 250 g/l · Fungicide',
-      'Lamdex 50 CS': 'Lambda-cyhalothrin · Insecticide',
-      'Decis 25 EC': 'Deltamethrin 25 g/l · Insecticide',
-      'Decis 100 EC': 'Deltamethrin 100 g/l · Insecticide',
-      'Mospilan 20 SP': 'Acetamiprid · 20% · Insecticide',
-      'Delegate 250 WG': 'Spinetoram · 25% · Insecticide',
-      'Exirel 100 SE': 'Cyantraniliprole · Insecticide',
-    };
-    // Normalised key: case, spaces and punctuation don't matter ("YARDA 400SC" = "Yarda 400 SC").
-    // Turkish lower-casing turns "I" into dotless "ı" (EXIREL → exırel), so fold ı → i too.
-    const nk = (s) => String(s).toLocaleLowerCase('tr').replace(/ı/g, 'i').replace(/[\s.,%\-]/g, '');
-    const byKey = (o) => Object.fromEntries(Object.entries(o).map(([k, v]) => [nk(k), v]));
-    // Normalised raw value → [match, how, why].
-    const PRODUCT_ALIASES = {
-      'hektaşbordo': ['Hektaş Bordo Bulamacı', 'auto', 'Trade name in the Turkish product register'],
-      'hektaşgöztaşı': ['Hektaş Göztaşı', 'auto', '“Göztaşı” = bluestone (copper sulphate) · active substance column agrees'],
-      'korumacaptan50wp': ['Koruma Captan 50 WP', 'auto', 'Exact trade name'],
-      'yarda400sc': ['Yarda 400 SC', 'auto', 'Exact trade name'],
-      'lusen': ['Lusen', 'auto', 'Active substances in the file (“fluopram… trifioxstrobin…”, misspelt) agree'],
-      'lamdex': ['Lamdex 50 CS', 'auto', 'Trade name · one formulation registered'],
-      'lamdex50cs': ['Lamdex 50 CS', 'auto', 'Exact trade name'],
-      'decis': ['', '', '2 registered products — Decis 25 EC or Decis 100 EC? The file only says “decis”'],
-      'mospilan20sp': ['Mospilan 20 SP', 'auto', 'Exact trade name'],
-      'delegate': ['Delegate 250 WG', 'suggested', 'File says “spinetorom %25 wp” — Delegate is registered as 250 WG'],
-      'delegate250wg': ['Delegate 250 WG', 'auto', 'Exact trade name'],
-      'exirel100se': ['Exirel 100 SE', 'auto', 'Exact trade name'],
-    };
-    const METHOD_ALIASES = { 'püskürtme': ['Foliar spray', 'Turkish for spraying'] };
-    const REL_PARCELS = {
-      'tümalan': [ALL_PLOTS, 'Turkish for “whole area” — every plot on the farm'],
-      'kalankısım': [REST_PLOTS, 'Turkish for “remaining part” — plots not in the row above'],
-    };
-    const DOSE_UNIT_OPTS = [['g/100 l', 'g per 100 l'], ['ml/100 l', 'ml per 100 l']];
-    const WATER_UNITS = [['t', 'Tonnes for the whole row'], ['l', 'Litres for the whole row'], ['lda', 'Litres per dekar'], ['lha', 'Litres per hectare']];
-    const DATE_ORDERS = [['mdy', 'Month first (2/25/26 = 25 Feb)'], ['dmy', 'Day first (2/25/26 = invalid)']];
-
-    // Excel diary — page 1 as in the screenshot (row y-bounds are for the source preview).
-    const G1 = 'A5-6-7-8-9-10-B7-B1-A2-4-6-Kanal altı-A1-3';
-    const ORG = 'B1-2-3-4-5-Organik-20da-55da-40 da-';
-    const LUSEN_AI = 'fluopram250g/l trifioxstrobin250g/l';
-    const XLSX = [
-      // parcels, date, active ingredient, trade name, dose, PHI, water, [y0, y1]
-      [G1, '2/25/26', '', 'hektaş bordo', '2000', 21, 25, [163, 218]],
-      ['kalan kısım', '2/25/26', '', 'hektaş bordo', '1000', 21, 35, [218, 258]],
-      [G1, '3/28/26', LUSEN_AI, 'LUSEN', '25ml/100l', 3, 25, [258, 312]],
-      ['kalan kısım', '3/31/26', LUSEN_AI, 'LUSEN', '25ml/100l', 3, 35, [312, 350]],
-      [G1, '4/7/26', LUSEN_AI, 'LUSEN', '25ml/100l', 3, 25, [350, 405]],
-      ['kalan kısım', '4/9/26', LUSEN_AI, 'LUSEN', '25ml/100l', 3, 35, [405, 443]],
-      ['tüm alan', '4/18/26', 'lambda-cyhalothrin', 'lamdex', '50cc/100l', 14, 60, [443, 480]],
-      ['tüm alan', '4/25/26', 'deltametrin', 'decis', '25ml/100l', 3, 60, [480, 516]],
-      ['tüm alan', '4/25/25', 'acetamiprid%20', 'mospilan 20sp', '25gr/100l', 7, 60, [516, 553]],
-      ['tüm alan', '5/4/26', 'deltametrin', 'decis', '25ml/100l', 3, 60, [553, 590]],
-      ['tüm alan', '5/4/26', 'acetamiprid%20', 'mospilan 20sp', '25gr/100l', 7, 60, [590, 626]],
-      ['tüm alan', '5/16/26', 'lambda-cyhalothrin', 'lamdex', '50cc/100l', 14, 60, [626, 662]],
-      ['tüm alan', '5/24/26', 'spinetorom %25 wp', 'delegate', '20gr/100l', 3, 60, [662, 694]],
-      ['tüm alan', '6/1/26', 'spinetorom %25 wp', 'delegate', '20gr/100l', 3, 60, [694, 726]],
-      [G1, '6/1/26', LUSEN_AI, 'LUSEN', '25ml/100l', 3, 30, [726, 782]],
-      [ORG, '6/10/26', 'spinetorom %25 wp', 'delegate', '20gr/100l', 3, 30, [782, 852]],
-      [ORG, '6/14/26', 'spinetorom %25 wp', 'delegate', '20gr/100l', 3, 30, [852, 920]],
-    ];
-    // Handwritten scan — 12 rows, all on parcel "B C/A 21,2 da" (spelling varies).
-    const SCAN = [
-      // parcels, date, active ingredient, trade name, dose, PHI, harvest date, reason, [y0, y1]
-      ['B C/A 21,2 da', '10.03.2026', 'Bakır Sülfat', 'Hektaş Göztaşı', '1000g/100lt', 21, '22.03.2026', 'Genel Koruma', [220, 290]],
-      ['B C/A 21.2 da', '10.04.2026', 'Captan 50% WP', 'Koruma Captan 50 WP', '300g/100lt', 14, '25.04.2026', 'Monilinia laxa', [290, 360]],
-      ['BC/A 21.2 da', '25.04.2026', 'Fluopyram Tebuconazole', 'YARDA 400SC', '25g/100l', 3, '29.04.2026', 'Monilinia', [360, 432]],
-      ['BC/A 21.2 da', '10.05.2026', 'Acetamiprid', 'Mospilan 20SP', '25g/100l', 7, '18.05.26', 'Kiraz sineği', [432, 503]],
-      ['BC/A 21.2 da', '10.05.2026', 'Lambda-cyhalothrin', 'LAMDEX 50 CS', '50ml/100l', 14, '25.05-26', 'Kiraz sineği', [503, 572]],
-      ['BC/A 21.2 da', '11.05.2026', 'Captan', 'Koruma Captan 50 WP', '300g/100lt', 14, '26.05.26', 'Monilinia', [572, 643]],
-      ['BC/A 21.2 da', '15.05.2026', '%25 Spinetoram', 'Delegate 250 WG', '20g/100lt', 3, '19.05.26', 'Kiraz sineği', [643, 715]],
-      ['BC/A 21.2 da', '15.05.2026', 'Fluopyram Tebuconazole', 'YARDA 400 SC', '25g/100lt', 3, '19.05.26', 'Monilinia', [715, 785]],
-      ['BC/A 21.2 da', '18.05.2026', 'Cyantraniliprole', 'EXIREL 100 SE', '100ml/100l', 3, '22.05.2026', 'Kiraz sineği', [785, 855]],
-      ['BC/A 21.2 da', '18.05.2026', 'Fluopyram Trifloxystrobin', 'LUSEN', '25cc/100lt', 3, '22.05.2026', 'Monilinia', [855, 937]],
-      ['BC/A 21.2 da', '22.05.2026', '%25 Spinetoram', 'Delegate 250 WG', '20g/100lt', 3, '26.05.2026', 'Kiraz sineği', [937, 1008]],
-      ['BC/A 21.2 da', '22.05.2026', 'Fluopyram Trifloxystrobin', 'LUSEN', '25cc/100lt', 3, '26.05.2026', 'Monilinia', [1008, 1092]],
-    ];
-    const DIARY_ROWS = [
-      ...XLSX.map(([parcels, date, ai, trade, dose, phi, water, y], i) =>
-        ({ src: 'xlsx', line: i + 1, parcels, date, ai, trade, dose, phi, water, y, method: 'püskürtme', include: true })),
-      ...SCAN.map(([parcels, date, ai, trade, dose, phi, harvest, reason, y], i) =>
-        ({ src: 'scan', line: i + 1, parcels, date, ai, trade, dose, phi, harvest, reason, y, water: '', method: 'Püskürtme', include: true })),
-    ];
-    // Source previews: [file, natural size in the 2000-wide reference, header band].
-    const SOURCES = {
-      xlsx: { img: 'diary-xlsx.png', h: 940, head: [18, 162], file: 'İlaçlama defteri 2026.xlsx' },
-      scan: { img: 'diary-scan.png', h: 1112, head: [0, 218], file: 'ilaclama-kaydi.pdf' },
-    };
-
-    const lc = (s) => String(s).trim().toLocaleLowerCase('tr');
-    const productKey = (r) => (r.trade || r.ai).trim();
-
-    // "A5-6-7-B1-A2-4-Kanal altı" → A5 A6 A7 B1 A2 A4 "Kanal altı": bare numbers
-    // inherit the last letter, repeats are dropped, "20da"/"21,2 da" are areas.
-    function parseParcels(raw) {
-      let s = raw.trim(); const areas = [];
-      const m = s.match(/\s*(\d+[.,]\d+)\s*da$/i);
-      if (m) { areas.push(m[1].replace(',', '.')); s = s.slice(0, m.index).trim(); }
-      if (!/^[A-Z]+\d/.test(s)) return { tokens: [s], dupes: [], areas };
-      let prefix = ''; const tokens = [], dupes = [];
-      s.split('-').map(t => t.trim()).filter(Boolean).forEach(t => {
-        if (/^\d+\s*da$/i.test(t)) { areas.push(t); return; }
-        let code = t;
-        const a = t.match(/^([A-Z]+)\d+$/);
-        if (a) prefix = a[1]; else if (/^\d+$/.test(t) && prefix) code = prefix + t;
-        if (tokens.includes(code)) dupes.push(code); else tokens.push(code);
-      });
-      return { tokens, dupes, areas };
-    }
-
-    function autoPlot(code, areas) {
-      const rel = byKey(REL_PARCELS)[nk(code)];
-      if (rel) return { value: rel[0], how: 'auto', note: rel[1] };
-      if (DIARY_PLOTS.some(p => p.name === code)) return { value: code, how: 'exact' };
-      if (areas.length === 1 && areas[0].includes('.')) {
-        const ha = Number(areas[0]) / 10;
-        const p = DIARY_PLOTS.find(x => Math.abs(x.area - ha) < 0.05);
-        if (p) return { value: p.name, how: 'suggested', note: `Suggested from the area next to it: ${areas[0].replace('.', ',')} da ≈ ${p.name} (${p.area} ha)` };
-      }
-      return { value: '', how: '', note: 'Not one of your plots' };
-    }
-
-    // Dose cell → { n, unit spelling }. "1000g/100lt" → 1000, "g"; "2000" → 2000, "".
-    const parseDose = (raw) => { const m = String(raw).match(/^\s*([\d.,]+)\s*([a-zA-Z]*)/); return { n: parseFloat(m[1]), u: lc(m[2]) }; };
-    const UNIT_ALIASES = {
-      '': ['g/100 l', 'No unit in the cell — taken from the column header “(g / 100 l)”'],
-      'g': ['g/100 l', ''], 'gr': ['g/100 l', '“gr” = grams'],
-      'ml': ['ml/100 l', ''], 'cc': ['ml/100 l', '“cc” = ml'],
-    };
 
     function buildDiaryMatches(rows) {
       const out = [];
@@ -821,6 +720,8 @@
     const matchOf = (kind, key) => data.matches.find(m => m.kind === kind && nk(m.key) === nk(key)) || {};
     const plotByName = (n) => DIARY_PLOTS.find(p => p.name === n);
     const diaryCreated = () => data.matches.filter(m => m.kind === 'parcel' && m.value === NEW_PLOT);
+    // The plot the "Organik" code resolved to (a new plot keeps its code as name).
+    const organikPlot = () => { const v = matchOf('parcel', 'Organik').value; return v === NEW_PLOT ? 'Organik' : v; };
     const farmPlots = () => [...DIARY_PLOTS.map(p => p.name), ...diaryCreated().map(m => m.key)];
     // Resolved plots for a row: [{ code, name, isNew }] (deduped — two codes can map to one plot).
     function rowPlots(r, depth = 0) {
@@ -828,12 +729,13 @@
       const push = (code, name, isNew) => { if (name && seen.has(name)) return; if (name) seen.add(name); out.push({ code, name, isNew }); };
       parseParcels(r.parcels).tokens.forEach(code => {
         const v = matchOf('parcel', code).value;
-        if (v === ALL_PLOTS) farmPlots().forEach(n => push(code, n, !plotByName(n)));
-        else if (v === REST_PLOTS) {
+        const org = organikPlot();
+        if (v === ALL_PLOTS || v === ALL_NO_ORG) farmPlots().filter(n => v === ALL_PLOTS || n !== org).forEach(n => push(code, n, !plotByName(n)));
+        else if (v === REST_PLOTS || v === REST_NO_ORG) {
           // Everything not sprayed in the row above.
           const prev = data.treatments[data.treatments.indexOf(r) - 1];
           const taken = prev && depth < 3 ? new Set(rowPlots(prev, depth + 1).map(p => p.name)) : new Set();
-          farmPlots().filter(n => !taken.has(n)).forEach(n => push(code, n, !plotByName(n)));
+          farmPlots().filter(n => !taken.has(n) && (v === REST_PLOTS || n !== org)).forEach(n => push(code, n, !plotByName(n)));
         } else push(code, v === NEW_PLOT ? code : v, v === NEW_PLOT);
       });
       return out;
@@ -897,7 +799,7 @@
       const ctxLine = (m, info) => {
         if (!m.value) return m.note ? `<div class="ctx">${esc(m.note)}</div>` : '';
         if (m.how === 'suggested') return `<div class="ctx soft">${esc(m.note)}</div>`;
-        const t = [info, m.how === 'manual' ? 'Matched by you' : m.note].filter(Boolean).join(' · ');
+        const t = [info, m.how === 'manual' ? 'Matched by you' : m.how === 'chat' ? 'Answered in the assistant' : m.note].filter(Boolean).join(' · ');
         return t ? `<div class="ctx${m.how === 'exact' ? ' ok' : ''}">${esc(t)}</div>` : '';
       };
       const select = (m, opts, placeholder) => {
@@ -929,7 +831,8 @@
 
       // Parcels.
       const parcels = of('parcel');
-      const plotOpts = (m) => [[ALL_PLOTS, '★ Whole farm (every plot)'], [REST_PLOTS, '★ Rest of the farm (not in the row above)'],
+      const plotOpts = (m) => [[ALL_PLOTS, '★ Whole farm (every plot)'], [ALL_NO_ORG, '★ Whole farm except Organik'],
+        [REST_PLOTS, '★ Rest of the farm (not in the row above)'], [REST_NO_ORG, '★ Rest of the farm except Organik'],
         ...DIARY_PLOTS.map(p => [p.name, `${p.name} · ${p.crop} · ${p.area} ha`]), [NEW_PLOT, `+ New plot “${m.key}”`]];
       const parcelRows = visible('parcel').map(m => {
         const p = plotByName(m.value);
@@ -1121,13 +1024,142 @@
 
     function showStep(id) {
       document.querySelectorAll('.step').forEach(s => s.classList.toggle('active', s.id === id));
+      chatShown = scenario === 'diary' && id === 'previewStep';
+      if (chatShown && !chat.started) chatStart();
+      renderChat();
     }
     function reset(next = scenario) {
       scenario = next; yearChecked = false; diaryOpen = new Set(); diaryFilter = 'all'; diaryMore = new Set();
+      chatReset();
       data = clone(SCENARIOS[scenario].seed); activeTab = 'plots';
       document.getElementById('mapping').innerHTML = '';
       render();
     }
+
+    // ── Import assistant (spray diary) ─────────────────────────────────────
+    // Asks about the values a lookup can't settle — "kalan kısım" and
+    // "tüm alan" — and writes the answers into the matches (step 1).
+    let chat, chatShown = false;
+    function chatReset() { chat = { started: false, msgs: [], q: null, typing: false, min: false }; }
+    chatReset();
+
+    const shortParcels = (s) => s.length > 16 ? s.slice(0, 14) + '…' : s;
+    // A few source rows, as they appear in the file.
+    const snip = (idxs, hl = []) => `<div class="snip"><table>${idxs.map(i => {
+      const r = data.treatments[i];
+      return `<tr class="${hl.includes(i) ? 'hl' : ''}"><td>${esc(shortParcels(r.parcels))}</td><td>${esc(r.date)}</td><td>${esc(r.trade)}</td><td>${esc(r.dose)}</td><td>${esc(r.water)}</td></tr>`;
+    }).join('')}</table></div>`;
+    const rowsWith = (code) => data.treatments.map((r, i) => [r, i]).filter(([r]) => nk(r.parcels) === nk(code)).map(([, i]) => i);
+    const setParcel = (code, value) => { const m = matchOf('parcel', code); m.value = value; m.how = value ? 'chat' : ''; render(); };
+
+    const QUESTIONS = {
+      kalan: () => {
+        const idx = rowsWith('kalan kısım');
+        return {
+          html: `${idx.length} rows say <strong>“kalan kısım”</strong> (Turkish: “the remaining part”) instead of parcels. Each one follows a row for the A-block:` +
+            snip([idx[2] - 1, idx[2]], [idx[2]]) + `Which plots does it mean?`,
+          options: [
+            { label: 'Every plot not in the row above', re: /yes|ja|evet|rest|remaining|übrig|not in|other/, run: () => { setParcel('kalan kısım', REST_PLOTS); return 'tum'; } },
+            { label: 'Let me pick plots', re: /pick|select|choose|manual|myself|selbst/, run: () => { setParcel('kalan kısım', ''); say('OK — pick the plots for “kalan kısım” in the Parcels card on the left.'); return 'tum'; } },
+          ],
+        };
+      },
+      tum: () => {
+        const idx = rowsWith('tüm alan');
+        const products = [...new Set(idx.map(i => data.treatments[i].trade))].join(', ');
+        return {
+          html: `<strong>“tüm alan”</strong> (“the whole area”) is used in ${idx.length} rows — insecticides mostly (${esc(products)}):` +
+            snip(idx.slice(0, 3)) + `Your file also has an <strong>Organik</strong> block. Did these sprays go on Organik too?`,
+          options: [
+            { label: 'Yes, every plot', re: /^(yes|ja|evet|y)\b|every|all|alle/, run: () => { setParcel('tüm alan', ALL_PLOTS); return null; } },
+            { label: 'Every plot except Organik', re: /(except|without|not|no|ohne|nicht|ausser|außer|exclude|skip|hariç).*organ|organ.*(not|no|excl|skip|ohne|nicht)/, first: true,
+              run: () => { setParcel('tüm alan', ALL_NO_ORG); return matchOf('parcel', 'kalan kısım').value === REST_PLOTS ? 'kalanOrg' : null; } },
+            { label: 'Let me pick plots', re: /pick|select|choose|manual|myself|selbst/, run: () => { setParcel('tüm alan', ''); say('OK — pick the plots for “tüm alan” in the Parcels card.'); return null; } },
+          ],
+        };
+      },
+      kalanOrg: () => ({
+        html: `Got it. Should <strong>“kalan kısım”</strong> skip Organik as well? Right now it includes it, because Organik isn’t in the A-block row.`,
+        options: [
+          { label: 'No, include it', re: /^(no|nein|hayır)\b|include/, first: true, run: () => null },
+          { label: 'Yes, skip Organik', re: /yes|ja|evet|skip|exclude|ohne/, run: () => { setParcel('kalan kısım', REST_NO_ORG); return null; } },
+        ],
+      }),
+    };
+
+    function say(html) { chat.msgs.push({ who: 'bot', html }); }
+    function ask(id) {
+      chat.typing = true; renderChat();
+      setTimeout(() => {
+        chat.typing = false;
+        if (!id) {
+          say(`Thanks — that’s all I needed. ${data.treatments.length} diary rows now give <strong>${diaryTreatmentCount()} treatments</strong>. I’ll remember these answers for this farm’s next import.`);
+          chat.q = null;
+        } else {
+          const q = QUESTIONS[id]();
+          say(q.html); chat.q = q;
+        }
+        renderChat();
+      }, 700);
+    }
+    function chatStart() {
+      chat.started = true;
+      say('I read both files. Most values matched on their own — two parcel entries need you, because they describe parts of the farm rather than plots.');
+      ask('kalan');
+    }
+    function answer(opt, text) {
+      chat.msgs.push({ who: 'me', html: esc(text || opt.label) });
+      chat.q = null;
+      ask(opt.run());
+    }
+    // Free text: match it to one of the current options, or ask again.
+    function answerText(text) {
+      const q = chat.q, t = lc(text);
+      if (!q) { chat.msgs.push({ who: 'me', html: esc(text) }); say('Nothing open right now — you can change any match in the cards on the left.'); renderChat(); return; }
+      const opts = [...q.options.filter(o => o.first), ...q.options.filter(o => !o.first)];
+      const hit = opts.find(o => o.re.test(t));
+      if (hit) { answer(hit, text); return; }
+      chat.msgs.push({ who: 'me', html: esc(text) });
+      say('Sorry, I didn’t get that. Tap one of the options, or say e.g. “all except Organik”.');
+      renderChat();
+    }
+
+    const BOT_ICO = '<svg viewBox="0 0 24 24"><path d="M19 9l1.25-2.75L23 5l-2.75-1.25L19 1l-1.25 2.75L15 5l2.75 1.25zm-7.5.5L9 4 6.5 9.5 1 12l5.5 2.5L9 20l2.5-5.5L17 12zM19 15l-1.25 2.75L15 19l2.75 1.25L19 23l1.25-2.75L23 19l-2.75-1.25z"/></svg>';
+    function renderChat() {
+      const el = document.getElementById('chat');
+      document.getElementById('frame').classList.toggle('with-chat', chatShown && !chat.min);
+      if (!chatShown) { el.innerHTML = ''; return; }
+      if (chat.min) {
+        el.innerHTML = `<button class="chat-pill" id="chatOpen"><span class="bot">${BOT_ICO}</span>Import assistant${chat.q ? '<span class="dot">1</span>' : ''}</button>`;
+        return;
+      }
+      const draft = (document.getElementById('chatText') || {}).value || '';
+      el.innerHTML = `<div class="chat" role="dialog" aria-label="Import assistant">
+        <div class="chat-head"><span class="bot">${BOT_ICO}</span><div><div class="t">Import assistant</div><div class="st">${chat.q ? 'Has a question for you' : chat.typing ? 'Typing…' : 'All questions answered'}</div></div>
+          <button class="min" id="chatMin" aria-label="Minimise">–</button></div>
+        <div class="chat-body" id="chatBody">
+          ${chat.msgs.map(m => `<div class="msg ${m.who}">${m.html}</div>`).join('')}
+          ${chat.typing ? '<div class="typing">•••</div>' : ''}
+          ${chat.q ? `<div class="chips">${chat.q.options.map((o, i) => `<button class="chip" data-opt="${i}">${esc(o.label)}</button>`).join('')}</div>` : ''}
+        </div>
+        <form class="chat-input" id="chatForm"><input id="chatText" placeholder="Or type an answer…" autocomplete="off" value="${esc(draft)}"><button>Send</button></form>
+      </div>`;
+      const b = document.getElementById('chatBody'); b.scrollTop = b.scrollHeight;
+    }
+    document.addEventListener('click', (e) => {
+      const chip = e.target.closest('.chip[data-opt]');
+      if (chip && chat.q) { answer(chat.q.options[Number(chip.dataset.opt)]); return; }
+      if (e.target.closest('#chatMin')) { chat.min = true; renderChat(); return; }
+      if (e.target.closest('#chatOpen')) { chat.min = false; renderChat(); }
+    });
+    document.addEventListener('submit', (e) => {
+      if (e.target.id !== 'chatForm') return;
+      e.preventDefault();
+      const inp = document.getElementById('chatText'), t = inp.value.trim();
+      if (!t) return;
+      inp.value = '';
+      answerText(t);
+    });
 
     render();
 

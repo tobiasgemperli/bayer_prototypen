@@ -1,0 +1,622 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ResiYou — Import assistant (mockup)</title>
+  <link rel="stylesheet" href="app.css" />
+  <style>
+    body { background: #e9eaee; }
+    .frame { position: relative; min-height: 100vh; max-width: 1260px; margin: 0 auto; background: #f5f5f7; }
+
+    /* Top app bar — same elements as the Plots screenshot. */
+    .appbar {
+      height: 60px; display: flex; align-items: center; gap: 8px;
+      padding: 0 24px; background: #fff; border-bottom: 1px solid #DCDBDB;
+      position: relative; z-index: 1;
+    }
+    .menu-btn { background: transparent; border: 0; cursor: pointer; padding: 6px; margin-right: 4px; color: #000; display: flex; border-radius: 8px; }
+    .menu-btn:hover { background: rgba(0,0,0,.05); }
+    .menu-btn svg { width: 24px; height: 24px; fill: currentColor; }
+    .logo-link { display: flex; cursor: pointer; }
+    .logo { width: 128px; height: 32px; display: block; }
+    .spacer { flex: 1; }
+    .appbar-right { display: flex; align-items: center; gap: 16px; }
+    .icon-btn { background: transparent; border: 0; cursor: pointer; color: #000; display: flex; padding: 4px; }
+    .icon-btn svg { width: 24px; height: 24px; fill: currentColor; }
+    .user { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+    .avatar { width: 32px; height: 32px; border-radius: 50%; background: #4a4a4a; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 400; }
+    .user .name { font-size: 14px; color: #000; }
+    .caret { width: 20px; height: 20px; fill: #000; }
+
+    /* Header title band — grey band under the app bar (matches the real ResiYou header). */
+    .crumbs { background: #E4E6EC; padding: 20px 32px 22px; }
+    .crumb-title { font-size: 18px; font-weight: 700; color: #333; margin: 0; }
+
+    /* Page body. */
+    .page { padding: 24px 32px 48px; }
+    /* ── Chat-only import ─────────────────────────────────────────────── */
+    .page { padding: 0; }
+    .chatwrap { max-width: 820px; margin: 0 auto; display: flex; flex-direction: column; height: calc(100vh - 60px - 63px); }
+    .strip { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; padding: 10px 16px; margin: 12px 16px 0; background: #fff; border: 1px solid #DCDBDB; border-radius: 10px; font-size: 13px; color: #333; }
+    .strip .files { display: flex; gap: 6px; align-items: center; color: #6b6b6b; min-width: 0; }
+    .strip .files svg { width: 16px; height: 16px; fill: #6b6b6b; flex: none; }
+    .strip .stat b { font-weight: 700; color: #1a1a1a; }
+    .strip .left { margin-left: auto; color: #1a1a1a; font-weight: 600; }
+    .strip .left.ok { color: #2e7d32; }
+    .thread { flex: 1; overflow-y: auto; padding: 20px 16px 8px; display: flex; flex-direction: column; gap: 14px; }
+    .msg { display: flex; gap: 10px; max-width: 100%; }
+    .msg.me { align-self: flex-end; flex-direction: row-reverse; max-width: 85%; }
+    .msg .av { width: 30px; height: 30px; border-radius: 50%; flex: none; display: flex; align-items: center; justify-content: center; }
+    .msg.bot .av { background: #ededf0; }
+    .msg.bot .av svg { width: 18px; height: 18px; fill: #1a1a1a; }
+    .msg.me .av { background: #4a4a4a; color: #fff; font-size: 14px; }
+    .bubble { background: #fff; border: 1px solid #DCDBDB; border-radius: 4px 14px 14px 14px; padding: 10px 14px; font-size: 14px; line-height: 1.5; color: #1a1a1a; min-width: 0; }
+    .msg.bot .bubble { max-width: 700px; }
+    .msg.me .bubble { background: #1a1a1a; border-color: #1a1a1a; color: #fff; border-radius: 14px 4px 14px 14px; }
+    .bubble p { margin: 0 0 6px; } .bubble p:last-child { margin-bottom: 0; }
+    .bubble .ack { color: inherit; font-weight: 400; }
+    .bubble .muted { color: inherit; font-size: inherit; }
+    .bubble code { background: #f1f1f4; border-radius: 4px; padding: 0 4px; font-size: 13px; }
+    .change { display: block; text-align: right; margin-top: 4px; font-size: 12px; color: #6b6b6b; cursor: pointer; background: none; border: 0; padding: 0; font: inherit; font-size: 12px; }
+    .change:hover { color: #1a1a1a; text-decoration: underline; }
+    .snip { overflow-x: auto; border: 1px solid #DCDBDB; border-radius: 8px; margin: 14px 0 10px; background: #fff; }
+    .snip .crop { position: relative; width: 820px; background-size: 820px auto; background-repeat: no-repeat; }
+    .snip .crop + .crop { border-top: 2px solid #1a1a1a; }
+    .snip .hl { position: absolute; border: 2px solid #f59e0b; background: rgba(251, 191, 36, .25); border-radius: 3px; box-sizing: border-box; }
+    .snip .hl.head { border-style: dashed; background: rgba(251, 191, 36, .12); }
+    .snip .hl-key { display: inline-block; width: 10px; height: 10px; border: 2px solid #f59e0b; background: rgba(251, 191, 36, .25); border-radius: 2px; vertical-align: -1px; }
+    .snip .cap { font-size: 11px; color: #6b6b6b; padding: 4px 8px; border-top: 1px solid #eee; position: sticky; left: 0; }
+    .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+    .chip { border: 1px solid #1a1a1a; color: #1a1a1a; background: #fff; border-radius: 18px; padding: 6px 14px; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+    .chip:hover { background: #ededf0; }
+    .chip .rec { font-weight: 400; color: #6b6b6b; margin-left: 4px; }
+    .pick { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; padding: 10px; background: #f7f7f9; border-radius: 8px; }
+    .pchip { border: 1px solid #DCDBDB; background: #fff; border-radius: 6px; padding: 4px 10px; font: inherit; font-size: 13px; cursor: pointer; }
+    .pchip.on { background: #1a1a1a; border-color: #1a1a1a; color: #fff; }
+    .pick .done { margin-left: auto; }
+    .kv { width: 100%; border-collapse: collapse; margin: 8px 0 4px; font-size: 13px; }
+    .kv th { text-align: left; font-weight: 600; color: #6b6b6b; font-size: 12px; padding: 4px 8px; border-bottom: 1px solid #DCDBDB; }
+    .kv td { padding: 5px 8px; border-bottom: 1px solid #f0f0f0; vertical-align: top; }
+    .kv td.arrow { color: #6b6b6b; width: 16px; padding: 5px 0; }
+    .kv .soft { color: #6b6b6b; font-size: 12px; }
+    .tag { display: inline-block; font-size: 11px; font-weight: 600; border-radius: 4px; padding: 0 6px; margin-left: 6px; vertical-align: 1px; }
+    .tag.new { background: #e3f2fd; color: #1565c0; }
+    .tag.ok { background: #e8f5e9; color: #2e7d32; }
+    .tag.ask { background: #ededf0; color: #1a1a1a; }
+    details.more { margin-top: 6px; font-size: 13px; }
+    details.more summary { cursor: pointer; color: #1a1a1a; font-weight: 600; }
+    .files-msg { display: flex; gap: 8px; flex-wrap: wrap; }
+    .file { display: flex; gap: 10px; align-items: center; background: rgba(255,255,255,.14); border-radius: 8px; padding: 6px 10px 6px 6px; }
+    .file .thumb { width: 64px; height: 44px; border-radius: 4px; background-size: cover; background-position: top left; background-color: #fff; }
+    .file .nm { font-size: 13px; font-weight: 600; } .file .sz { font-size: 11px; opacity: .8; }
+    .typing { display: inline-flex; gap: 4px; padding: 4px 0; }
+    .typing i { width: 6px; height: 6px; border-radius: 50%; background: #bbb; animation: blink 1s infinite; }
+    .typing i:nth-child(2) { animation-delay: .15s; } .typing i:nth-child(3) { animation-delay: .3s; }
+    @keyframes blink { 0%, 80%, 100% { opacity: .3; } 40% { opacity: 1; } }
+    .primary { background: #1a1a1a; color: #fff; border: 0; border-radius: 8px; padding: 9px 18px; font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 10px; }
+    .primary:hover { background: #000; }
+    .bubble a { color: #1a1a1a; }
+    .composer { padding: 8px 16px 18px; }
+    .composer form { display: flex; align-items: flex-end; gap: 6px; background: #fff; border: 1px solid #DCDBDB; border-radius: 14px; padding: 6px; }
+    .composer form:focus-within { border-color: #1a1a1a; }
+    .composer textarea { flex: 1; border: 0; outline: 0; resize: none; font: inherit; font-size: 14px; padding: 8px 6px; height: 38px; max-height: 120px; background: transparent; }
+    .composer .ib { width: 38px; height: 38px; border: 0; border-radius: 10px; background: transparent; cursor: pointer; display: flex; align-items: center; justify-content: center; flex: none; }
+    .composer .ib svg { width: 22px; height: 22px; fill: #6b6b6b; }
+    .composer .ib:hover { background: #f1f1f4; }
+    .composer .send { background: #1a1a1a; } .composer .send svg { fill: #fff; } .composer .send:hover { background: #000; }
+    .composer .hint { font-size: 11px; color: #9a9a9a; text-align: center; margin-top: 6px; }
+    .drop { border: 2px dashed #DCDBDB; border-radius: 12px; padding: 22px 18px 18px; text-align: center; color: #6b6b6b; font-size: 13px; margin-top: 10px; cursor: pointer; }
+    .drop:hover { border-color: #1a1a1a; color: #1a1a1a; }
+    .ftypes { display: flex; justify-content: center; gap: 28px; flex-wrap: wrap; margin: 4px 0 14px; }
+    .ftype { display: flex; flex-direction: column; align-items: center; gap: 8px; width: 92px; }
+    .fdoc { position: relative; width: 48px; height: 60px; }
+    .fdoc svg { width: 48px; height: 60px; display: block; }
+    .fext { position: absolute; left: -6px; bottom: 8px; background: #1a1a1a; color: #fff; font-size: 10px; font-weight: 700; letter-spacing: .04em; border-radius: 3px; padding: 1px 5px; }
+    .flbl { font-size: 12px; color: #444; text-align: center; line-height: 1.3; }
+    .drop:hover .fdoc svg path:first-child, .drop:hover .fdoc svg rect { stroke: #1a1a1a; }
+    .dhint { font-size: 13px; color: #555; }
+    [hidden] { display: none !important; }
+    .overlay { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 1300; }
+  </style>
+</head>
+<body>
+  <div class="frame" id="frame">
+    <!-- App bar -->
+    <header class="appbar">
+      <button class="menu-btn" id="menuBtn" aria-label="Open navigation menu">
+        <svg viewBox="0 0 24 24"><path d="M3 18h18v-2H3zm0-5h18v-2H3zm0-7v2h18V6z"/></svg>
+      </button>
+      <a class="logo-link" href="index.html" aria-label="ResiYou — go to Plots">
+      <svg class="logo" viewBox="0 0 128 32" aria-label="ResiYou">
+        <g clip-path="url(#lclip)">
+          <path fill-rule="evenodd" clip-rule="evenodd" fill="url(#lg0)" d="M22.158 1.23249C21.9599 1.14991 21.7606 1.07144 21.56 0.997113C20.6377 0.655299 19.6902 0.400848 18.7297 0.234561C16.4409 -0.161708 14.0785 -0.0573067 11.8092 0.558602C8.38043 1.48917 5.35893 3.53446 3.22105 6.37201C1.08316 9.20956 -0.0494908 12.678 0.00165939 16.2304C0.0528095 19.7828 1.28486 23.2171 3.50355 25.992C5.72225 28.7668 8.80138 30.7242 12.2555 31.5557C15.7096 32.3872 19.3422 32.0453 22.5806 30.5841C25.819 29.1229 28.4789 26.6254 30.141 23.4854C31.243 21.4038 31.8648 19.1182 31.9803 16.7943C32.0041 16.3166 32.0064 15.8373 31.9871 15.3578C31.9588 14.6514 31.8835 13.9445 31.7605 13.2419L16.8 14.8445L22.158 1.23249ZM28.3885 17.179V15.2L28.1778 13.6257L16.8 14.8445L20.8937 4.44445L19.3778 3.99003L17.3917 3.63363C15.843 3.45934 14.2648 3.57633 12.7405 3.99003C10.0737 4.7138 7.72362 6.30459 6.06082 8.51157C4.39802 10.7186 3.51706 13.4162 3.55685 16.1792C3.59663 18.9422 4.55489 21.6133 6.28054 23.7715C8.00619 25.9297 10.4011 27.4522 13.0876 28.0989C15.7741 28.7456 18.5995 28.4797 21.1182 27.3432C23.637 26.2067 25.7058 24.2642 26.9986 21.822C27.7668 20.3708 28.2349 18.7923 28.3885 17.179Z"/>
+          <path fill-rule="evenodd" clip-rule="evenodd" fill="url(#lg1)" d="M31.2162 5.51988L13.9694 22.8624L7.28674 16.2893L9.78004 13.7544L13.9418 17.8479L28.6951 3.0127L31.2162 5.51988Z"/>
+          <path fill="#10384F" d="M38.9189 23.944V6.08541H45.8621C49.5197 6.08541 51.8258 8.20171 51.8258 11.5556V11.5804C51.8258 14.0061 50.4992 15.9367 48.3542 16.6669L52.359 23.944H49.1601L45.515 17.0877H41.6962V23.944H38.9189ZM41.6962 14.8105H45.5894C47.7343 14.8105 48.9618 13.6348 48.9618 11.6051V11.5804C48.9618 9.6002 47.6475 8.4121 45.515 8.4121H41.6962V14.8105Z"/>
+          <path fill="#10384F" d="M59.7113 24.2039C55.8802 24.2039 53.5616 21.5926 53.5616 17.4837V17.4713C53.5616 13.3996 55.9174 10.6769 59.5749 10.6769C63.2325 10.6769 65.4766 13.3006 65.4766 17.2114V18.1149H56.2397C56.2893 20.5777 57.6408 22.0133 59.7733 22.0133C61.3603 22.0133 62.4142 21.1965 62.749 20.2188L62.7861 20.1198H65.3279L65.3031 20.2559C64.8815 22.3227 62.8729 24.2039 59.7113 24.2039ZM59.5873 12.8675C57.8515 12.8675 56.5125 14.0432 56.2769 16.2214H62.8233C62.6002 13.9689 61.3355 12.8675 59.5873 12.8675Z"/>
+          <path fill="#10384F" d="M72.4446 24.2039C69.1838 24.2039 67.2744 22.595 67.0017 20.2188L66.9893 20.1074H69.6425L69.6673 20.2312C69.9153 21.4317 70.808 22.1371 72.457 22.1371C74.0688 22.1371 75.0359 21.4688 75.0359 20.4168V20.4045C75.0359 19.5629 74.5648 19.0802 73.1637 18.7461L71.0312 18.2634C68.5515 17.6941 67.324 16.506 67.324 14.6125V14.6001C67.324 12.2734 69.3574 10.6769 72.3578 10.6769C75.4451 10.6769 77.3048 12.3972 77.4412 14.6125L77.4536 14.761H74.9367L74.9243 14.6744C74.7631 13.5358 73.8704 12.7437 72.3578 12.7437C70.9196 12.7437 70.0145 13.4244 70.0145 14.464V14.4763C70.0145 15.2808 70.5476 15.8253 71.9487 16.1595L74.0688 16.6421C76.7345 17.2609 77.7512 18.3129 77.7512 20.1817V20.1941C77.7512 22.5703 75.5195 24.2039 72.4446 24.2039Z"/>
+          <path fill="#10384F" d="M81.2848 8.91952C80.4169 8.91952 79.7226 8.22646 79.7226 7.38489C79.7226 6.53095 80.4169 5.83789 81.2848 5.83789C82.1651 5.83789 82.847 6.53095 82.847 7.38489C82.847 8.22646 82.1651 8.91952 81.2848 8.91952ZM79.9457 23.944V10.9244H82.6238V23.944H79.9457Z"/>
+          <path fill="#10384F" d="M91.5389 23.944V17.2733L85.3149 6.08541H89.3568L93.3739 13.709H93.4607L97.4654 6.08541H101.52L95.2833 17.2733V23.944H91.5389Z"/>
+          <path fill="#10384F" d="M106.405 24.2163C102.363 24.2163 99.8212 21.6297 99.8212 17.3105V17.2857C99.8212 13.016 102.425 10.4046 106.392 10.4046C110.372 10.4046 112.988 12.9912 112.988 17.2857V17.3105C112.988 21.6421 110.422 24.2163 106.405 24.2163ZM106.417 21.3822C108.178 21.3822 109.306 19.897 109.306 17.3105V17.2857C109.306 14.7239 108.153 13.2387 106.392 13.2387C104.644 13.2387 103.504 14.7239 103.504 17.2857V17.3105C103.504 19.9094 104.632 21.3822 106.417 21.3822Z"/>
+          <path fill="#10384F" d="M119.386 24.2163C116.46 24.2163 114.799 22.3475 114.799 19.2411V10.6769H118.419V18.4862C118.419 20.2188 119.237 21.2213 120.861 21.2213C122.486 21.2213 123.515 20.0332 123.515 18.3005V10.6769H127.135V23.944H123.515V21.7534H123.44C122.758 23.2757 121.395 24.2163 119.386 24.2163Z"/>
+        </g>
+        <defs>
+          <linearGradient id="lg0" gradientUnits="userSpaceOnUse" x1="32" x2="0" y1="13.0667" y2="13.0667"><stop stop-color="#624963"/><stop offset="1" stop-color="#FF3162"/></linearGradient>
+          <linearGradient id="lg1" gradientUnits="userSpaceOnUse" x1="29.7778" x2="12.8001" y1="3.82184" y2="21.2441"><stop stop-color="#68B713"/><stop offset="1" stop-color="#87D228"/></linearGradient>
+          <clipPath id="lclip"><rect width="128" height="32" fill="#fff"/></clipPath>
+        </defs>
+      </svg>
+      </a>
+      <div class="spacer"></div>
+      <div class="appbar-right">
+        <button class="icon-btn" aria-label="Notifications"><svg viewBox="0 0 24 24"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.89 2 2 2m6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1zm-2 1H8v-6c0-2.48 1.51-4.5 4-4.5s4 2.02 4 4.5z"/></svg></button>
+        <button class="icon-btn" aria-label="Help"><svg viewBox="0 0 24 24"><path d="M11 18h2v-2h-2zm1-16C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2m0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8m0-14c-2.21 0-4 1.79-4 4h2c0-1.1.9-2 2-2s2 .9 2 2c0 2-3 1.75-3 5h2c0-2.25 3-2.5 3-5 0-2.21-1.79-4-4-4"/></svg></button>
+        <div class="user">
+          <div class="avatar">T</div>
+          <span class="name">Tobias Gemperli</span>
+          <svg class="caret" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5z"/></svg>
+        </div>
+      </div>
+    </header>
+
+    <div class="crumbs">
+      <h1 class="crumb-title">Import assistant</h1>
+    </div>
+
+    <main class="page">
+      <div class="chatwrap">
+        <div class="strip" id="strip" hidden></div>
+        <div class="thread" id="thread"></div>
+        <div class="composer">
+          <form id="composer">
+            <button type="button" class="ib" id="attach" aria-label="Attach files"><svg viewBox="0 0 24 24"><path d="M16.5 6v11.5c0 2.21-1.79 4-4 4s-4-1.79-4-4V5c0-1.38 1.12-2.5 2.5-2.5s2.5 1.12 2.5 2.5v10.5c0 .55-.45 1-1 1s-1-.45-1-1V6H10v9.5c0 1.38 1.12 2.5 2.5 2.5s2.5-1.12 2.5-2.5V5c0-2.21-1.79-4-4-4S7 2.79 7 5v12.5c0 3.04 2.46 5.5 5.5 5.5s5.5-2.46 5.5-5.5V6z"/></svg></button>
+            <textarea id="text" rows="1" placeholder="Reply, or tell me how to read your files…"></textarea>
+            <button type="submit" class="ib send" aria-label="Send"><svg viewBox="0 0 24 24"><path d="M3.4 20.4l17.45-7.48c.81-.35.81-1.49 0-1.84L3.4 3.6c-.66-.29-1.39.2-1.39.91L2 9.12c0 .5.37.93.87.99L17 12 2.87 13.88c-.5.07-.87.5-.87 1l.01 4.61c0 .71.73 1.2 1.39.91"/></svg></button>
+          </form>
+          <div class="hint">Nothing is saved until you press Import.</div>
+        </div>
+      </div>
+    </main>
+
+    <div class="overlay">
+      <div class="scrim" id="scrim"></div>
+      <nav class="drawer" role="navigation" aria-label="Navigate">
+        <ul class="nav">
+          <li><a class="item" href="index.html">
+            <svg viewBox="0 0 24 24"><path d="M3 13h2v-2H3v2m0 4h2v-2H3v2m0-8h2V7H3v2m4 4h14v-2H7v2m0 4h14v-2H7v2M7 7v2h14V7H7Z"/></svg>
+            Plots</a></li>
+          <li><a class="item" data-noop href="#">
+            <svg viewBox="0 0 24 24"><path d="M12 21C11.7167 21 11.4792 20.9042 11.2875 20.7125C11.0958 20.5208 11 20.2833 11 20V13.025C9.93333 13.025 8.90833 12.8208 7.925 12.4125C6.94167 12.0042 6.075 11.425 5.325 10.675C4.575 9.925 4 9.05833 3.6 8.075C3.2 7.09167 3 6.06667 3 5V4C3 3.71667 3.09583 3.47917 3.2875 3.2875C3.47917 3.09583 3.71667 3 4 3H5C6.05 3 7.06667 3.20417 8.05 3.6125C9.03333 4.02083 9.9 4.6 10.65 5.35C11.1667 5.86667 11.5958 6.43333 11.9375 7.05C12.2792 7.66667 12.5417 8.325 12.725 9.025C12.8083 8.90833 12.9 8.79583 13 8.6875C13.1 8.57917 13.2083 8.46667 13.325 8.35C14.075 7.6 14.9417 7.02083 15.925 6.6125C16.9083 6.20417 17.9333 6 19 6H20C20.2833 6 20.5208 6.09583 20.7125 6.2875C20.9042 6.47917 21 6.71667 21 7V8C21 9.06667 20.7958 10.0917 20.3875 11.075C19.9792 12.0583 19.4 12.925 18.65 13.675C17.9 14.425 17.0375 15 16.0625 15.4C15.0875 15.8 14.0667 16 13 16V20C13 20.2833 12.9042 20.5208 12.7125 20.7125C12.5208 20.9042 12.2833 21 12 21ZM11 11C11 10.2 10.8458 9.4375 10.5375 8.7125C10.2292 7.9875 9.79167 7.34167 9.225 6.775C8.65833 6.20833 8.0125 5.77083 7.2875 5.4625C6.5625 5.15417 5.8 5 5 5C5 5.8 5.15 6.56667 5.45 7.3C5.75 8.03333 6.18333 8.68333 6.75 9.25C7.31667 9.81667 7.96667 10.25 8.7 10.55C9.43333 10.85 10.2 11 11 11ZM13 14C13.8 14 14.5625 13.85 15.2875 13.55C16.0125 13.25 16.6583 12.8167 17.225 12.25C17.7917 11.6833 18.2292 11.0333 18.5375 10.3C18.8458 9.56667 19 8.8 19 8C18.2 8 17.4333 8.15417 16.7 8.4625C15.9667 8.77083 15.3167 9.20833 14.75 9.775C14.1833 10.3417 13.75 10.9875 13.45 11.7125C13.15 12.4375 13 13.2 13 14Z"/></svg>
+            Seasons</a></li>
+          <li><a class="item" data-noop href="#">
+            <svg viewBox="0 0 24 24"><path d="M8 14C7.71667 14 7.47917 13.9042 7.2875 13.7125C7.09583 13.5208 7 13.2833 7 13C7 12.7167 7.09583 12.4792 7.2875 12.2875C7.47917 12.0958 7.71667 12 8 12C8.28333 12 8.52083 12.0958 8.7125 12.2875C8.90417 12.4792 9 12.7167 9 13C9 13.2833 8.90417 13.5208 8.7125 13.7125C8.52083 13.9042 8.28333 14 8 14ZM12 14C11.7167 14 11.4792 13.9042 11.2875 13.7125C11.0958 13.5208 11 13.2833 11 13C11 12.7167 11.0958 12.4792 11.2875 12.2875C11.4792 12.0958 11.7167 12 12 12C12.2833 12 12.5208 12.0958 12.7125 12.2875C12.9042 12.4792 13 12.7167 13 13C13 13.2833 12.9042 13.5208 12.7125 13.7125C12.5208 13.9042 12.2833 14 12 14ZM16 14C15.7167 14 15.4792 13.9042 15.2875 13.7125C15.0958 13.5208 15 13.2833 15 13C15 12.7167 15.0958 12.4792 15.2875 12.2875C15.4792 12.0958 15.7167 12 16 12C16.2833 12 16.5208 12.0958 16.7125 12.2875C16.9042 12.4792 17 12.7167 17 13C17 13.2833 16.9042 13.5208 16.7125 13.7125C16.5208 13.9042 16.2833 14 16 14ZM5 22C4.45 22 3.97917 21.8042 3.5875 21.4125C3.19583 21.0208 3 20.55 3 20V6C3 5.45 3.19583 4.97917 3.5875 4.5875C3.97917 4.19583 4.45 4 5 4H6V3C6 2.71667 6.09583 2.47917 6.2875 2.2875C6.47917 2.09583 6.71667 2 7 2C7.28333 2 7.52083 2.09583 7.7125 2.2875C7.90417 2.47917 8 2.71667 8 3V4H16V3C16 2.71667 16.0958 2.47917 16.2875 2.2875C16.4792 2.09583 16.7167 2 17 2C17.2833 2 17.5208 2.09583 17.7125 2.2875C17.9042 2.47917 18 2.71667 18 3V4H19C19.55 4 20.0208 4.19583 20.4125 4.5875C20.8042 4.97917 21 5.45 21 6V20C21 20.55 20.8042 21.0208 20.4125 21.4125C20.0208 21.8042 19.55 22 19 22H5ZM5 20H19V10H5V20ZM5 8H19V6H5V8Z"/></svg>
+            Calendar</a></li>
+          <li><a class="item" data-noop href="#">
+            <svg viewBox="0 0 24 24"><path d="M5.02497 21C4.47497 21 4.00413 20.8042 3.61247 20.4125C3.2208 20.0208 3.02497 19.55 3.02497 19V11.05C2.64163 10.7 2.3458 10.25 2.13747 9.7C1.92913 9.15 1.92497 8.55 2.12497 7.9L3.17497 4.5C3.3083 4.06667 3.5458 3.70833 3.88747 3.425C4.22913 3.14167 4.62497 3 5.07497 3H18.975C19.425 3 19.8166 3.1375 20.15 3.4125C20.4833 3.6875 20.725 4.05 20.875 4.5L21.925 7.9C22.125 8.55 22.1208 9.14167 21.9125 9.675C21.7041 10.2083 21.4083 10.6667 21.025 11.05V19C21.025 19.55 20.8291 20.0208 20.4375 20.4125C20.0458 20.8042 19.575 21 19.025 21H5.02497ZM14.225 10C14.675 10 15.0166 9.84583 15.25 9.5375C15.4833 9.22917 15.575 8.88333 15.525 8.5L14.975 5H13.025V8.7C13.025 9.05 13.1416 9.35417 13.375 9.6125C13.6083 9.87083 13.8916 10 14.225 10ZM9.72497 10C10.1083 10 10.4208 9.87083 10.6625 9.6125C10.9041 9.35417 11.025 9.05 11.025 8.7V5H9.07497L8.52497 8.5C8.4583 8.9 8.5458 9.25 8.78747 9.55C9.02913 9.85 9.34163 10 9.72497 10ZM5.27497 10C5.57497 10 5.83747 9.89167 6.06247 9.675C6.28747 9.45833 6.42497 9.18333 6.47497 8.85L7.02497 5H5.07497L4.07497 8.35C3.97497 8.68333 4.02913 9.04167 4.23747 9.425C4.4458 9.80833 4.79163 10 5.27497 10ZM18.775 10C19.2583 10 19.6083 9.80833 19.825 9.425C20.0416 9.04167 20.0916 8.68333 19.975 8.35L18.925 5H17.025L17.575 8.85C17.625 9.18333 17.7625 9.45833 17.9875 9.675C18.2125 9.89167 18.475 10 18.775 10ZM5.02497 19H19.025V11.95C18.9416 11.9833 18.8875 12 18.8625 12H18.775C18.325 12 17.9291 11.925 17.5875 11.775C17.2458 11.625 16.9083 11.3833 16.575 11.05C16.275 11.35 15.9333 11.5833 15.55 11.75C15.1666 11.9167 14.7583 12 14.325 12C13.875 12 13.4541 11.9167 13.0625 11.75C12.6708 11.5833 12.325 11.35 12.025 11.05C11.7416 11.35 11.4125 11.5833 11.0375 11.75C10.6625 11.9167 10.2583 12 9.82497 12C9.34163 12 8.90413 11.9167 8.51247 11.75C8.1208 11.5833 7.77497 11.35 7.47497 11.05C7.12497 11.4 6.77913 11.6458 6.43747 11.7875C6.0958 11.9292 5.7083 12 5.27497 12H5.16247C5.1208 12 5.07497 11.9833 5.02497 11.95V19Z"/></svg>
+            Supermarkets</a></li>
+          <li><a class="item" data-noop href="#">
+            <svg viewBox="0 0 24 24"><path d="M9 17C8.71667 17 8.47917 16.9042 8.2875 16.7125C8.09583 16.5208 8 16.2833 8 16C8 15.7167 8.09583 15.4792 8.2875 15.2875C8.47917 15.0958 8.71667 15 9 15H10C10.2833 15 10.5208 15.0958 10.7125 15.2875C10.9042 15.4792 11 15.7167 11 16C11 16.2833 10.9042 16.5208 10.7125 16.7125C10.5208 16.9042 10.2833 17 10 17H9ZM8 22C6.61667 22 5.4375 21.5125 4.4625 20.5375C3.4875 19.5625 3 18.3833 3 17V8C2.45 8 1.97917 7.80417 1.5875 7.4125C1.19583 7.02083 1 6.55 1 6V4C1 3.45 1.19583 2.97917 1.5875 2.5875C1.97917 2.19583 2.45 2 3 2H13C13.55 2 14.0208 2.19583 14.4125 2.5875C14.8042 2.97917 15 3.45 15 4V6C15 6.55 14.8042 7.02083 14.4125 7.4125C14.0208 7.80417 13.55 8 13 8V11C13 11.55 12.8042 12.0208 12.4125 12.4125C12.0208 12.8042 11.55 13 11 13H9C8.71667 13 8.47917 12.9042 8.2875 12.7125C8.09583 12.5208 8 12.2833 8 12C8 11.7167 8.09583 11.4792 8.2875 11.2875C8.47917 11.0958 8.71667 11 9 11H11V8H5V17C5 17.8333 5.29167 18.5417 5.875 19.125C6.45833 19.7083 7.16667 20 8 20C8.3 20 8.5875 19.9583 8.8625 19.875C9.1375 19.7917 9.39167 19.675 9.625 19.525C9.84167 19.3917 10.075 19.3583 10.325 19.425C10.575 19.4917 10.7667 19.6417 10.9 19.875C11.05 20.1083 11.0917 20.3625 11.025 20.6375C10.9583 20.9125 10.8083 21.125 10.575 21.275C10.1917 21.5083 9.7875 21.6875 9.3625 21.8125C8.9375 21.9375 8.48333 22 8 22ZM3 6H13V4H3V6ZM16.5 19C17.2 19 17.7917 18.7583 18.275 18.275C18.7583 17.7917 19 17.2 19 16.5C19 15.8 18.7583 15.2083 18.275 14.725C17.7917 14.2417 17.2 14 16.5 14C15.8 14 15.2083 14.2417 14.725 14.725C14.2417 15.2083 14 15.8 14 16.5C14 17.2 14.2417 17.7917 14.725 18.275C15.2083 18.7583 15.8 19 16.5 19ZM16.5 21C15.25 21 14.1875 20.5625 13.3125 19.6875C12.4375 18.8125 12 17.75 12 16.5C12 15.25 12.4375 14.1875 13.3125 13.3125C14.1875 12.4375 15.25 12 16.5 12C17.75 12 18.8125 12.4375 19.6875 13.3125C20.5625 14.1875 21 15.25 21 16.5C21 16.9333 20.9417 17.35 20.825 17.75C20.7083 18.15 20.5333 18.5333 20.3 18.9L22.3 20.9C22.4833 21.0833 22.575 21.3167 22.575 21.6C22.575 21.8833 22.4833 22.1167 22.3 22.3C22.1167 22.4833 21.8833 22.575 21.6 22.575C21.3167 22.575 21.0833 22.4833 20.9 22.3L18.9 20.3C18.5333 20.5333 18.15 20.7083 17.75 20.825C17.35 20.9417 16.9333 21 16.5 21Z"/></svg>
+            Substances</a></li>
+          <li><a class="item" href="batch-import.html">
+            <svg viewBox="0 0 24 24"><path d="M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z"/></svg>
+            Batch import</a></li>
+          <li><a class="item selected" data-current href="import-chat.html">
+            <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2m0 14H6l-2 2V4h16zM7 9h2v2H7zm4 0h2v2h-2zm4 0h2v2h-2z"/></svg>
+            Import assistant</a></li>
+          <li><a class="item" href="history.html">
+            <svg viewBox="0 0 24 24"><path d="M13 3a9 9 0 0 0-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42A8.95 8.95 0 0 0 13 21a9 9 0 0 0 0-18m-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8z"/></svg>
+            History</a></li>
+          <li><a class="item" href="chat-blocks.html">
+            <svg viewBox="0 0 24 24"><path d="M4 8h4V4H4zm6 12h4v-4h-4zm-6 0h4v-4H4zm0-6h4v-4H4zm6 0h4v-4h-4zm6-10v4h4V4zm-6 4h4V4h-4zm6 6h4v-4h-4zm0 6h4v-4h-4z"/></svg>
+            Assistant components</a></li>
+        </ul>
+        <div class="drawer-footer"><a data-noop href="#">Conditions</a> &amp; <a data-noop href="#">Privacy</a></div>
+      </nav>
+    </div>
+  </div>
+
+  <script src="diary-data.js"></script>
+  <script>
+    // Chat-only import: the assistant reads the Turkish diaries (diary-data.js),
+    // matches what it can by itself, and asks one question at a time about the
+    // rest. Every answer updates the draft (strip at the top) right away.
+    const esc = (s) => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    const BOT_ICO = '<svg viewBox="0 0 24 24"><path d="M19 9l1.25-2.75L23 5l-2.75-1.25L19 1l-1.25 2.75L15 5l2.75 1.25zm-7.5.5L9 4 6.5 9.5 1 12l5.5 2.5L9 20l2.5-5.5L17 12zM19 15l-1.25 2.75L15 19l2.75 1.25L19 23l1.25-2.75L23 19l-2.75-1.25z"/></svg>';
+    const FILE_ICO = '<svg viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8zm4 18H6V4h7v5h5z"/></svg>';
+    const SKIP_V = '__skip';
+    const PLOT_NAMES = DIARY_PLOTS.map(p => p.name);
+    const sum = (a) => a.reduce((x, y) => x + y, 0);
+
+    // ── Resolving rows with the answers so far ────────────────────────────
+    let A;               // answers by question id
+    const newPlots = () => [['kanal', 'Kanal altı'], ['organik', 'Organik']].filter(([id]) => A[id] === NEW_PLOT).map(([, n]) => n);
+    const farm = () => [...PLOT_NAMES, ...newPlots()];
+    const isRel = (s) => ['tümalan', 'kalankisim'].includes(nk(s));
+    const prevExplicit = (r) => { const xs = DIARY_ROWS.filter(x => x.src === r.src && x.line < r.line && !isRel(x.parcels)); return xs[xs.length - 1]; };
+    const pickedOr = (v, fallback) => Array.isArray(v) ? v : v === undefined ? null : fallback();
+    function tokenPlots(t, r) {
+      const k = nk(t);
+      if (PLOT_NAMES.includes(t)) return [t];
+      if (k === 'bc/a') return A.bca ? [A.bca] : null;
+      if (k === 'kanalalti') return A.kanal === undefined ? null : A.kanal === SKIP_V ? [] : A.kanal === NEW_PLOT ? ['Kanal altı'] : [A.kanal];
+      if (k === 'organik') return A.organik === undefined ? null : A.organik === SKIP_V ? [] : A.organik === NEW_PLOT ? ['Organik'] : [A.organik];
+      if (k === 'tümalan') return pickedOr(A.tum, () => A.tum === ALL_NO_ORG ? farm().filter(n => n !== 'Organik') : farm());
+      if (k === 'kalankisim') return pickedOr(A.kalan, () => { const prev = rowPlots(prevExplicit(r)) || []; return farm().filter(n => !prev.includes(n)); });
+      return [];
+    }
+    // null = still waiting for an answer.
+    function rowPlots(r) {
+      const out = [];
+      for (const t of parseParcels(r.parcels).tokens) { const ps = tokenPlots(t, r); if (ps === null) return null; ps.forEach(p => out.includes(p) || out.push(p)); }
+      return out;
+    }
+    function rowProduct(r) {
+      const k = nk(productKey(r));
+      if (k === 'decis') return A.decis || null;
+      if (k === 'delegate') return A.delegate === undefined ? null : A.delegate === SKIP_V ? SKIP_V : 'Delegate 250 WG';
+      return (byKey(PRODUCT_ALIASES)[k] || [])[0] || null;
+    }
+    const rowReady = (r) => rowPlots(r) !== null && rowProduct(r) !== null;
+    const rowTreatments = (r) => rowReady(r) && rowProduct(r) !== SKIP_V ? rowPlots(r).length : 0;
+    const totalTreatments = () => sum(DIARY_ROWS.map(rowTreatments));
+    const plotsTouched = () => new Set(DIARY_ROWS.filter(r => rowTreatments(r)).flatMap(rowPlots)).size;
+    const rowsOf = (pred) => DIARY_ROWS.filter(pred);
+    const hasTok = (k) => (r) => parseParcels(r.parcels).tokens.some(t => nk(t) === k);
+    const plotsLabel = (ps) => ps.length > 8 ? `${ps.slice(0, 7).join(', ')} +${ps.length - 7} more` : ps.join(', ');
+
+    // ── Source snippets: crops of the real files ──────────────────────────
+    // Column x-bounds in the 2000-wide reference (same scale as the row y-bounds).
+    const COLS = {
+      xlsx: { parcels: [15, 228, 'Uygulanan Parseller'], date: [228, 498, 'Uygulama Tarihi'], ai: [498, 800, 'Etkili Madde'], trade: [800, 1098, 'Ticari Adı'],
+              dose: [1098, 1375, 'Doz'], method: [1375, 1572, 'Uygulama Metodu'], phi: [1572, 1775, 'Bekleme Süresi'], water: [1775, 2000, 'Toplam Kullanılan Su Miktarı'] },
+      scan: { parcels: [30, 155, 'Uygulanan Parseller'], date: [155, 288, 'Uygulama Tarihi'], ai: [288, 466, 'Etkili Madde'], trade: [466, 642, 'Ticari Adı'],
+              dose: [642, 798, 'Doz'], method: [798, 995, 'Uygulama Metodu'], phi: [995, 1128, 'Bekleme Süresi'], harvest: [1128, 1278, 'Uygun Hasat Tarihi'], reason: [1278, 1528, 'Uygulama Nedeni'] },
+    };
+    // snip(src, row ranges, caption, cols, lines): crops of header + rows; the cells
+    // of `cols` × `lines` are outlined, plus their header cell (dashed).
+    function snip(src, ranges, cap, cols = [], lines = []) {
+      const S = SOURCES[src], k = 820 / 2000, px = (v) => Math.round(v * k);
+      const rowY = (n) => DIARY_ROWS.find(r => r.src === src && r.line === n).y;
+      const boxes = [...cols.map(c => [c, S.head, true]), ...cols.flatMap(c => lines.map(n => [c, rowY(n), false]))];
+      const crop = ([y0, y1]) => {
+        const hl = boxes.filter(([, [b0, b1]]) => b0 < y1 && b1 > y0).map(([c, [b0, b1], head]) => {
+          const [x0, x1] = COLS[src][c], t = Math.max(b0, y0), b = Math.min(b1, y1);
+          return `<i class="hl${head ? ' head' : ''}" style="left:${px(x0)}px;width:${px(x1 - x0)}px;top:${px(t - y0)}px;height:${px(b - t)}px"></i>`;
+        }).join('');
+        return `<div class="crop" style="height:${px(y1 - y0)}px;background-image:url(${S.img});background-position:0 -${px(y0)}px">${hl}</div>`;
+      };
+      return `<div class="snip" data-focus="${cols.length ? px(COLS[src][cols[0]][0]) : 0}">${crop(S.head)}${ranges.map(crop).join('')}</div>`;
+    }
+    const xRow = (n) => DIARY_ROWS.find(r => r.src === 'xlsx' && r.line === n).y;
+    const sRow = (n) => DIARY_ROWS.find(r => r.src === 'scan' && r.line === n).y;
+
+    // ── Questions ─────────────────────────────────────────────────────────
+    // Each: html, snippet, options [{label, value, re, rec, ack}], optional picker.
+    const QUESTIONS = {
+      columns: () => ({
+        html: `<p>Here's how I read your columns into ResiYou treatment fields:</p>
+          <table class="kv"><tr><th>Your column</th><th></th><th>ResiYou field</th></tr>
+          ${[['Uygulanan Parseller · Parsel', 'Plot', 'shorthand lists like “A5-6-7” are split per plot'],
+             ['Uygulama Tarihi · Tarih', 'Application date', ''],
+             ['Ticari Adı', 'Product', 'active substance column used to double-check'],
+             ['Doz (g / 100 l)', 'Dose', 'per 100 l of water'],
+             ['Toplam Kullanılan Su Miktarı', 'Water volume', 'unit unclear — I\'ll ask'],
+             ['Bekleme Süresi', 'PHI (days)', ''],
+             ['Neden (scan)', 'Target', 'e.g. “Kiraz sineği” = cherry fruit fly'],
+             ['Hasat Tarihi (scan)', '—', 'no treatment field for this']]
+            .map(([a, b, c]) => `<tr><td>${esc(a)}</td><td class="arrow">→</td><td>${esc(b)}${c ? `<div class="soft">${esc(c)}</div>` : ''}</td></tr>`).join('')}</table>
+          <p>Your scan also has a <b>harvest date</b> per spray. ResiYou doesn't store it, but I can use it to double-check your PHI days. Should I?</p>`,
+        snip: snip('scan', [sRow(1)], 'header + row 1', ['harvest'], [1]),
+        options: [
+          { label: 'Yes, double-check', value: 'use', rec: true, re: /yes|ja|check|use|ok|sure|evet/i, ack: () => 'I\'ll check that spray date + PHI fits your harvest date.' },
+          { label: 'No, ignore it', value: 'ignore', re: /ignore|no|nein|skip|hayır/i, ack: () => 'Harvest dates will be ignored.' },
+        ],
+      }),
+      bca: () => ({
+        html: `<p>All 12 scan rows are on <code>B C/A 21,2 da</code> (written three ways). That isn't a plot code, but <b>21,2 da = 2.12 ha</b> — exactly the size of your plot <b>B1</b>.</p><p>Is it B1?</p>`,
+        snip: snip('scan', [[sRow(1)[0], sRow(3)[1]]], 'rows 1–3', ['parcels'], [1, 2, 3]),
+        options: [
+          { label: 'Yes, it\'s B1', value: 'B1', rec: true, re: /yes|ja|right|correct|evet|b1\b/i },
+          { label: 'No, another plot', pick: 'single' },
+        ],
+        ack: (v) => `${v} gets the 12 treatments from the scan.`,
+      }),
+      kanal: () => ({
+        html: `<p><code>Kanal altı</code> (“below the canal”) appears in ${rowsOf(hasTok('kanalalti')).length} Excel rows between your A and B plots, but none of your plots is called that.</p>`,
+        snip: snip('xlsx', [xRow(1)], 'row 1', ['parcels'], [1]),
+        options: [
+          { label: 'Create plot “Kanal altı”', value: NEW_PLOT, rec: true, re: /new|create|neu|anlegen|yeni/i, ack: () => 'New draft plot “Kanal altı” — add crop and area later.' },
+          { label: 'It\'s one of my plots', pick: 'single' },
+          { label: 'Leave it out', value: SKIP_V, re: /skip|leave|ignore|weg|nicht/i, ack: () => 'Kanal altı is left out.' },
+        ],
+        ack: (v) => `Kanal altı = ${v}.`,
+      }),
+      organik: () => ({
+        html: `<p>The last two Excel rows list <code>B1-2-3-4-5-Organik-20da-55da-40 da</code>. B1–B5 are yours; <code>Organik</code> isn't. The areas after it add up to 115 da (11.5 ha).</p>`,
+        snip: snip('xlsx', [[xRow(16)[0], xRow(17)[1]]], 'rows 16–17', ['parcels'], [16, 17]),
+        options: [
+          { label: 'Create plot “Organik”', value: NEW_PLOT, rec: true, re: /new|create|neu|anlegen|yeni/i, ack: () => 'New draft plot “Organik”, 11.5 ha.' },
+          { label: 'It\'s one of my plots', pick: 'single' },
+          { label: 'Leave it out', value: SKIP_V, re: /skip|leave|ignore|weg|nicht/i, ack: () => 'Organik is left out.' },
+        ],
+        ack: (v) => `Organik = ${v}.`,
+      }),
+      kalan: () => {
+        const prev = rowPlots(prevExplicit(DIARY_ROWS.find(r => r.src === 'xlsx' && r.line === 2)));
+        const rest = farm().filter(n => !prev.includes(n));
+        return {
+          html: `<p><code>kalan kısım</code> means “the remaining part”. It's in ${rowsOf(hasTok('kalankisim')).length} rows, each right after a row that lists A1–A10, B1, B7${A.kanal === NEW_PLOT ? ' and Kanal altı' : ''}.</p>
+            <p>So I read it as the rest of the farm: <b>${esc(plotsLabel(rest))}</b>. Right?</p>`,
+          snip: snip('xlsx', [[xRow(5)[0], xRow(6)[1]]], 'rows 5–6', ['parcels'], [5, 6]),
+          options: [
+            { label: `Yes, those ${rest.length} plots`, value: REST_PLOTS, rec: true, re: /yes|ja|right|correct|rest|evet/i },
+            { label: 'Let me pick', pick: 'multi', preset: rest },
+          ],
+          ack: () => { const r = DIARY_ROWS.find(x => x.src === 'xlsx' && x.line === 2); return `“kalan kısım” → ${plotsLabel(rowPlots(r))}.`; },
+        };
+      },
+      tum: () => {
+        const org = A.organik === NEW_PLOT;
+        const n = rowsOf(hasTok('tümalan')).length;
+        return {
+          html: `<p><code>tüm alan</code> means “the whole area”. It's used for ${n} sprays in April–June (Lamdex, Decis, Mospilan, Delegate).</p>
+            ${org ? '<p>Did these also go on <b>Organik</b>? Organic plots usually don\'t get synthetic insecticides like these.</p>' : `<p>I'll put them on all ${farm().length} plots. OK?</p>`}`,
+          snip: snip('xlsx', [[xRow(7)[0], xRow(9)[1]]], 'rows 7–9 of 8 “tüm alan” rows', ['parcels'], [7, 8, 9]),
+          options: org ? [
+            { label: 'Every plot except Organik', value: ALL_NO_ORG, rec: true, prio: 1, re: /except|without|ohne|not|nicht|no\b|nein|hariç/i },
+            { label: 'Yes, Organik too', value: ALL_PLOTS, re: /yes|ja|too|auch|all|every|evet/i },
+            { label: 'Let me pick', pick: 'multi', preset: farm().filter(x => x !== 'Organik') },
+          ] : [
+            { label: `Yes, all ${farm().length} plots`, value: ALL_PLOTS, rec: true, re: /yes|ja|all|every|evet/i },
+            { label: 'Let me pick', pick: 'multi', preset: farm() },
+          ],
+          ack: () => { const ps = rowPlots(rowsOf(hasTok('tümalan'))[0]); return `${n} sprays × ${ps.length} plots = ${n * ps.length} treatments.`; },
+        };
+      },
+      decis: () => ({
+        html: `<p>Two rows only say <code>decis</code>. There are two Decis products: <b>Decis 25 EC</b> and <b>Decis 100 EC</b>.</p>
+          <p class="muted">The dose of 25 ml/100 l is on the Decis 25 EC label; for 100 EC it would be ~4× too high.</p>`,
+        snip: snip('xlsx', [xRow(8), xRow(10)], 'rows 8 and 10', ['trade', 'ai', 'dose'], [8, 10]),
+        options: [
+          { label: 'Decis 25 EC', value: 'Decis 25 EC', rec: true, re: /25/ },
+          { label: 'Decis 100 EC', value: 'Decis 100 EC', re: /100/ },
+        ],
+        ack: (v) => `Both rows → ${v} (deltamethrin).`,
+      }),
+      delegate: () => ({
+        html: `<p>4 Excel rows say <code>delegate</code> with active substance “spinetorom %25 wp”. The registered product is <b>Delegate 250 WG</b> — same substance and strength, but WG, not WP.</p><p>Use Delegate 250 WG?</p>`,
+        snip: snip('xlsx', [xRow(13)], 'row 13', ['trade', 'ai'], [13]),
+        options: [
+          { label: 'Yes, Delegate 250 WG', value: 'ok', rec: true, re: /yes|ja|ok|250|wg|evet/i, ack: () => 'Delegate 250 WG (spinetoram).' },
+          { label: 'Leave those rows out', value: SKIP_V, re: /skip|leave|no|nein|out/i, ack: () => 'The 4 Delegate rows are left out.' },
+        ],
+      }),
+      water: () => ({
+        html: `<p>The column <code>Toplam Kullanılan Su Miktarı</code> (total water used) has values 25, 35, 60 and 30, but no unit. I need it to work out the rate per hectare.</p>
+          <p class="muted">For a tank sprayer on ~10 ha, 25–60 <b>tonnes</b> fits (≈ 1 000–1 500 l/ha).</p>`,
+        snip: snip('xlsx', [xRow(1)], 'row 1', ['water'], [1]),
+        options: [
+          { label: 'Tonnes per row', value: 't', rec: true, re: /ton|\bt\b/i, ack: () => 'Water in tonnes — 25 t over the row\'s plots.' },
+          { label: 'Litres per row', value: 'l', prio: 1, re: /lit|liter|\bl\b/i, ack: () => 'Water in litres per row.' },
+          { label: 'Litres per dekar', value: 'lda', prio: 2, re: /dekar|da\b|per/i, ack: () => 'Water in litres per dekar.' },
+        ],
+      }),
+      year: () => ({
+        html: `<p>Excel row 9 is dated <code>4/25/25</code>; all other rows are from 2026, and row 8 is <code>4/25/26</code>. Probably a typo?</p>`,
+        snip: snip('xlsx', [[xRow(8)[0], xRow(9)[1]]], 'rows 8–9', ['date'], [9]),
+        options: [
+          { label: 'Yes, make it 25 Apr 2026', value: 'fix', rec: true, re: /yes|ja|fix|2026|typo|evet/i, ack: () => 'Row 9 → 25 Apr 2026.' },
+          { label: 'Keep 2025', value: 'keep', re: /keep|2025|no|nein/i, ack: () => 'Row 9 stays in 2025 (previous season).' },
+        ],
+      }),
+      harvest: () => ({
+        html: `<p>One check came up: scan row 1 sprayed Hektaş Göztaşı on <b>10 Mar</b> with a 21-day PHI, but the harvest date says <b>22 Mar</b> — 9 days early. All other rows have harvest ≥ spray + PHI.</p>`,
+        snip: snip('scan', [sRow(1)], 'row 1', ['date', 'phi', 'harvest'], [1]),
+        options: [
+          { label: 'Import and flag it', value: 'flag', rec: true, re: /flag|yes|ja|import|mark/i, ack: () => 'B1 will get a PHI warning on that spray.' },
+          { label: 'Import as written', value: 'plain', prio: 1, re: /written|plain|no|nein|ignore/i, ack: () => 'No warning — imported as written.' },
+        ],
+      }),
+    };
+    const ORDER = ['columns', 'bca', 'kanal', 'organik', 'kalan', 'tum', 'decis', 'delegate', 'water', 'year', 'harvest'];
+    const skipQ = (id) => id === 'harvest' && A.columns === 'ignore';
+    const openQuestions = () => ORDER.filter(id => A[id] === undefined && !skipQ(id)).length;
+
+    // ── Chat state ────────────────────────────────────────────────────────
+    let S;
+    function reset() {
+      A = {};
+      S = { msgs: [], cur: null, pick: null, typing: false, stage: 'empty', queue: [] };
+      // Empty state: the accepted file types as icons inside the drop zone — no prose.
+      const ftile = (ext, label, icon) => `<div class="ftype"><div class="fdoc">${icon}<span class="fext">${ext}</span></div><div class="flbl">${label}</div></div>`;
+      const DOC = '<svg viewBox="0 0 48 60"><path d="M4 0h28l16 16v40a4 4 0 0 1-4 4H4a4 4 0 0 1-4-4V4a4 4 0 0 1 4-4z" fill="#fff" stroke="#c9c9cf" stroke-width="2"/><path d="M32 0v12a4 4 0 0 0 4 4h12" fill="#ededf0" stroke="#c9c9cf" stroke-width="2"/></svg>';
+      const CAM = '<svg viewBox="0 0 48 60"><rect x="1" y="1" width="46" height="58" rx="5" fill="#fff" stroke="#c9c9cf" stroke-width="2"/><path d="M8 44l10-13 8 9 6-7 9 11z" fill="#d6d6db"/><circle cx="33" cy="18" r="5" fill="#d6d6db"/></svg>';
+      bot(`<div class="drop" data-act="load">
+          <div class="ftypes">${ftile('XLSX', 'Excel', DOC)}${ftile('CSV', 'CSV', DOC)}${ftile('PDF', 'PDF scan', DOC)}${ftile('JPG', 'Photo of a notebook', CAM)}</div>
+          <div class="dhint">${FILE_ICO.replace('<svg', '<svg style="width:18px;height:18px;fill:currentColor;vertical-align:-4px;margin-right:6px"')}Drop files or click to upload · any layout, any language</div>
+        </div>
+        <div class="chips" style="margin-top:20px"><button class="chip" data-act="load">Try the example: İlaçlama defteri 2026.xlsx + scan.pdf</button></div>`);
+      render();
+    }
+    const bot = (html, extra = {}) => S.msgs.push({ who: 'bot', html, ...extra });
+    const me = (html, extra = {}) => S.msgs.push({ who: 'me', html, ...extra });
+    const later = (fn, ms = 650) => { S.typing = true; render(); setTimeout(() => { S.typing = false; fn(); render(); }, ms); };
+
+    function loadExample() {
+      if (S.stage !== 'empty') return;
+      S.stage = 'reading';
+      const tile = (img, name, sz) => `<div class="file"><div class="thumb" style="background-image:url(${img})"></div><div><div class="nm">${esc(name)}</div><div class="sz">${sz}</div></div></div>`;
+      me(`<div class="files-msg">${tile(SOURCES.xlsx.img, SOURCES.xlsx.file, 'Excel · 24 KB')}${tile(SOURCES.scan.img, SOURCES.scan.file, 'PDF · 1 page · 1.2 MB')}</div>`);
+      later(() => {
+        const nx = rowsOf(r => r.src === 'xlsx').length, ns = rowsOf(r => r.src === 'scan').length;
+        const exact = new Set(DIARY_ROWS.flatMap(r => parseParcels(r.parcels).tokens).filter(t => PLOT_NAMES.includes(t)));
+        const prods = new Set(DIARY_ROWS.map(r => (byKey(PRODUCT_ALIASES)[nk(productKey(r))] || [])).filter(x => x[1] === 'auto').map(x => x[0]));
+        S.stage = 'asking';
+        bot(`<p class="ack">✓ Read ${nx + ns} rows and matched most of it on my own.</p>
+          <details class="more"><summary>Show what I matched</summary>
+            <table class="kv"><tr><th>In your files</th><th></th><th>Matched to</th></tr>
+            ${[...DIARY_ROWS.reduce((m, r) => { const k = productKey(r), a = byKey(PRODUCT_ALIASES)[nk(k)]; if (a && a[1] === 'auto') { const e = m.get(a[0]) || new Set(); e.add(k); m.set(a[0], e); } return m; }, new Map())]
+              .map(([p, ks]) => `<tr><td>${[...ks].map(esc).join(', ')}</td><td class="arrow">→</td><td>${esc(p)}<div class="soft">${esc(DIARY_PRODUCTS[p])}</div></td></tr>`).join('')}
+            <tr><td>${[...exact].sort((a, b) => a.localeCompare(b, 'en', { numeric: true })).join(', ')}</td><td class="arrow">→</td><td>Same plot codes as in ResiYou</td></tr>
+            <tr><td>püskürtme</td><td class="arrow">→</td><td>Foliar spray</td></tr>
+            <tr><td>gr, cc</td><td class="arrow">→</td><td>g, ml</td></tr></table>
+          </details>
+          <p style="margin-top:8px"><b>${openQuestions()} questions</b> about the rest.</p>`);
+        S.queue = [...ORDER];
+        next();
+      }, 1100);
+    }
+
+    function next() {
+      const id = S.queue.find(q => A[q] === undefined && !skipQ(q));
+      S.queue = S.queue.filter(q => q !== id);
+      if (!id) return finish();
+      ask(id);
+    }
+    function ask(id, lead = '') {
+      const q = QUESTIONS[id]();
+      S.cur = { id, q };
+      bot(`${lead}${q.html}${q.snip}`, { qid: id });
+    }
+    function finish(lead = '') {
+      S.cur = null;
+      if (S.stage === 'done') return;
+      S.stage = 'review';
+      const per = {};
+      DIARY_ROWS.forEach(r => { if (rowTreatments(r)) rowPlots(r).forEach(p => per[p] = (per[p] || 0) + 1); });
+      const plots = Object.keys(per).sort((a, b) => a.localeCompare(b, 'en', { numeric: true }));
+      const skipped = DIARY_ROWS.filter(r => rowProduct(r) === SKIP_V).length;
+      bot(`${lead}<p>That's everything. Here's what I'll import:</p>
+        <table class="kv"><tr><th>Plots</th><th>Treatments each</th></tr>
+        ${[...new Set(plots.map(p => per[p]))].sort((x, y) => y - x).map(n => { const ps = plots.filter(p => per[p] === n);
+          return `<tr><td>${ps.map(p => esc(p) + (newPlots().includes(p) ? '<span class="tag new">New draft plot</span>' : '')).join(', ')}</td><td>${n}</td></tr>`; }).join('')}
+        <tr><td><b>${plots.length} plots</b></td><td><b>${totalTreatments()} in total</b></td></tr></table>
+        ${skipped ? `<p class="muted">${skipped} rows left out, as you said.</p>` : ''}
+        <p class="muted">I'll remember these answers for your next diary. Want to change anything? Just tell me, or tap <i>Change</i> under an answer.</p>
+        <button class="primary" data-act="import">Import ${totalTreatments()} treatments</button>`, { final: true });
+    }
+
+    function answer(opt, text) {
+      const { id, q } = S.cur;
+      A[id] = opt.value;
+      me(esc(text || opt.label), { qid: id });
+      S.cur = null; S.pick = null;
+      const ack = (opt.ack || q.ack)?.(Array.isArray(opt.value) ? plotsLabel(opt.value) : opt.value);
+      later(() => {
+        const lead = ack ? `<p class="ack">✓ ${esc(ack)}</p>` : '';
+        const nextId = S.queue.find(x => A[x] === undefined && !skipQ(x));
+        if (nextId) { S.queue = S.queue.filter(x => x !== nextId); ask(nextId, lead); }
+        else finish(lead);
+      });
+    }
+
+    // Free text: an option's keywords, or plot codes for a picker question.
+    function answerText(text) {
+      me(esc(text));
+      if (S.stage === 'empty') { S.msgs.pop(); return loadExample(); }
+      if (!S.cur) {
+        // After the review: understand "change <thing>" requests.
+        const hit = ORDER.find(id => new RegExp({ bca: 'b ?c/?a|scan', kanal: 'kanal', organik: 'organi', kalan: 'kalan|rest', tum: 'tüm|tum|whole', decis: 'decis', delegate: 'delegate', water: 'water|su\\b|wasser', year: 'year|2025|jahr', harvest: 'harvest|phi', columns: 'column' }[id], 'i').test(text));
+        return later(() => hit ? (S.stage = 'asking', delete A[hit], ask(hit, '<p>Sure — let\'s redo that one.</p>')) : bot('<p>Tell me what to change — e.g. “Kanal altı is A3” or “tüm alan without Organik”.</p>'));
+      }
+      const { q } = S.cur;
+      const codes = plotCodes(text);
+      const picker = q.options.find(o => o.pick);
+      const ord = [...q.options].sort((a, b) => (b.prio || 0) - (a.prio || 0)); // most specific keywords first
+      const opt = ord.find(o => o.re && o.re.test(text));
+      S.msgs.pop();
+      if (codes.length && picker && !(opt && opt.value === 'B1' && codes.join() === 'B1')) {
+        const value = picker.pick === 'single' ? codes[0] : codes;
+        return answer({ value }, text);
+      }
+      if (opt) return answer(opt, text);
+      me(esc(text));
+      later(() => bot(`<p>Sorry, I didn't get that. Pick one of these${picker ? ', or name plots like “A3” or “B2-B6”' : ''}:</p>`));
+    }
+
+    // "A3, B2-B6" → A3 B2 B3 B4 B5 B6 (only codes that exist).
+    function plotCodes(text) {
+      const out = [];
+      const rest = text.toUpperCase().replace(/\b([AB])(\d{1,2})\s*[-–]\s*\1?(\d{1,2})\b/g, (m, l, a, b) => { for (let i = +a; i <= +b; i++) out.push(l + i); return ' '; });
+      (rest.match(/\b[AB]\d{1,2}\b/g) || []).forEach(c => out.push(c));
+      return [...new Set(out)].filter(c => PLOT_NAMES.includes(c));
+    }
+    function startPick(opt) {
+      S.pick = { mode: opt.pick, sel: new Set(opt.preset || []) };
+      render();
+    }
+
+    // ── Render ────────────────────────────────────────────────────────────
+    const thread = document.getElementById('thread');
+    function render() {
+      const lastBotQ = [...S.msgs].reverse().find(m => m.who === 'bot');
+      thread.innerHTML = S.msgs.map((m, i) => {
+        let tail = '';
+        if (S.cur && m === lastBotQ) { // options sit on the latest bot message, so they survive a “didn't get that”
+          if (S.pick) {
+            const list = S.pick.mode === 'single' ? PLOT_NAMES : farm();
+            tail = `<div class="pick">${list.map(n => `<button class="pchip${S.pick.sel.has(n) ? ' on' : ''}" data-p="${esc(n)}">${esc(n)}</button>`).join('')}
+              ${S.pick.mode === 'multi' ? `<button class="chip done" data-act="pickdone">Use ${S.pick.sel.size} plots</button>` : ''}</div>`;
+          } else {
+            tail = `<div class="chips">${S.cur.q.options.map((o, j) => `<button class="chip" data-opt="${j}">${esc(o.label)}${o.rec ? '<span class="rec">· suggested</span>' : ''}</button>`).join('')}</div>`;
+          }
+        }
+        const change = m.who === 'me' && m.qid && S.stage !== 'done' ? `<button class="change" data-change="${m.qid}">Change</button>` : '';
+        return `<div class="msg ${m.who}"><div class="av">${m.who === 'bot' ? BOT_ICO : 'T'}</div><div><div class="bubble">${m.html}${tail}</div>${change}</div></div>`;
+      }).join('') + (S.typing ? `<div class="msg bot"><div class="av">${BOT_ICO}</div><div class="bubble"><span class="typing"><i></i><i></i><i></i></span></div></div>` : '');
+      thread.querySelectorAll('.snip[data-focus]').forEach(el => { const f = +el.dataset.focus; if (f + 140 > el.clientWidth) el.scrollLeft = f - 40; });
+      // Show the start of a long bot message rather than its end.
+      const last = thread.lastElementChild;
+      thread.scrollTop = last && last.classList.contains('bot') && last.offsetHeight > thread.clientHeight - 40 ? last.offsetTop - thread.offsetTop - 8 : thread.scrollHeight;
+
+      const strip = document.getElementById('strip');
+      strip.hidden = S.stage === 'empty' || S.stage === 'reading';
+      if (!strip.hidden) {
+        const left = openQuestions();
+        strip.innerHTML = `<span class="files">${FILE_ICO}${esc(SOURCES.xlsx.file)} + ${esc(SOURCES.scan.file)}</span>
+          <span class="stat"><b>${totalTreatments()}</b> treatments on <b>${plotsTouched()}</b> plots${newPlots().length ? ` · <b>${newPlots().length}</b> new` : ''}</span>
+          <span class="left${left ? '' : ' ok'}">${S.stage === 'done' ? '✓ Imported' : left ? `${left} question${left > 1 ? 's' : ''} left` : '✓ Ready to import'}</span>`;
+      }
+    }
+
+    thread.addEventListener('click', (e) => {
+      const t = e.target.closest('button, [data-act]');
+      if (!t) return;
+      if (t.dataset.act === 'load') return loadExample();
+      if (t.dataset.act === 'import') {
+        if (S.stage !== 'review') return;
+        S.stage = 'done';
+        me('Import');
+        const n = totalTreatments(), p = plotsTouched(), np = newPlots();
+        return later(() => bot(`<p><span class="ack">✓ Imported ${n} treatments on ${p} plots.</span>${np.length ? ` Created ${np.length} draft plot${np.length > 1 ? 's' : ''} (${np.map(esc).join(', ')}) — add crop and area when you get a chance.` : ''}</p>
+          <p><a href="index.html">Open Plots</a> · <a href="#" data-act="again">Import another diary</a></p>`), 900);
+      }
+      if (t.dataset.act === 'again') { e.preventDefault(); return reset(); }
+      if (t.dataset.opt !== undefined && S.cur) {
+        const o = S.cur.q.options[+t.dataset.opt];
+        return o.pick ? startPick(o) : answer(o);
+      }
+      if (t.dataset.p && S.pick) {
+        if (S.pick.mode === 'single') return answer({ value: t.dataset.p }, t.dataset.p);
+        S.pick.sel.has(t.dataset.p) ? S.pick.sel.delete(t.dataset.p) : S.pick.sel.add(t.dataset.p);
+        return render();
+      }
+      if (t.dataset.act === 'pickdone' && S.pick) { const v = [...S.pick.sel]; return answer({ value: v }, plotsLabel(v)); }
+      if (t.dataset.change) {
+        const id = t.dataset.change;
+        if (S.cur) S.queue.unshift(S.cur.id);
+        S.pick = null; S.stage = 'asking';
+        delete A[id];
+        return later(() => ask(id, '<p>Sure — let\'s redo that one.</p>'), 400);
+      }
+    });
+
+    const form = document.getElementById('composer'), ta = document.getElementById('text');
+    form.addEventListener('submit', (e) => { e.preventDefault(); const v = ta.value.trim(); if (!v || S.typing) return; ta.value = ''; answerText(v); });
+    ta.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); form.requestSubmit(); } });
+    document.getElementById('attach').addEventListener('click', loadExample);
+    reset();
+  </script>
+  <script src="app.js"></script>
+</body>
+</html>
